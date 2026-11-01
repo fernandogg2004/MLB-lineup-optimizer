@@ -200,7 +200,7 @@ export function Simulator({ snap, team }: { snap: GameSnapshot; team: Team }) {
       </h3>
       <p className="card-sub">{t("sim.subtitle")}</p>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] mt-4">
-        <div>
+        <div className="min-w-0">
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
             <SortableContext items={order} strategy={verticalListSortingStrategy}>
               <ol className="sim-list" aria-label={t("sim.your")}>
@@ -244,7 +244,7 @@ export function Simulator({ snap, team }: { snap: GameSnapshot; team: Team }) {
             {search && "err" in search && <span className="text-warn">{search.err}</span>}
           </div>
         </div>
-        <div>
+        <div className="min-w-0">
           <div className="stat">
             <div className="stat-label">
               {t("sim.your_value")} <span className="badge badge-model">{t("game.model")}</span>

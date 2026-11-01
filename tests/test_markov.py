@@ -217,3 +217,27 @@ def test_invalid_inputs_rejected() -> None:
     m = Matchup.single_regime(_probs(rng))
     with pytest.raises(ValueError):
         evaluate(DET, m, [0, 0, 1, 2, 3, 4, 5, 6, 7])
+
+
+def test_truncation_bound_holds_against_loose_tolerance() -> None:
+    """Evaluate with a coarse tolerance and check the error against Proposition 3."""
+    from batting_order.engine.markov import out_probability_floor, truncation_error_bound
+
+    rng = np.random.default_rng(11)
+    kernel = random_kernel(rng)
+    m = Matchup.single_regime(_probs(rng))
+    order = rng.permutation(9)
+    exact = evaluate(kernel, m, order, tol=1e-15).expected_runs
+    q = out_probability_floor(kernel, m)
+    assert 0 < q < 1
+    for tol in (1e-2, 1e-4, 1e-6):
+        ev = evaluate(kernel, m, order, tol=tol)
+        assert abs(exact - ev.expected_runs) <= truncation_error_bound(q, ev.truncated_mass) + 1e-15
+
+
+def test_runs_never_exceed_plate_appearances_minus_three() -> None:
+    """Bookkeeping identity R + LOB + 3 = N implies E[R_inning] <= E[N] - 3."""
+    rng = np.random.default_rng(12)
+    m = Matchup.single_regime(_probs(rng))
+    ev = evaluate(DET, m, np.arange(9))
+    assert ev.expected_runs <= ev.pa_by_slot.sum() - 27 + 1e-9

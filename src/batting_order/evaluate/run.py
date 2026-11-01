@@ -11,7 +11,7 @@ import json
 import logging
 import time
 from collections.abc import Callable
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -261,6 +261,79 @@ def e2(pa: pl.DataFrame, quick: bool) -> None:
             "block_days": 14,
             "by_season": results,
             "lightgbm_iterations": int(lgbm.best_iteration_ or 0),
+        },
+    )
+
+
+# Common 7-class taxonomy shared with the original model: K, BB, 1B, 2B, 3B, HR, OUT(in play).
+COARSE_NEW = np.array([0, 1, 2, 3, 4, 5, 6, 6])  # new class -> coarse
+COARSE_LEGACY = np.array([6, 0, 1, 2, 3, 4, 5, 6])  # legacy class -> coarse (OUT, K, BB.., DP)
+
+
+def e2_legacy(pa: pl.DataFrame) -> None:
+    """Original project's 51-feature LightGBM vs M2 on its out-of-sample 2026 window."""
+    path = WORK / "legacy_2026.parquet"
+    if not path.exists():
+        log.warning("work/legacy_2026.parquet missing; run scripts/legacy_pa_predictions.py")
+        return
+    leg = pl.read_parquet(path).with_columns(pl.col("game_date").str.to_date())
+    pcols = [f"p{k}" for k in range(8)]
+    # Daily-grain features => identical predictions within (batter, pitcher, date).
+    spread = leg.group_by(["batter_id", "pitcher_id", "game_date"]).agg(
+        *[(pl.col(c).max() - pl.col(c).min()).alias(c) for c in pcols]
+    )
+    max_spread = float(spread.select(pl.max_horizontal(pcols)).max().item())
+    leg1 = leg.unique(["batter_id", "pitcher_id", "game_date"], keep="first").rename(
+        {"batter_id": "batter", "pitcher_id": "pitcher"}
+    )
+    dates = sorted(leg["game_date"].unique().to_list())
+    start: date = dates[0]
+    end: date = dates[-1] + timedelta(days=1)
+    rp = rolling(
+        pa,
+        start,
+        end,
+        14,
+        tuned_hyper(),
+        {"M0_league": league_predictor, "M2_batter_pitcher": full_predictor},
+    )
+    rows = rp.rows.with_row_index("i").join(
+        leg1, on=["batter", "pitcher", "game_date"], how="inner"
+    )
+    idx = rows["i"].to_numpy()
+    y = COARSE_NEW[rows["c"].to_numpy()]
+
+    def coarse(p: np.ndarray, mapping: np.ndarray) -> np.ndarray:
+        out = np.zeros((p.shape[0], 7))
+        for k, j in enumerate(mapping):
+            out[:, j] += p[:, k]
+        return out
+
+    legacy_p = coarse(rows.select(pcols).to_numpy(), COARSE_LEGACY)
+    games = rows["game_pk"].to_numpy()
+    res = {}
+    ref = pa_log_loss(coarse(rp.probs["M2_batter_pitcher"][idx], COARSE_NEW), y)
+    for name, p in (
+        ("legacy_lightgbm_51_features", legacy_p),
+        ("M0_league", coarse(rp.probs["M0_league"][idx], COARSE_NEW)),
+        ("M2_batter_pitcher", coarse(rp.probs["M2_batter_pitcher"][idx], COARSE_NEW)),
+    ):
+        ll = pa_log_loss(p, y)
+        res[name] = {
+            "log_loss": float(ll.mean()),
+            "brier": float(pa_brier(p, y).mean()),
+            "diff_vs_M2": cluster_bootstrap_diff(ll, ref, games),
+        }
+    _save(
+        "e2b_legacy_comparison",
+        {
+            "window": [str(start), str(end)],
+            "n_pa_matched": len(y),
+            "n_pa_new_table": rp.rows.height,
+            "max_within_group_prediction_spread": max_spread,
+            "taxonomy": "K,BB,1B,2B,3B,HR,OUT",
+            "models": res,
+            "note": "Legacy features are recomputed daily (more recent than M2's 14-day refits).",
         },
     )
 
@@ -710,7 +783,34 @@ def e5(pa: pl.DataFrame, quick: bool) -> None:
         }
         for side, t in ref["teams"].items()
     }
-    _save("e5_reference_game", {"game": ref["game"], "teams": summary, "sensitivity": sens})
+    from batting_order.engine.markov import out_probability_floor
+
+    snap_main = build_snapshot(pa, date(2026, 10, 28), tuned_hyper())
+    kernel_main = kernel_for(pa, date(2026, 10, 28), {})
+    q_min = 1.0
+    for side, t in ref["teams"].items():
+        opp = ref["teams"]["home" if side == "away" else "away"]
+        ctx = GameContext(
+            [x["id"] for x in t["hitters"]],
+            t["opponent_starter"]["id"],
+            t["opponent_starter"]["throws"],
+            opp["team"],
+        )
+        q_min = min(q_min, out_probability_floor(kernel_main, build_matchup(snap_main, ctx)))
+    _save(
+        "e5_reference_game",
+        {
+            "game": ref["game"],
+            "teams": summary,
+            "sensitivity": sens,
+            "q_min": q_min,
+            "kernel": ref["cutoff"]["kernel"],
+        },
+    )
+    if not quick:
+        from batting_order.snapshot import write_snapshot
+
+        write_snapshot(ref, ROOT / "web" / "public" / "data" / "games" / "849799.json")
 
 
 def main(only: list[str] | None = None, quick: bool = False) -> None:
@@ -718,12 +818,13 @@ def main(only: list[str] | None = None, quick: bool = False) -> None:
     seasons = [s for s in SEASONS if (DATA / "processed" / f"transitions_{s}.parquet").exists()]
     pa = load_transitions(DATA, seasons)
     lineups = load_lineups(DATA, seasons)
-    todo = only or ["e1", "e2", "e3", "e4a", "e4c", "e5"]
+    todo = only or ["e1", "e2", "e2b", "e3", "e4a", "e4c", "e5"]
     for name in todo:
         t = time.time()
         {
             "e1": lambda: e1(pa),
             "e2": lambda: e2(pa, quick),
+            "e2b": lambda: e2_legacy(pa),
             "e3": lambda: e3_e4b(pa, lineups, quick),
             "e4a": lambda: e4a(pa, lineups, quick),
             "e4c": lambda: e4c(pa, lineups, quick),

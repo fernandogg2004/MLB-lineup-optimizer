@@ -361,3 +361,33 @@ def run_distribution(
         F = NF
     p = F.sum(axis=0)
     return np.asarray(p / p.sum(), dtype=np.float64)
+
+
+# ---------------------------------------------------------------------------
+# Constants appearing in the paper's propositions
+# ---------------------------------------------------------------------------
+
+
+def out_probability_floor(kernel: Kernel, m: Matchup) -> float:
+    """``q = min_{g,i,s} P(outs increase in one PA | s, batter i, regime g)`` (Assumption A4)."""
+    from batting_order.engine.states import decode
+
+    outs = np.array([decode(s)[0] for s in range(N_STATES)] + [3])
+    up = (outs[None, :] > outs[:N_STATES, None]).astype(np.float64)  # (24, 25)
+    p_out = (kernel.P * up[None, :, :]).sum(axis=2)  # (8, 24)
+    return float(np.einsum("gic,cs->gis", m.x, p_out).min())
+
+
+def truncation_error_bound(q: float, mass: float) -> float:
+    """Bound on |E[R_9] - computed value| when every half-inning stops at mass ``<= mass``.
+
+    Proposition 3 of the paper. Per inning, runs after truncation are at most the
+    runners on base (<= 3) plus the remaining plate appearances, whose conditional
+    expectation is <= 3/q; hence the per-inning error is <= (3 + 3/q) mass <= 6 mass/q.
+    The lost leadoff mass adds at most (k-1) mass in total variation before inning k,
+    and expected runs per inning are <= 3/q. Summing over nine innings:
+    ``9 * 6/q * mass + 36 * 3/q * mass = 162 * mass / q``.
+    """
+    if not 0 < q <= 1:
+        raise ValueError("q must lie in (0, 1]")
+    return 162.0 * mass / q
