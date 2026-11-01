@@ -1,0 +1,59 @@
+"""Empirical estimation of the batter-independent transition kernel.
+
+For each outcome class ``c`` and state ``s`` the observed transitions
+``(s', r)`` are counted over a window of games strictly before the prediction
+cutoff. The estimate is the posterior mean under a Dirichlet prior centred on the
+conventional deterministic advancement (``alpha`` pseudo-observations), which keeps
+sparse cells (e.g. a triple with the bases loaded and two outs) well defined:
+
+    J_hat[c, s, s', r] = (N[c, s, s', r] + alpha * J0[c, s, s', r]) / (N[c, s] + alpha).
+
+Censored (walk-off) and bookkeeping-violating transitions are excluded.
+"""
+
+from __future__ import annotations
+
+from datetime import date
+
+import numpy as np
+import polars as pl
+
+from batting_order.engine.states import (
+    MAX_RUNS_PER_PA,
+    N_NEXT,
+    N_OUT,
+    N_STATES,
+    Kernel,
+    deterministic_kernel,
+)
+
+
+def count_transitions(pa: pl.DataFrame) -> np.ndarray:
+    """Counts ``N[c, s, s', r]`` from a transitions table."""
+    ok = pa.filter(~pl.col("censored") & pl.col("conserved"))
+    agg = ok.group_by(["c", "s", "s_next", "runs"]).len()
+    N = np.zeros((N_OUT, N_STATES, N_NEXT, MAX_RUNS_PER_PA + 1))
+    for c, s, s2, r, n in agg.iter_rows():
+        N[c, s, s2, min(r, MAX_RUNS_PER_PA)] += n
+    return N
+
+
+def fit_kernel(pa: pl.DataFrame, cutoff: date, start: date, alpha: float = 2.0) -> Kernel:
+    """Estimate the kernel from transitions with ``start <= game_date < cutoff``."""
+    if start >= cutoff:
+        raise ValueError("kernel window is empty")
+    win = pa.filter((pl.col("game_date") >= start) & (pl.col("game_date") < cutoff))
+    N = count_transitions(win)
+    J0 = deterministic_kernel().J
+    tot = N.sum(axis=(2, 3), keepdims=True)
+    J = (N + alpha * J0) / (tot + alpha)
+    return Kernel(
+        J,
+        label=f"empirical[{start}..{cutoff})",
+        meta={
+            "n_transitions": int(N.sum()),
+            "alpha": alpha,
+            "start": start.isoformat(),
+            "cutoff": cutoff.isoformat(),
+        },
+    )

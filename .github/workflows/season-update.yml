@@ -1,0 +1,52 @@
+# Manual season update. Never scheduled (ADR 0001): run it from the Actions tab.
+# It downloads Statcast for the season (plus history), rebuilds the processed tables,
+# writes dashboard snapshots for newly completed games and opens a pull request.
+# Nothing is deployed automatically; see docs/operations.md.
+name: Season update (manual)
+on:
+  workflow_dispatch:
+    inputs:
+      season:
+        description: "Season to update (e.g. 2027)"
+        required: true
+      last:
+        description: "Snapshot the last N completed games (0 = postseason games only)"
+        default: "0"
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11", cache: pip }
+      - run: pip install ".[ingest]"
+      - name: Restore raw data cache
+        uses: actions/cache@v4
+        with:
+          path: data/raw
+          key: raw-${{ inputs.season }}-${{ github.run_id }}
+          restore-keys: raw-${{ inputs.season }}-
+      - name: History (three previous seasons)
+        run: |
+          S=${{ inputs.season }}
+          batting-order ingest $((S-3)) $((S-2)) $((S-1))
+          batting-order build $((S-3)) $((S-2)) $((S-1))
+      - name: Update season and snapshots
+        run: batting-order update --season ${{ inputs.season }} --last ${{ inputs.last }}
+      - name: Open pull request
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          BR="season-update/${{ inputs.season }}-${{ github.run_id }}"
+          git switch -c "$BR"
+          git add web/public/data
+          if git diff --cached --quiet; then echo "No new snapshots."; exit 0; fi
+          git commit -m "data: season ${{ inputs.season }} snapshots (run ${{ github.run_id }})"
+          git push origin "$BR"
+          gh pr create --title "Season ${{ inputs.season }} snapshots" \
+            --body "Automated snapshot update from workflow run ${{ github.run_id }}. Review, merge, then deploy (docs/operations.md)."
