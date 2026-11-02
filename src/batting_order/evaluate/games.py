@@ -10,8 +10,7 @@ from __future__ import annotations
 
 import logging
 import time
-from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date
 
 import numpy as np
 import polars as pl
@@ -19,25 +18,12 @@ import polars as pl
 from batting_order.engine.markov import evaluate, exhaustive
 from batting_order.engine.run_expectancy import run_values
 from batting_order.engine.states import Kernel
-from batting_order.model.kernel import fit_kernel
+from batting_order.model.kernel import kernel_for
 from batting_order.model.matchup import GameContext, build_matchup
 from batting_order.model.pa_model import Hyper, Snapshot, build_snapshot
 from batting_order.optimize.search import batter_summaries, heuristic_sorted, heuristic_the_book
 
 log = logging.getLogger(__name__)
-KERNEL_YEARS = 3
-KERNEL_ERA_START = date(2023, 1, 1)  # 2023 rule changes (bases, pick-off limits, shift ban)
-
-
-def kernel_for(pa: pl.DataFrame, d: date, cache: dict[date, Kernel]) -> Kernel:
-    """Kernel fitted on the window ending at the first day of ``d``'s month."""
-    key = date(d.year, d.month, 1)
-    if key not in cache:
-        start = max(KERNEL_ERA_START, key - timedelta(days=365 * KERNEL_YEARS))
-        if start >= key:  # early 2023: fall back to the previous era rather than nothing
-            start = key - timedelta(days=365)
-        cache[key] = fit_kernel(pa, key, start)
-    return cache[key]
 
 
 def observed_runs_8(pa: pl.DataFrame) -> pl.DataFrame:
@@ -47,25 +33,6 @@ def observed_runs_8(pa: pl.DataFrame) -> pl.DataFrame:
         .group_by(["game_pk", "bat_team"])
         .agg(pl.col("runs").sum().alias("runs_8"))
     )
-
-
-@dataclass
-class GameRow:
-    game_pk: int
-    game_date: date
-    game_type: str
-    bat_team: str
-    fld_team: str
-    pred_r8: float
-    pred_r9_actual: float
-    pred_r9_opt: float
-    pred_r9_book: float
-    pred_r9_rv_sorted: float
-    pred_r9_obp_sorted: float
-    pred_r9_random_mean: float
-    pred_r9_worst: float
-    pct_actual: float
-    opt_order: list[int]
 
 
 def run_games(

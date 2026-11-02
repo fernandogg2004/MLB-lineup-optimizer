@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import itertools
 from datetime import date, timedelta
+from pathlib import Path
 
 import numpy as np
 import polars as pl
@@ -224,3 +225,20 @@ def test_posterior_sampling_is_reproducible_and_valid() -> None:
     p = a.vs_pitcher(1, 500, "R")
     assert np.all(p > 0) and p.sum() == pytest.approx(1.0)
     assert s.batter_mult is not a.batter_mult  # original snapshot untouched
+
+
+def test_verify_detects_changed_missing_and_extra_files(tmp_path: Path) -> None:
+    from batting_order.data.statcast import verify_season, write_manifest
+
+    d = tmp_path / "season=2026"
+    d.mkdir()
+    for name in ("a.parquet", "b.parquet"):
+        pl.DataFrame({"x": [1, 2]}).write_parquet(d / name)
+    ref = tmp_path / "ref.json"
+    ref.write_text(write_manifest(d).read_text())
+    assert verify_season(d, ref) == {"missing": [], "changed": [], "extra": []}
+    pl.DataFrame({"x": [3]}).write_parquet(d / "a.parquet")
+    (d / "b.parquet").unlink()
+    pl.DataFrame({"x": [4]}).write_parquet(d / "c.parquet")
+    res = verify_season(d, ref)
+    assert res == {"missing": ["b.parquet"], "changed": ["a.parquet"], "extra": ["c.parquet"]}

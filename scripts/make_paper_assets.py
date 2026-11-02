@@ -67,7 +67,13 @@ def main() -> None:
         for s in range(2021, 2027)
         if (ROOT / "data" / "processed" / f"quality_{s}.json").exists()
     }
-    sw = (e5 or e4b or {}).get("software", {"package": "2.0.0", "git": "unknown"})
+    # Software version cited by the paper: the clean commit at which the published results were
+    # re-computed and verified (scripts/check_provenance.py), falling back to the E5 output.
+    prov = load("provenance_check")
+    if prov and prov.get("passed"):
+        sw = {"package": "2.0.0", "git": prov["git"]}
+    else:
+        sw = (e5 or e4b or {}).get("software", {"package": "2.0.0", "git": "unknown"})
     m: dict[str, str] = {
         "SoftwareVersion": f"{sw['package']}@{sw['git']}",
         "PaperDate": f"{date.today():%B} {date.today().day}, {date.today().year}",
@@ -85,6 +91,34 @@ def main() -> None:
         m["EtwoBatterScale"] = f(h["batter_scale"], 2)
         m["EtwoPitcherScale"] = f(h["pitcher_scale"], 2)
         m["EtwoHalfLife"] = f"{h['half_life_days']:.0f}"
+        seasons = (s25, s26)
+        m["EtwoBatterGain"] = f(
+            np.mean([s["M0_league"]["log_loss"] - s["M1_batter"]["log_loss"] for s in seasons]), 3
+        )
+        m["EtwoPitcherGain"] = f(
+            np.mean(
+                [s["M1_batter"]["log_loss"] - s["M2_batter_pitcher"]["log_loss"] for s in seasons]
+            ),
+            3,
+        )
+        m["EtwoTuneGain"] = f(
+            np.mean(
+                [
+                    s["M2_default_hyper"]["log_loss"] - s["M2_batter_pitcher"]["log_loss"]
+                    for s in seasons
+                ]
+            ),
+            4,
+        )
+        for key, s in (("A", s25), ("B", s26)):
+            d3 = s["M3_lightgbm"]["diff_vs_M2"]
+            m[f"EtwoMthree{key}"] = f(d3["mean"], 4, signed=True)
+            m[f"EtwoMthree{key}Lo"] = f(d3["ci_low"], 4, signed=True)
+            m[f"EtwoMthree{key}Hi"] = f(d3["ci_high"], 4, signed=True)
+    e0 = load("e0_lineup_audit")
+    if e0:
+        m["EzeroN"] = str(e0["n"])
+        m["EzeroMatch"] = str(round(e0["share_both_match"] * e0["n"]))
     e2b = load("e2b_legacy_comparison")
     if e2b:
         lm = e2b["models"]
@@ -308,8 +342,22 @@ def tables(e1: Any, e2: Any, e4a: Any, m: dict[str, str]) -> None:
         m["EoneWeightedDiff"] = f(max(v["weighted_mean_abs_diff"] for v in d.values()), 3)
         m["EoneMaxDiff"] = f(max(v["max_abs_diff"] for v in d.values()), 2)
         m["EoneREzero"] = f(d["2026"]["model_re24"][0], 3)
+        mix5, mix = d["2024"].get("state5_mix"), d["2024"]["league_mix"]
+        if mix5:
+            m["EoneFiveSingle"] = pct(mix5["1B"], 1)
+            m["EoneFiveK"] = pct(mix5["K"], 1)
+            m["EoneAllSingle"] = pct(mix["1B"], 1)
+            m["EoneAllK"] = pct(mix["K"], 1)
+            imm = d["2024"]["state5_immediate_runs_model_vs_data"]
+            diffs = [
+                abs(a - b) for a, b in zip(imm["model"], imm["data"], strict=True) if b is not None
+            ]
+            m["EoneFiveImmDiff"] = f(max(diffs), 3)
     _fill_missing(m)
     (GEN / "numbers.tex").write_text(macros(m), encoding="utf-8")
+
+
+MISSING: list[str] = []
 
 
 def _fill_missing(m: dict[str, str]) -> None:
@@ -319,9 +367,10 @@ def _fill_missing(m: dict[str, str]) -> None:
     used: set[str] = set()
     for tex in [ROOT / "research" / "paper.tex", *(ROOT / "research" / "sections").glob("*.tex")]:
         text = tex.read_text("utf-8")
-        used |= set(re.findall(r"\\((?:Eone|Etwo|Ethree|Efour|Ref)[A-Za-z]+)", text))
+        used |= set(re.findall(r"\\((?:Ezero|Eone|Etwo|Ethree|Efour|Ref)[A-Za-z]+)", text))
     for name in sorted(used - m.keys()):
-        m[name] = r"	extbf{??}"
+        m[name] = r"\textbf{??}"
+        MISSING.append(name)
         print("MISSING macro:", name)
 
 
@@ -471,11 +520,30 @@ def web_validation(e2: Any, e3: Any, e4a: Any, e4b: Any, e4c: Any) -> None:
     if e4a:
         out["e4a"] = {"methods": e4a["methods"]}
     if e4b:
-        out["e4b"] = {k: e4b[k] for k in ("uplift_opt_vs_actual", "actual_percentile")}
+        out["e4b"] = {
+            k: e4b[k] for k in ("n_team_games", "uplift_opt_vs_actual", "actual_percentile")
+        }
     if e4c:
         out["e4c"] = {k: v for k, v in e4c.items() if k != "rows"}
     (WEB / "validation.json").write_text(json.dumps(out, indent=1), encoding="utf-8")
 
 
+def copy_pdf() -> None:
+    """Single source of truth for the paper PDF: research/ -> web/public/."""
+    import shutil
+
+    pdf = ROOT / "research" / "paper.pdf"
+    if pdf.exists():
+        shutil.copyfile(pdf, ROOT / "web" / "public" / "paper.pdf")
+
+
 if __name__ == "__main__":
+    import sys
+
     main()
+    copy_pdf()
+    # Release mode: refuse to leave placeholders or unknown provenance in the paper.
+    if "--release" in sys.argv:
+        numbers = (GEN / "numbers.tex").read_text(encoding="utf-8")
+        if MISSING or "unknown" in numbers or "-dirty" in numbers:
+            raise SystemExit(f"release check failed: missing={MISSING}, provenance in numbers.tex")

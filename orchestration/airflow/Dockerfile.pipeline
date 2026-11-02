@@ -6,6 +6,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /
 WORKDIR /opt/batting-order
 COPY pyproject.toml README.md ./
 COPY src ./src
-RUN pip install ".[ingest]"
+RUN pip install .
 WORKDIR /app
 CMD ["batting-order", "--help"]

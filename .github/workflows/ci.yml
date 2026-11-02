@@ -8,10 +8,13 @@ permissions:
 jobs:
   python:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.13"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with: { python-version: "3.11", cache: pip }
+        with: { python-version: "${{ matrix.python-version }}", cache: pip }
       - run: pip install -e ".[dev]"
       - run: ruff check src tests scripts
       - run: mypy
@@ -30,9 +33,13 @@ jobs:
       - run: npx tsc -b
       - run: npx vitest run
       - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
   paper:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: No placeholders in generated paper inputs
+        run: "! grep -rn '??\\|unknown' research/generated/numbers.tex"
       - uses: xu-cheng/latex-action@v3
         with: { root_file: paper.tex, working_directory: research }

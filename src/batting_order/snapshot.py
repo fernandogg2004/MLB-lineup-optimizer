@@ -11,7 +11,6 @@ from __future__ import annotations
 import json
 import logging
 import subprocess
-from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -20,11 +19,12 @@ import numpy as np
 import polars as pl
 
 from batting_order import __version__
+from batting_order.config import REFERENCE_GAME, tuned_hyper
 from batting_order.data.statsapi import StatsApi, TeamLineup, official_lineups
 from batting_order.engine.markov import evaluate, exhaustive, run_distribution
 from batting_order.engine.run_expectancy import run_expectancy, run_values
 from batting_order.engine.states import OUTCOMES, Kernel
-from batting_order.evaluate.games import kernel_for
+from batting_order.model.kernel import kernel_for
 from batting_order.model.matchup import GameContext, build_matchup
 from batting_order.model.pa_model import Hyper, Snapshot, build_snapshot
 from batting_order.optimize.search import batter_summaries, heuristic_the_book
@@ -32,36 +32,24 @@ from batting_order.optimize.search import batter_summaries, heuristic_the_book
 log = logging.getLogger(__name__)
 SCHEMA_VERSION = 1
 BROWSER_DRAWS = 100
-REFERENCE_GAME = 849799  # 2026 World Series Game 5
-# Statcast team abbreviations differ from StatsAPI in a few cases.
-STATSAPI_TO_STATCAST = {
-    "AZ": "AZ",
-    "ATH": "ATH",
-    "CWS": "CWS",
-    "KC": "KC",
-    "SD": "SD",
-    "SF": "SF",
-    "TB": "TB",
-    "WSH": "WSH",
-}
 
 
 def git_revision(root: Path) -> str:
+    """Short commit hash, suffixed ``-dirty`` when tracked files have uncommitted changes."""
     try:
         return subprocess.check_output(
-            ["git", "rev-parse", "--short", "HEAD"], cwd=root, text=True
+            ["git", "describe", "--always", "--dirty", "--abbrev=7"],
+            cwd=root,
+            text=True,
+            stderr=subprocess.STDOUT,
         ).strip()
-    except (OSError, subprocess.CalledProcessError):
+    except (OSError, subprocess.CalledProcessError) as exc:
+        log.warning("git revision unavailable in %s: %s", root, exc)
         return "unknown"
 
 
 def _r(a: np.ndarray, nd: int = 6) -> list[Any]:
     return np.round(np.asarray(a, dtype=np.float64), nd).tolist()  # type: ignore[no-any-return]
-
-
-@dataclass
-class TeamResult:
-    payload: dict[str, Any]
 
 
 def _team(
@@ -194,11 +182,15 @@ def build_game_snapshot(
     pa: pl.DataFrame,
     api: StatsApi,
     root: Path,
-    hyper: Hyper = Hyper(),
+    hyper: Hyper | None = None,
     n_draws: int = 200,
     seed: int = 0,
     label: dict[str, str] | None = None,
 ) -> dict[str, Any]:
+    """Build the dashboard snapshot of one game (tuned hyperparameters unless given)."""
+    hyper_source = "explicit"
+    if hyper is None:
+        hyper, hyper_source = tuned_hyper(root)
     box = api.boxscore(game_pk)
     lus = official_lineups(box)
     sched = {int(g["gamePk"]): g for g in api.schedule(_season_of(pa, game_pk))}
@@ -209,6 +201,12 @@ def build_game_snapshot(
     kernel = kernel_for(pa, game_date, kernels)
     rng = np.random.default_rng(seed)
     throws = _throws(pa, box)
+    for side in ("away", "home"):
+        abbr = lus[side].abbreviation
+        if abbr not in snap.bullpen_mult:
+            raise KeyError(
+                f"team {abbr!r} has no Statcast bullpen history (abbreviation mismatch?)"
+            )
     teams = {}
     for side, other in (("away", "home"), ("home", "away")):
         teams[side] = _team(
@@ -249,7 +247,11 @@ def build_game_snapshot(
             "pa_history_from": (snap.cutoff - timedelta(days=hyper.window_days)).isoformat(),
             "kernel": kernel.meta,
         },
-        "model": {"hyper": hyper.__dict__, "outcomes": list(OUTCOMES)},
+        "model": {
+            "hyper": hyper.__dict__,
+            "hyper_source": hyper_source,
+            "outcomes": list(OUTCOMES),
+        },
         "kernel": {"P": _r(kernel.P, 7), "R": _r(kernel.R, 7)},
         "run_expectancy": _r(run_expectancy(kernel, lg).reshape(3, 8), 4),
         "teams": teams,

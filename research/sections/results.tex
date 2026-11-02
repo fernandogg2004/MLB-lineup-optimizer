@@ -7,10 +7,11 @@ expectancy at the start of an inning (state 0) within \EoneStateZeroMaxDiff{} ru
 difference over all 24 states is at most \EoneWeightedDiff{} (\cref{fig:re24}). The largest
 differences (up to \EoneMaxDiff{} runs) occur in states with a runner on third and fewer than two
 outs, where the model is \emph{below} the empirical value. Two observations show that this is a
-selection effect rather than a kernel error: the expected runs of each individual transition out
-of those states match the data closely, and the outcome mix observed in those states is markedly
-more favourable to the offence than the league mix (in 2024, from first-and-third with no outs,
-18.7\% singles and 19.8\% strikeouts versus 14.2\% and 22.6\% overall). Innings reach those states
+selection effect rather than a kernel error: the expected immediate runs of each outcome out of
+first-and-third with no outs match the data within \EoneFiveImmDiff{} runs (2024), and the
+outcome mix observed in that state is markedly more favourable to the offence than the league mix
+(\EoneFiveSingle{} singles and \EoneFiveK{} strikeouts versus \EoneAllSingle{} and \EoneAllK{}
+overall). Innings reach those states
 disproportionately against weak pitching or with strong hitters at the plate, which a
 league-average run-expectancy calculation cannot reflect. Game-level predictions (E3) use the
 actual hitters and pitchers and are the relevant check.
@@ -29,24 +30,31 @@ Tuning on 2024 selected prior-strength scales $\lambda_B=\EtwoBatterScale$,
 $\lambda_P=\EtwoPitcherScale$ and half-life $H=\EtwoHalfLife$ days; the strength scales are
 interior to the final grid, and $H=180$ days, evaluated in the first grid, was worse.
 \Cref{tab:e2} reports the test seasons. Batter multipliers reduce log-loss relative to the league
-model by about one hundredth of a nat per PA, and pitcher multipliers by a further 0.01; both
-differences are large relative to their bootstrap intervals. Tuning the priors matters little
-(about 0.001). The gradient-boosted model M3, using the same inputs, is better than M2 by 0.0008
-nats in 2025 (interval excluding zero) and indistinguishable in 2026. Class-wise calibration of M2
+model by \EtwoBatterGain{} nats per PA (mean of the two seasons), and pitcher multipliers by a
+further \EtwoPitcherGain{}; both differences are large relative to their bootstrap intervals.
+Tuning the priors matters little (\EtwoTuneGain{}). The gradient-boosted model M3, using the same
+inputs, differs from M2 by \EtwoMthreeA{} nats in 2025 (95\% interval \EtwoMthreeALo{} to
+\EtwoMthreeAHi{}) and \EtwoMthreeB{} in 2026 (\EtwoMthreeBLo{} to \EtwoMthreeBHi{}). Class-wise calibration of M2
 is shown in \cref{fig:pacal}.
 
 \input{generated/table_e2.tex}
 
 \paragraph{Deviation from the pre-specified selection rule.} Our protocol selected the simplest
-model not significantly worse than the best; strictly applied to 2025, it would select M3. We kept
-M2 for the lineup analysis and report this as a deviation, for two reasons that we checked
-rather than assumed. First, M2 provides the posterior distribution used for parameter uncertainty
-(\cref{sec:uncertainty}), which M3 does not. Second, the choice does not change the decisions: on
-\EtwocN{} random test team-games, the optimal order under M2 coincides with the M3 optimum in
-\EtwocSame{} of the games, the M2 optimum loses on average \EtwocLoss{} runs per game when
-evaluated under M3 (maximum \EtwocLossMax{}), the mean gains over the actual order are
-\EtwocUpTwo{} (M2) and \EtwocUpThree{} (M3), and the correlation between the two models' values
-over all 9! orders averages \EtwocCorr{}.
+model not significantly worse than the best; strictly applied to 2025, it selects M3. We
+nevertheless use M2 for the lineup analysis and report this as a deviation. The reasons are that
+M3's advantage is about one thousandth of a nat per PA in one of the two test seasons and absent
+in the other, and that M2 provides the posterior distribution used for parameter uncertainty
+(\cref{sec:uncertainty}), which M3 does not. We checked what the choice changes on \EtwocN{}
+random test team-games (E2c). The \emph{magnitude} of the conclusions does not depend on it: the
+mean gain of the optimal order over the actual order is \EtwocUpTwo{} runs per game under M2 and
+\EtwocUpThree{} under M3. The \emph{identity} of the optimal order does: the two models select the
+same exact order in only \EtwocSame{} of the games, and the M2 optimum is worse under M3 than the M3
+optimum by \EtwocLoss{} runs per game on average (maximum \EtwocLossMax{}); the correlation of the two
+models' values over all 9! orders averages \EtwocCorr{}. This is the same phenomenon as in
+\cref{sec:uncertainty}: many orders are nearly tied, and small changes in the inputs change which
+one is best. One caveat applies to M3: for the bullpen pseudo-pitcher we supplied a sample-size
+feature outside its training range, so M3's absolute run levels for innings against the bullpen
+should not be relied on.
 
 \paragraph{The original model.} On the window where its stored features exist (\EtwobWindow{},
 \EtwobN{} PAs, which are out of sample for it), the predecessor system's 51-feature LightGBM has

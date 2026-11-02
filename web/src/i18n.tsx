@@ -4,7 +4,7 @@ import type { Ctx } from "./i18n-context";
 import type { ReactNode } from "react";
 
 import { dictionaries } from "./strings";
-import type { Lang } from "./strings";
+import type { Key, Lang } from "./strings";
 
 function initialLang(): Lang {
   const q = new URLSearchParams(window.location.search).get("lang");
@@ -19,12 +19,24 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.documentElement.lang = lang;
     window.localStorage.setItem("lang", lang);
+    // Keep a shared URL in sync with the visible language.
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("lang") !== lang) {
+      url.searchParams.set("lang", lang);
+      window.history.replaceState(null, "", url);
+    }
   }, [lang]);
   const setLang = useCallback((l: Lang) => setLangState(l), []);
   const value = useMemo<Ctx>(() => {
     const locale = lang === "es" ? "es-ES" : "en-US";
+    // "always": group thousands consistently (es-ES otherwise leaves 4-digit numbers ungrouped).
+    const grouping = { useGrouping: "always" } as unknown as Intl.NumberFormatOptions;
     const fmt = (v: number, digits = 2) =>
-      new Intl.NumberFormat(locale, { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(v);
+      new Intl.NumberFormat(locale, { ...grouping, minimumFractionDigits: digits, maximumFractionDigits: digits }).format(v);
+    const pct = (v: number, digits = 0) => {
+      if (v > 0 && v < 0.01 && digits === 0) return lang === "es" ? "<1 %" : "<1%";
+      return new Intl.NumberFormat(locale, { style: "percent", maximumFractionDigits: digits }).format(v);
+    };
     return {
       lang,
       setLang,
@@ -34,9 +46,14 @@ export function I18nProvider({ children }: { children: ReactNode }) {
         return s;
       },
       fmt,
-      int: (v) => new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(Math.round(v)),
-      pct: (v, digits = 0) =>
-        new Intl.NumberFormat(locale, { style: "percent", maximumFractionDigits: digits }).format(v),
+      int: (v) => new Intl.NumberFormat(locale, { ...grouping, maximumFractionDigits: 0 }).format(Math.round(v)),
+      pct,
+      date: (iso) =>
+        new Date(`${iso}T12:00:00Z`).toLocaleDateString(locale, { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" }),
+      series: (s) => {
+        const k = `series.${s}` as Key;
+        return k in dictionaries.en ? dictionaries[lang][k] : s;
+      },
       signed: (v, digits = 3) => (v > 0 ? "+" : v < 0 ? "−" : "") + fmt(Math.abs(v), digits),
     };
   }, [lang, setLang]);

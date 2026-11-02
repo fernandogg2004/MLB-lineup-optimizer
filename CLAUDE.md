@@ -25,7 +25,7 @@ exhaustive 9! search → static bilingual dashboard (web/) and LaTeX paper (rese
 
 ## Commands
 ```bash
-pip install -e ".[ingest,compare,figures,dev]"
+pip install -e ".[compare,figures,dev]"
 pytest -m "not slow"; pytest -m slow; ruff check src tests scripts; mypy
 cd web && npm ci && npx tsc -b && npx vitest run && npx playwright test
 batting-order experiments && python scripts/make_paper_assets.py && (cd research && latexmk -pdf paper.tex)

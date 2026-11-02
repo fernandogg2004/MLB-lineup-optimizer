@@ -12,19 +12,24 @@ function sd(p: number[]): number {
   return Math.sqrt(p.reduce((a, v, i) => a + v * (i - m) ** 2, 0));
 }
 
+function gameSd(snap: GameSnapshot): number {
+  return (sd(snap.teams.away.actual.run_distribution) + sd(snap.teams.home.actual.run_distribution)) / 2;
+}
+
 export function GameView({ snap }: { snap: GameSnapshot }) {
-  const { t, fmt, signed, lang } = useI18n();
+  const { t, fmt, signed, pct, date, series } = useI18n();
   const g = snap.game;
   const [side, setSide] = useState<"away" | "home">("away");
   const team = snap.teams[side];
-  const date = new Date(`${g.date}T12:00:00Z`).toLocaleDateString(lang === "es" ? "es-ES" : "en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
   const ua = snap.teams.away.optimal.er9 - snap.teams.away.actual.er9;
   const ub = snap.teams.home.optimal.er9 - snap.teams.home.actual.er9;
-  const gameSd = (sd(snap.teams.away.actual.run_distribution) + sd(snap.teams.home.actual.run_distribution)) / 2;
+  const worstPct = Math.min(snap.teams.away.actual.percentile, snap.teams.home.actual.percentile);
+  // Round "top x%" up to a whole percent so the claim is never overstated.
+  const top = Math.max(0.01, Math.ceil((1 - worstPct) * 100) / 100);
+  const seriesLabel =
+    g.series_description && g.series_game_number
+      ? t("game.series", { series: series(g.series_description), n: g.series_game_number })
+      : series(g.series_description);
 
   return (
     <div className="space-y-6">
@@ -32,13 +37,10 @@ export function GameView({ snap }: { snap: GameSnapshot }) {
         <div className="flex flex-wrap items-center gap-2 text-sm">
           {g.reference === "true" && <span className="badge badge-ref">{t("game.reference")}</span>}
           <span className="text-muted">
-            {g.series_description && g.series_game_number
-              ? t("game.series", { series: g.series_description, n: g.series_game_number })
-              : g.series_description}{" "}
-            · {date} · {g.venue}
+            {seriesLabel} · {date(g.date)} · {g.venue}
           </span>
         </div>
-        <div className="scoreboard" aria-label={t("game.result")}>
+        <div className="scoreboard" role="group" aria-label={t("game.scoreboard")}>
           <span className="badge badge-fact">{t("game.historical")}</span>
           <div className="score-row">
             <span className="score-team">{g.away}</span>
@@ -51,25 +53,36 @@ export function GameView({ snap }: { snap: GameSnapshot }) {
           <div className="text-xs text-muted">{t("game.final")}</div>
         </div>
         <h1 className="hero-q">{t("hero.question")}</h1>
-        <p className="hero-a">
+        <p className="hero-verdict">
           <span className="badge badge-model mr-2">{t("game.model")}</span>
+          {top <= 0.1
+            ? t("hero.verdict", { top: pct(top) })
+            : t("hero.verdict_mixed", {
+                a: snap.teams.away.name,
+                b: snap.teams.home.name,
+                pa: pct(snap.teams.away.actual.percentile, 1),
+                pb: pct(snap.teams.home.actual.percentile, 1),
+              })}
+        </p>
+        <p className="hero-a">
           {t("hero.answer", {
             ua: signed(ua, 3),
             ub: signed(ub, 3),
             a: snap.teams.away.name,
             b: snap.teams.home.name,
-            sd: fmt(gameSd, 1),
+            sa: fmt(ua * 162, 1),
+            sb: fmt(ub * 162, 1),
+            sd: fmt(gameSd(snap), 1),
           })}
         </p>
-        <p className="text-sm text-muted mt-2">{t("hero.cutoff", { date })}</p>
+        <p className="text-sm text-muted mt-2">{t("hero.cutoff", { date: date(g.date) })}</p>
       </header>
 
-      <div role="tablist" aria-label={t("team.select")} className="segmented">
+      <div role="group" aria-label={t("team.select")} className="segmented">
         {(["away", "home"] as const).map((s) => (
           <button
             key={s}
-            role="tab"
-            aria-selected={side === s}
+            aria-pressed={side === s}
             className={side === s ? "seg seg-on" : "seg"}
             onClick={() => setSide(s)}
           >
@@ -88,10 +101,17 @@ function TeamPanel({ snap, team }: { snap: GameSnapshot; team: Team }) {
   const opp = snap.teams[team === snap.teams.away ? "home" : "away"];
   const u = team.uncertainty;
   const uplift = team.optimal.er9 - team.actual.er9;
+  const range = team.optimal.er9 - team.worst.er9;
+  const sdGame = gameSd(snap);
+  const mode = team.actual.run_distribution.indexOf(Math.max(...team.actual.run_distribution));
   return (
-    <div className="space-y-6" role="tabpanel">
+    <section className="space-y-6" aria-label={team.name}>
       <p className="text-muted">
-        {t("team.vs", { pitcher: team.opponent_starter.name, hand: team.opponent_starter.throws, team: opp.name })}
+        {t("team.vs", {
+          pitcher: team.opponent_starter.name,
+          hand: t(team.opponent_starter.throws === "L" ? "hand.L" : "hand.R"),
+          team: opp.name,
+        })}
       </p>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label={t("kpi.actual")} value={fmt(team.actual.er9, 3)} sub={t("kpi.runs9")} kind="used" />
@@ -116,7 +136,7 @@ function TeamPanel({ snap, team }: { snap: GameSnapshot; team: Team }) {
         <ChartCard
           title={t("dist.title")}
           subtitle={t("dist.subtitle")}
-          footer={t("dist.spread", { d: fmt(team.optimal.er9 - team.worst.er9, 3) })}
+          footer={t("dist.spread", { d: fmt(range, 3) })}
           table={
             <table className="data-table">
               <tbody>
@@ -129,18 +149,26 @@ function TeamPanel({ snap, team }: { snap: GameSnapshot; team: Team }) {
                 ].map(([k, v]) => (
                   <tr key={String(k)}>
                     <th scope="row">{k}</th>
-                    <td>{fmt(Number(v), 4)}</td>
+                    <td className="num">{fmt(Number(v), 4)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           }
         >
+          <p className="chart-note">
+            {t("dist.scale", { d: fmt(range, 3), r: pct(range / sdGame, 1), sd: fmt(sdGame, 1) })}
+          </p>
           <Histogram
             edges={team.all_orders.hist.edges}
             counts={team.all_orders.hist.counts}
             xLabel={t("dist.x")}
             yLabel={t("dist.y")}
+            summary={t("chart.dist_summary", {
+              u: fmt(team.actual.er9, 3),
+              p: pct(team.actual.percentile, 1),
+              o: fmt(team.optimal.er9, 3),
+            })}
             digits={2}
             markers={[
               { value: team.actual.er9, label: t("dist.used"), kind: "used" },
@@ -159,7 +187,7 @@ function TeamPanel({ snap, team }: { snap: GameSnapshot; team: Team }) {
                 {team.actual.run_distribution.slice(0, 16).map((p, i) => (
                   <tr key={i}>
                     <th scope="row">{i}</th>
-                    <td>{fmt(p * 100, 1)}%</td>
+                    <td className="num">{pct(p, 1)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -171,6 +199,7 @@ function TeamPanel({ snap, team }: { snap: GameSnapshot; team: Team }) {
             observed={team.observed_runs}
             observedLabel={t("runs.observed")}
             xLabel={t("runs.x")}
+            summary={t("chart.runs_summary", { m: mode, r: team.observed_runs ?? "—" })}
             maxX={15}
           />
         </ChartCard>
@@ -182,7 +211,11 @@ function TeamPanel({ snap, team }: { snap: GameSnapshot; team: Team }) {
           mid={uplift}
           hi={u.diff_q95}
           domain={[Math.min(-0.02, u.diff_q05 - 0.01), Math.max(0.06, u.diff_q95 + 0.01)]}
-          label={t("unc.interval")}
+          label={t("chart.interval_summary", {
+            m: signed(uplift, 3),
+            lo: signed(u.diff_q05, 3),
+            hi: signed(u.diff_q95, 3),
+          })}
         />
         <dl className="grid gap-3 sm:grid-cols-3 text-sm mt-2">
           <div className="mini">
@@ -197,16 +230,14 @@ function TeamPanel({ snap, team }: { snap: GameSnapshot; team: Team }) {
           </div>
           <div className="mini">
             <dt className="text-muted">{t("unc.stable")}</dt>
-            <dd className="mini-val">
-              {pct(u.p_same_optimum)}
-            </dd>
+            <dd className="mini-val">{pct(u.p_same_optimum)}</dd>
           </div>
         </dl>
       </ChartCard>
 
       <Simulator key={`${snap.game.game_pk}-${team.team}`} snap={snap} team={team} />
       <Technical snap={snap} team={team} />
-    </div>
+    </section>
   );
 }
 
@@ -225,21 +256,24 @@ function Stat(props: { label: string; value: string; sub: string; extra?: string
 }
 
 function LineupComparison({ team }: { team: Team }) {
-  const { t, fmt } = useI18n();
+  const { t, fmt, pct } = useI18n();
   const same = team.optimal.order.every((p, i) => p === team.actual.order[i]);
   const optSlot = (p: number) => team.optimal.order.indexOf(p);
+  const u = team.uncertainty;
+  const leadShare = u.slot_player_freq[0]?.[team.optimal.order[0]] ?? 0;
   return (
     <section className="card" aria-labelledby="lc-title">
-      <h3 id="lc-title" className="card-title">
+      <h2 id="lc-title" className="card-title">
         {t("lineup.title")}
-      </h3>
+      </h2>
       {same && <p className="card-sub">{t("lineup.identical")}</p>}
+      <p className="callout mt-2">{t("lineup.stability", { p: pct(u.p_same_optimum), lead: pct(leadShare) })}</p>
       <div className="grid gap-6 md:grid-cols-2 mt-3">
         {(["used", "optimal"] as const).map((kind) => {
           const order = kind === "used" ? team.actual.order : team.optimal.order;
           return (
             <div key={kind}>
-              <h4 className={`lineup-head lineup-head-${kind}`}>{kind === "used" ? t("lineup.used") : t("lineup.optimal")}</h4>
+              <h3 className={`lineup-head lineup-head-${kind}`}>{kind === "used" ? t("lineup.used") : t("lineup.optimal")}</h3>
               <table className="lineup">
                 <thead>
                   <tr>
@@ -294,22 +328,21 @@ function WhyPanel({ team }: { team: Team }) {
   const { t, fmt, signed } = useI18n();
   const paUsed = team.actual.pa_by_slot;
   const paOpt = team.optimal.pa_by_slot;
-  const moves = useMemo(
+  // Expected PAs of each hitter: in the order used (slot = roster index) and in the top order.
+  const perPlayer = useMemo(
     () =>
-      team.hitters
-        .map((h, p) => {
-          const to = team.optimal.order.indexOf(p);
-          return { name: h.name, from: p + 1, to: to + 1, dpa: paOpt[to] - paUsed[p] };
-        })
-        .filter((m) => m.from !== m.to)
-        .sort((a, b) => Math.abs(b.dpa) - Math.abs(a.dpa)),
+      team.hitters.map((h, p) => {
+        const to = team.optimal.order.indexOf(p);
+        return { name: h.name, from: p + 1, to: to + 1, used: paUsed[p], opt: paOpt[to], dpa: paOpt[to] - paUsed[p] };
+      }),
     [team, paOpt, paUsed],
   );
+  const moves = perPlayer.filter((m) => m.from !== m.to).sort((a, b) => Math.abs(b.dpa) - Math.abs(a.dpa));
   return (
     <section className="card" aria-labelledby="why-title">
-      <h3 id="why-title" className="card-title">
+      <h2 id="why-title" className="card-title">
         {t("why.title")}
-      </h3>
+      </h2>
       <p className="mt-2">{t("why.intro", { d: fmt(paUsed[0] - paUsed[8], 2) })}</p>
       {moves.length > 0 && (
         <ul className="list-disc ml-5 mt-2 space-y-1">
@@ -320,11 +353,12 @@ function WhyPanel({ team }: { team: Team }) {
       )}
       <p className="text-sm text-muted mt-3">{t("why.caveat")}</p>
       <div className="mt-4">
-        <h4 className="font-medium text-sm">{t("tech.pa")}</h4>
+        <h3 className="font-medium text-sm">{t("tech.pa")}</h3>
+        <p className="text-xs text-muted">{t("tech.pa_note")}</p>
         <PairedBars
-          categories={paUsed.map((_, i) => String(i + 1))}
-          a={paUsed}
-          b={paOpt}
+          categories={perPlayer.map((m) => m.name)}
+          a={perPlayer.map((m) => m.used)}
+          b={perPlayer.map((m) => m.opt)}
           aLabel={t("tech.pa_used")}
           bLabel={t("tech.pa_opt")}
         />
@@ -334,13 +368,13 @@ function WhyPanel({ team }: { team: Team }) {
 }
 
 function Technical({ snap, team }: { snap: GameSnapshot; team: Team }) {
-  const { t, fmt, pct } = useI18n();
+  const { t, fmt, pct, date } = useI18n();
   return (
     <details className="card">
       <summary className="card-title cursor-pointer">{t("tech.title")}</summary>
       <div className="mt-4 space-y-6">
-        <div className="overflow-x-auto">
-          <h4 className="font-medium text-sm mb-2">{t("tech.probs")}</h4>
+        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={t("tech.probs")}>
+          <h3 className="font-medium text-sm mb-2">{t("tech.probs")}</h3>
           <table className="data-table">
             <thead>
               <tr>
@@ -374,8 +408,8 @@ function Technical({ snap, team }: { snap: GameSnapshot; team: Team }) {
             </tbody>
           </table>
         </div>
-        <div className="overflow-x-auto">
-          <h4 className="font-medium text-sm mb-2">{t("tech.regime")}</h4>
+        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label={t("tech.regime")}>
+          <h3 className="font-medium text-sm mb-2">{t("tech.regime")}</h3>
           <table className="data-table">
             <thead>
               <tr>
@@ -396,7 +430,11 @@ function Technical({ snap, team }: { snap: GameSnapshot; team: Team }) {
           </table>
         </div>
         <p className="text-xs text-muted">
-          {t("tech.version", { date: snap.generated_at.slice(0, 10), sw: `${snap.software.package}@${snap.software.git}`, cutoff: snap.cutoff.information_before })}
+          {t("tech.version", {
+            date: date(snap.generated_at.slice(0, 10)),
+            sw: `${snap.software.package}@${snap.software.git}`,
+            cutoff: date(snap.cutoff.information_before),
+          })}
           {" · "}
           <a className="link" href={`${import.meta.env.BASE_URL}data/games/${snap.game.game_pk}.json`} download>
             {t("tech.download")}

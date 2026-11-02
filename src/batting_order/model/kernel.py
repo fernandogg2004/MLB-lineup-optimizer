@@ -13,7 +13,7 @@ Censored (walk-off) and bookkeeping-violating transitions are excluded.
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 
 import numpy as np
 import polars as pl
@@ -57,3 +57,21 @@ def fit_kernel(pa: pl.DataFrame, cutoff: date, start: date, alpha: float = 2.0) 
             "cutoff": cutoff.isoformat(),
         },
     )
+
+
+KERNEL_YEARS = 3
+KERNEL_ERA_START = date(2023, 1, 1)  # 2023 rule changes (bases, pick-off limits, shift ban)
+
+
+def kernel_for(pa: pl.DataFrame, d: date, cache: dict[date, Kernel]) -> Kernel:
+    """Kernel for a game on ``d``: fitted on the window ending on the first day of its month.
+
+    The window is the previous ``KERNEL_YEARS`` years, but not before the 2023 rule changes.
+    """
+    key = date(d.year, d.month, 1)
+    if key not in cache:
+        start = max(KERNEL_ERA_START, key - timedelta(days=365 * KERNEL_YEARS))
+        if start >= key:  # early 2023: fall back to the previous year rather than nothing
+            start = key - timedelta(days=365)
+        cache[key] = fit_kernel(pa, key, start)
+    return cache[key]

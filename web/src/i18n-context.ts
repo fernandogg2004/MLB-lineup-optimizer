@@ -10,6 +10,8 @@ export interface Ctx {
   fmt: (v: number, digits?: number) => string;
   int: (v: number) => string;
   pct: (v: number, digits?: number) => string;
+  date: (iso: string) => string;
+  series: (s: string) => string;
   signed: (v: number, digits?: number) => string;
 }
 

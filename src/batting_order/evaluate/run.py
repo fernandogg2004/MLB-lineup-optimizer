@@ -19,11 +19,13 @@ import numpy as np
 import polars as pl
 
 from batting_order import __version__
+from batting_order.config import project_root
+from batting_order.config import tuned_hyper as _tuned_hyper
 from batting_order.data.build import load_lineups, load_transitions
-from batting_order.engine.markov import Matchup, evaluate, exhaustive, run_distribution
+from batting_order.engine.markov import Matchup, exhaustive, run_distribution
 from batting_order.engine.run_expectancy import run_expectancy
 from batting_order.engine.states import N_OUT, OUTCOMES
-from batting_order.evaluate.games import kernel_for, run_games
+from batting_order.evaluate.games import run_games
 from batting_order.evaluate.pa_eval import (
     batter_only_predictor,
     calibration_table,
@@ -36,7 +38,7 @@ from batting_order.evaluate.pa_eval import (
     rolling,
     snapshot_features,
 )
-from batting_order.model.kernel import fit_kernel
+from batting_order.model.kernel import fit_kernel, kernel_for
 from batting_order.model.matchup import GameContext, build_matchup
 from batting_order.model.pa_model import Hyper, build_snapshot
 from batting_order.optimize.search import (
@@ -54,12 +56,17 @@ from batting_order.optimize.search import (
 from batting_order.snapshot import git_revision
 
 log = logging.getLogger(__name__)
-ROOT = Path(__file__).resolve().parents[3]
+# Resolved at run time from $BATTING_ORDER_ROOT / the current directory (see config.py).
+ROOT = Path(".")
 DATA = ROOT / "data"
 OUT = ROOT / "outputs"
 WORK = ROOT / "work"
 SEASONS = [2021, 2022, 2023, 2024, 2025, 2026]
-TUNED_PATH = OUT / "e2_tuning.json"
+
+
+def _set_root(root: Path) -> None:
+    global ROOT, DATA, OUT, WORK
+    ROOT, DATA, OUT, WORK = root, root / "data", root / "outputs", root / "work"
 
 
 def _save(name: str, obj: dict[str, Any]) -> None:
@@ -75,14 +82,43 @@ def _save(name: str, obj: dict[str, Any]) -> None:
 
 
 def tuned_hyper() -> Hyper:
-    if TUNED_PATH.exists():
-        h = json.loads(TUNED_PATH.read_text())["selected"]
-        return Hyper(
-            batter_scale=h["batter_scale"],
-            pitcher_scale=h["pitcher_scale"],
-            half_life_days=h["half_life_days"],
+    return _tuned_hyper(ROOT)[0]
+
+
+# ----------------------------------------------------------------------
+# E0 — audit of inferred starting lineups against official boxscores
+# ----------------------------------------------------------------------
+
+
+def e0(lineups: pl.DataFrame, n: int = 60) -> None:
+    from batting_order.data.statsapi import StatsApi, official_lineups
+
+    api = StatsApi(DATA / "raw" / "statsapi")
+    sample = lineups.filter(pl.col("reliable") & (pl.col("season") == 2026)).sample(n, seed=7)
+    rows = []
+    for r in sample.iter_rows(named=True):
+        off = official_lineups(api.boxscore(r["game_pk"]))
+        side = "away" if r["bat_team"] == r["away_team"] else "home"
+        other = "home" if side == "away" else "away"
+        rows.append(
+            {
+                "game_pk": r["game_pk"],
+                "lineup_match": [h.player_id for h in off[side].starters] == list(r["lineup"]),
+                "starter_match": off[other].starting_pitcher_id == r["opp_starter"],
+            }
         )
-    return Hyper()
+    df = pl.DataFrame(rows)
+    share = float((df["lineup_match"] & df["starter_match"]).mean())
+    _save(
+        "e0_lineup_audit",
+        {
+            "n": df.height,
+            "share_both_match": share,
+            "share_lineup_match": float(df["lineup_match"].mean()),
+            "share_starter_match": float(df["starter_match"].mean()),
+            "rows": rows,
+        },
+    )
 
 
 # ----------------------------------------------------------------------
@@ -118,6 +154,34 @@ def e1(pa: pl.DataFrame) -> None:
             "transitions": int(sp.height),
             "non_conserved": int((~sp["conserved"]).sum()),
             "league_mix": dict(zip(OUTCOMES, np.round(x, 4).tolist(), strict=True)),
+            # Selection check: outcome mix observed in state 5 (runners on 1st and 3rd, 0 out).
+            "state5_mix": dict(
+                zip(
+                    OUTCOMES,
+                    np.round(
+                        np.bincount(sp.filter(pl.col("s") == 5)["c"].to_numpy(), minlength=N_OUT)
+                        / max(sp.filter(pl.col("s") == 5).height, 1),
+                        4,
+                    ).tolist(),
+                    strict=True,
+                )
+            ),
+            "state5_immediate_runs_model_vs_data": {
+                "model": np.round(k.R[:, 5], 4).tolist(),
+                "data": [
+                    float(v) if v == v else None
+                    for v in (
+                        sp.filter((pl.col("s") == 5) & pl.col("conserved"))
+                        .group_by("c")
+                        .agg(pl.col("runs").mean())
+                        .sort("c")
+                        .join(pl.DataFrame({"c": list(range(N_OUT))}), on="c", how="right")
+                        .sort("c")["runs"]
+                        .fill_null(float("nan"))
+                        .to_list()
+                    )
+                ],
+            },
         }
     _save(
         "e1_kernel",
@@ -926,13 +990,15 @@ def e5(pa: pl.DataFrame, quick: bool) -> None:
 
 def main(only: list[str] | None = None, quick: bool = False) -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
+    _set_root(project_root())
     seasons = [s for s in SEASONS if (DATA / "processed" / f"transitions_{s}.parquet").exists()]
     pa = load_transitions(DATA, seasons)
     lineups = load_lineups(DATA, seasons)
-    todo = only or ["e1", "e2", "e2b", "e3", "e4a", "e4c", "e5"]
+    todo = only or ["e0", "e1", "e2", "e2b", "e2c", "e3", "e4a", "e4c", "e5"]
     for name in todo:
         t = time.time()
         {
+            "e0": lambda: e0(lineups),
             "e1": lambda: e1(pa),
             "e2": lambda: e2(pa, quick),
             "e2b": lambda: e2_legacy(pa),
@@ -943,6 +1009,3 @@ def main(only: list[str] | None = None, quick: bool = False) -> None:
             "e5": lambda: e5(pa, quick),
         }[name]()
         log.info("%s done in %.0fs", name, time.time() - t)
-
-
-__all__ = ["Matchup", "evaluate", "main"]

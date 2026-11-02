@@ -15,6 +15,66 @@
    "home_runs": 1,
    "reference": true,
    "path": "games/849799.json"
+  },
+  {
+   "game_pk": 849803,
+   "date": "2026-10-27",
+   "game_type": "W",
+   "series_description": "World Series",
+   "series_game_number": 4,
+   "away": "Milwaukee Brewers",
+   "home": "Tampa Bay Rays",
+   "away_abbr": "MIL",
+   "home_abbr": "TB",
+   "away_runs": 3,
+   "home_runs": 4,
+   "reference": false,
+   "path": "games/849803.json"
+  },
+  {
+   "game_pk": 849804,
+   "date": "2026-10-26",
+   "game_type": "W",
+   "series_description": "World Series",
+   "series_game_number": 3,
+   "away": "Milwaukee Brewers",
+   "home": "Tampa Bay Rays",
+   "away_abbr": "MIL",
+   "home_abbr": "TB",
+   "away_runs": 10,
+   "home_runs": 1,
+   "reference": false,
+   "path": "games/849804.json"
+  },
+  {
+   "game_pk": 849802,
+   "date": "2026-10-24",
+   "game_type": "W",
+   "series_description": "World Series",
+   "series_game_number": 2,
+   "away": "Tampa Bay Rays",
+   "home": "Milwaukee Brewers",
+   "away_abbr": "TB",
+   "home_abbr": "MIL",
+   "away_runs": 4,
+   "home_runs": 5,
+   "reference": false,
+   "path": "games/849802.json"
+  },
+  {
+   "game_pk": 849805,
+   "date": "2026-10-23",
+   "game_type": "W",
+   "series_description": "World Series",
+   "series_game_number": 1,
+   "away": "Tampa Bay Rays",
+   "home": "Milwaukee Brewers",
+   "away_abbr": "TB",
+   "home_abbr": "MIL",
+   "away_runs": 2,
+   "home_runs": 3,
+   "reference": false,
+   "path": "games/849805.json"
   }
  ]
 }

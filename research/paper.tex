@@ -245,8 +245,9 @@ final transition of a walk-off half-inning is censored, because the game ended b
 and is excluded from estimation.
 
 Starting lineups are inferred as the first nine distinct batters of each team; the inference is
-marked reliable when the tenth PA returns to the leadoff hitter. In a random audit of 60 team-games
-the inferred lineup and opposing starter matched the official boxscore in all 60. For the
+marked reliable when the tenth PA returns to the leadoff hitter. In a random audit of \EzeroN{}
+reliable 2026 team-games (E0) the inferred lineup and opposing starter matched the official boxscore
+in \EzeroMatch{} of them. For the
 reference game we use the official boxscore (slot codes $100,\dots,900$).
 \Cref{tab:data} summarizes the data.
 
@@ -581,7 +582,8 @@ model this.
 
 \paragraph{Data.} Statcast occasionally revises recent games; decisive-pitch states may contain
 scorer errors (removed when they violate bookkeeping, 0.05--0.06\% of PAs). Lineups for the
-backtests are inferred, with a 100\% match rate in an audit of 60 games but no guarantee.
+backtests are inferred (\EzeroMatch{} of \EzeroN{} matched the official boxscore in the E0 audit),
+with no guarantee for every game.
 
 \paragraph{Counterfactuals.} As stated in \cref{rem:identification}, none of the comparisons
 between orders is an observed effect.

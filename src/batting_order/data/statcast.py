@@ -183,3 +183,21 @@ def read_season(raw_root: Path, season: int) -> pl.DataFrame:
     df = pl.concat(frames, how="diagonal")
     # Safety net: a pitch is identified by (game, at-bat, pitch number).
     return df.unique(["game_pk", "at_bat_number", "pitch_number"], keep="last", maintain_order=True)
+
+
+def verify_season(season_dir: Path, reference: Path) -> dict[str, list[str]]:
+    """Compare raw files in ``season_dir`` with a published manifest (``reference``).
+
+    Returns lists of files that are ``missing`` locally, ``changed`` (different SHA-256) and
+    ``extra`` (present locally but not in the manifest). Nothing is modified.
+    """
+    ref: dict[str, dict[str, object]] = json.loads(reference.read_text(encoding="utf-8"))
+    local = {p.name: p for p in sorted(season_dir.glob("*.parquet"))}
+    missing = sorted(set(ref) - set(local))
+    extra = sorted(set(local) - set(ref))
+    changed = sorted(
+        name
+        for name in set(ref) & set(local)
+        if hashlib.sha256(local[name].read_bytes()).hexdigest() != ref[name]["sha256"]
+    )
+    return {"missing": missing, "changed": changed, "extra": extra}

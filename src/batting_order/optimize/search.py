@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 import numpy as np
 from numpy.typing import NDArray
 
-from batting_order.engine.markov import Matchup, evaluate, exhaustive
+from batting_order.engine.markov import Matchup, evaluate
 from batting_order.engine.montecarlo import simulate
 from batting_order.engine.states import Kernel
 
@@ -225,11 +225,3 @@ def genetic(
         trace.append(max(fit))
     i = int(np.argmax(fit))
     return SearchResult("genetic", P[i], fit[i], 0, trace=trace)
-
-
-def exhaustive_search(
-    kernel: Kernel, m: Matchup, allowed: NDArray[np.bool_] | None = None
-) -> SearchResult:
-    res = exhaustive(kernel, m)
-    order, val = res.best(allowed)
-    return SearchResult("exhaustive", order, val, 362_880)

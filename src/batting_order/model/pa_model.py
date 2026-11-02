@@ -29,7 +29,7 @@ import numpy as np
 import polars as pl
 from numpy.typing import NDArray
 
-from batting_order.engine.states import N_OUT, OUTCOMES
+from batting_order.engine.states import N_OUT
 
 FloatArr = NDArray[np.float64]
 HANDS = ("L", "R")
@@ -41,7 +41,10 @@ BASE_STRENGTH = np.array([12.0, 15.0, 40.0, 25.0, 6.0, 12.0, 60.0, 60.0])
 
 @dataclass(frozen=True)
 class Hyper:
-    """Hyperparameters, tuned on 2024 only (see ``evaluate/tuning.py``)."""
+    """Hyperparameters, tuned on 2024 only.
+
+    Selected by experiment E2 (``evaluate/run.py:e2_tune``); loaded by ``config.tuned_hyper``.
+    """
 
     batter_scale: float = 1.0
     pitcher_scale: float = 1.5
@@ -326,10 +329,6 @@ def brier(probs: FloatArr, y: NDArray[np.int64]) -> float:
     onehot = np.zeros_like(probs)
     onehot[np.arange(len(y)), y] = 1.0
     return float(np.mean(np.sum((probs - onehot) ** 2, axis=1)))
-
-
-def class_names() -> tuple[str, ...]:
-    return OUTCOMES
 
 
 __all__ = ["Hyper", "Snapshot", "brier", "build_snapshot", "log_loss", "predict_frame"]

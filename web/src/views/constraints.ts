@@ -1,9 +1,4 @@
-/** Feasibility of lock constraints: each slot <= 1 locked hitter and vice versa. */
-export function locksConsistent(locks: Record<number, number>): boolean {
-  const players = Object.values(locks);
-  return new Set(players).size === players.length;
-}
-
+/** `allowed[slot][player]` for locks of the form slot -> player. */
 export function allowedMatrix(locks: Record<number, number>): boolean[][] {
   const allowed = Array.from({ length: 9 }, () => Array(9).fill(true));
   for (const [slotS, player] of Object.entries(locks)) {
@@ -12,4 +7,10 @@ export function allowedMatrix(locks: Record<number, number>): boolean[][] {
     for (let s = 0; s < 9; s++) if (s !== slot) allowed[s][player] = false;
   }
   return allowed;
+}
+
+/** Nearest unlocked slot from `from` in direction `dir`, skipping locked slots; null if none. */
+export function nextFreeSlot(from: number, dir: -1 | 1, locked: Set<number>): number | null {
+  for (let s = from + dir; s >= 0 && s < 9; s += dir) if (!locked.has(s)) return s;
+  return null;
 }

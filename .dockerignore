@@ -1,0 +1,13 @@
+# Docker build context for orchestration/airflow/Dockerfile.pipeline: code only.
+data/
+models/
+work/
+outputs/
+logs_rebuild/
+.env
+.env.*
+.venv*/
+web/
+research/
+.git/
+**/__pycache__/

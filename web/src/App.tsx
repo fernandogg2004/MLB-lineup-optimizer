@@ -18,7 +18,7 @@ function parseHash(): Route {
 }
 
 function Shell() {
-  const { t, lang, setLang } = useI18n();
+  const { t, lang, setLang, date } = useI18n();
   const [route, setRoute] = useState<Route>(parseHash);
   const [index, setIndex] = useState<GameIndex | null>(null);
   const [loaded, setLoaded] = useState<{ pk: number; snap: GameSnapshot | null; error: boolean } | null>(null);
@@ -94,7 +94,7 @@ function Shell() {
                 >
                   {index.games.map((g) => (
                     <option key={g.game_pk} value={g.game_pk}>
-                      {g.date} · {g.away_abbr} {g.away_runs}–{g.home_runs} {g.home_abbr}
+                      {date(g.date)} · {g.away_abbr} {g.away_runs}–{g.home_runs} {g.home_abbr}
                       {g.reference ? " ★" : ""}
                     </option>
                   ))}
@@ -104,7 +104,6 @@ function Shell() {
             <button
               className="btn btn-sm"
               onClick={() => setLang(lang === "en" ? "es" : "en")}
-              aria-label={`${t("lang.label")}: ${t("lang.switch")}`}
               lang={lang === "en" ? "es" : "en"}
             >
               {t("lang.switch")}

@@ -1,7 +1,11 @@
 # Manual season update. Never scheduled (ADR 0001): run it from the Actions tab.
-# It downloads Statcast for the season (plus history), rebuilds the processed tables,
-# writes dashboard snapshots for newly completed games and opens a pull request.
+# Downloads Statcast for the season (plus history), rebuilds the processed tables, writes
+# dashboard snapshots for newly completed games, runs the test suites and opens a pull request.
 # Nothing is deployed automatically; see docs/operations.md.
+#
+# Requirements: Settings → Actions → General → "Allow GitHub Actions to create and approve pull
+# requests". Pull requests opened with the built-in token do not trigger other workflows, which is
+# why the tests run in this job before the PR is opened.
 name: Season update (manual)
 on:
   workflow_dispatch:
@@ -19,11 +23,19 @@ jobs:
   update:
     runs-on: ubuntu-latest
     timeout-minutes: 300
+    env:
+      SEASON: ${{ inputs.season }}
+      LAST: ${{ inputs.last }}
+      BATTING_ORDER_ROOT: ${{ github.workspace }}
     steps:
+      - name: Validate inputs
+        run: |
+          [[ "$SEASON" =~ ^20[0-9]{2}$ ]] || { echo "invalid season: $SEASON"; exit 1; }
+          [[ "$LAST" =~ ^[0-9]{1,4}$ ]] || { echo "invalid last: $LAST"; exit 1; }
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.11", cache: pip }
-      - run: pip install ".[ingest]"
+      - run: pip install ".[dev]"
       - name: Restore raw data cache
         uses: actions/cache@v4
         with:
@@ -32,21 +44,27 @@ jobs:
           restore-keys: raw-${{ inputs.season }}-
       - name: History (three previous seasons)
         run: |
-          S=${{ inputs.season }}
-          batting-order ingest $((S-3)) $((S-2)) $((S-1))
-          batting-order build $((S-3)) $((S-2)) $((S-1))
+          batting-order ingest $((SEASON-3)) $((SEASON-2)) $((SEASON-1))
+          batting-order build $((SEASON-3)) $((SEASON-2)) $((SEASON-1))
       - name: Update season and snapshots
-        run: batting-order update --season ${{ inputs.season }} --last ${{ inputs.last }}
+        run: batting-order update --season "$SEASON" --last "$LAST"
+      - name: Python tests
+        run: pytest -m "not slow" -q
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: web/package-lock.json }
+      - name: Web build and tests
+        working-directory: web
+        run: npm ci && npx tsc -b && npx vitest run && npm run build
       - name: Open pull request
         env: { GH_TOKEN: "${{ github.token }}" }
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          BR="season-update/${{ inputs.season }}-${{ github.run_id }}"
+          BR="season-update/${SEASON}-${{ github.run_id }}"
           git switch -c "$BR"
           git add web/public/data
           if git diff --cached --quiet; then echo "No new snapshots."; exit 0; fi
-          git commit -m "data: season ${{ inputs.season }} snapshots (run ${{ github.run_id }})"
+          git commit -m "data: season ${SEASON} snapshots (run ${{ github.run_id }})"
           git push origin "$BR"
-          gh pr create --title "Season ${{ inputs.season }} snapshots" \
-            --body "Automated snapshot update from workflow run ${{ github.run_id }}. Review, merge, then deploy (docs/operations.md)."
+          gh pr create --title "Season ${SEASON} snapshots" \
+            --body "Automated snapshot update from workflow run ${{ github.run_id }}. Tests passed in that run. Review, merge, then deploy (docs/operations.md)."
