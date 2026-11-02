@@ -3,7 +3,7 @@
 This note records which code produced each output in `outputs/` and how the results were verified
 against a clean commit (audit findings A-4, D-18).
 
-## Final state (commit `8ed6f63`)
+## Final state (commit `33ad5e4`)
 
 | Output | Produced with | Notes |
 |---|---|---|
@@ -20,7 +20,7 @@ refactoring (verified: bit-exact reproduction of 25 sampled team-games at `07d57
 
 After `07d570c` the data pipeline censors every end-of-game transition that did not end in three
 outs (finding B-5; previously only walk-offs from the 9th inning on). This changes 15 of about
-560,000 transitions in the 2023–2026 kernel window. `scripts/check_provenance.py` at `8ed6f63`
+560,000 transitions in the 2023–2026 kernel window. `scripts/check_provenance.py` at `33ad5e4`
 recomputes 25 random team-games of the E3/E4b table and the reference game with the current code:
 
 - reference game E[R] (order used and top order): deviation **0.0** (regenerated with current code);
@@ -29,7 +29,7 @@ recomputes 25 random team-games of the E3/E4b table and the reference game with 
   below every difference the paper interprets.
 
 The expensive experiments (E3 per-game rows, E4a method table, E4c; about six hours of compute)
-were therefore not re-run. The paper cites `8ed6f63`.
+were therefore not re-run. The paper cites `33ad5e4`.
 
 ## Environment
 
