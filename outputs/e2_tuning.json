@@ -3,13 +3,25 @@
  "generated_at": "2026-11-02",
  "software": {
   "package": "2.0.0",
-  "git": "a4a7042"
+  "git": "fc12f7f-dirty"
  },
  "period": [
   "2024-04-01",
   "2024-10-01"
  ],
  "grid": [
+  {
+   "batter_scale": 0.125,
+   "pitcher_scale": 0.1875,
+   "half_life_days": 180.0,
+   "log_loss": 1.74757008400483
+  },
+  {
+   "batter_scale": 0.125,
+   "pitcher_scale": 0.1875,
+   "half_life_days": 270.0,
+   "log_loss": 1.746709658260079
+  },
   {
    "batter_scale": 0.125,
    "pitcher_scale": 0.1875,
@@ -27,6 +39,18 @@
    "pitcher_scale": 0.1875,
    "half_life_days": 1095.0,
    "log_loss": 1.7473942843753125
+  },
+  {
+   "batter_scale": 0.125,
+   "pitcher_scale": 0.375,
+   "half_life_days": 180.0,
+   "log_loss": 1.7465772696274524
+  },
+  {
+   "batter_scale": 0.125,
+   "pitcher_scale": 0.375,
+   "half_life_days": 270.0,
+   "log_loss": 1.745775489648567
   },
   {
    "batter_scale": 0.125,
@@ -49,6 +73,18 @@
   {
    "batter_scale": 0.125,
    "pitcher_scale": 0.75,
+   "half_life_days": 180.0,
+   "log_loss": 1.746556222326763
+  },
+  {
+   "batter_scale": 0.125,
+   "pitcher_scale": 0.75,
+   "half_life_days": 270.0,
+   "log_loss": 1.7456614340737586
+  },
+  {
+   "batter_scale": 0.125,
+   "pitcher_scale": 0.75,
    "half_life_days": 365.0,
    "log_loss": 1.7454536619978258
   },
@@ -63,6 +99,18 @@
    "pitcher_scale": 0.75,
    "half_life_days": 1095.0,
    "log_loss": 1.7459784897218482
+  },
+  {
+   "batter_scale": 0.125,
+   "pitcher_scale": 1.5,
+   "half_life_days": 180.0,
+   "log_loss": 1.7475247757226213
+  },
+  {
+   "batter_scale": 0.125,
+   "pitcher_scale": 1.5,
+   "half_life_days": 270.0,
+   "log_loss": 1.746461175082043
   },
   {
    "batter_scale": 0.125,
@@ -85,6 +133,18 @@
   {
    "batter_scale": 0.125,
    "pitcher_scale": 3.0,
+   "half_life_days": 180.0,
+   "log_loss": 1.7491990604723302
+  },
+  {
+   "batter_scale": 0.125,
+   "pitcher_scale": 3.0,
+   "half_life_days": 270.0,
+   "log_loss": 1.7480127806299743
+  },
+  {
+   "batter_scale": 0.125,
+   "pitcher_scale": 3.0,
    "half_life_days": 365.0,
    "log_loss": 1.7475405281221421
   },
@@ -99,6 +159,18 @@
    "pitcher_scale": 3.0,
    "half_life_days": 1095.0,
    "log_loss": 1.747274706061737
+  },
+  {
+   "batter_scale": 0.25,
+   "pitcher_scale": 0.1875,
+   "half_life_days": 180.0,
+   "log_loss": 1.746698953113577
+  },
+  {
+   "batter_scale": 0.25,
+   "pitcher_scale": 0.1875,
+   "half_life_days": 270.0,
+   "log_loss": 1.7459124656368168
   },
   {
    "batter_scale": 0.25,
@@ -121,6 +193,18 @@
   {
    "batter_scale": 0.25,
    "pitcher_scale": 0.375,
+   "half_life_days": 180.0,
+   "log_loss": 1.745698641630315
+  },
+  {
+   "batter_scale": 0.25,
+   "pitcher_scale": 0.375,
+   "half_life_days": 270.0,
+   "log_loss": 1.7449731176478078
+  },
+  {
+   "batter_scale": 0.25,
+   "pitcher_scale": 0.375,
    "half_life_days": 365.0,
    "log_loss": 1.7448620861741535
   },
@@ -135,6 +219,18 @@
    "pitcher_scale": 0.375,
    "half_life_days": 1095.0,
    "log_loss": 1.745595623320817
+  },
+  {
+   "batter_scale": 0.25,
+   "pitcher_scale": 0.75,
+   "half_life_days": 180.0,
+   "log_loss": 1.7456707178971835
+  },
+  {
+   "batter_scale": 0.25,
+   "pitcher_scale": 0.75,
+   "half_life_days": 270.0,
+   "log_loss": 1.7448542402659237
   },
   {
    "batter_scale": 0.25,
@@ -157,6 +253,18 @@
   {
    "batter_scale": 0.25,
    "pitcher_scale": 1.5,
+   "half_life_days": 180.0,
+   "log_loss": 1.7466339177328567
+  },
+  {
+   "batter_scale": 0.25,
+   "pitcher_scale": 1.5,
+   "half_life_days": 270.0,
+   "log_loss": 1.7456501581022175
+  },
+  {
+   "batter_scale": 0.25,
+   "pitcher_scale": 1.5,
    "half_life_days": 365.0,
    "log_loss": 1.7453190975142792
   },
@@ -171,6 +279,18 @@
    "pitcher_scale": 1.5,
    "half_life_days": 1095.0,
    "log_loss": 1.745439692233634
+  },
+  {
+   "batter_scale": 0.25,
+   "pitcher_scale": 3.0,
+   "half_life_days": 180.0,
+   "log_loss": 1.7483048139922075
+  },
+  {
+   "batter_scale": 0.25,
+   "pitcher_scale": 3.0,
+   "half_life_days": 270.0,
+   "log_loss": 1.7471993857716626
   },
   {
    "batter_scale": 0.25,
@@ -193,6 +313,18 @@
   {
    "batter_scale": 0.5,
    "pitcher_scale": 0.1875,
+   "half_life_days": 180.0,
+   "log_loss": 1.7465502265200725
+  },
+  {
+   "batter_scale": 0.5,
+   "pitcher_scale": 0.1875,
+   "half_life_days": 270.0,
+   "log_loss": 1.745689329557058
+  },
+  {
+   "batter_scale": 0.5,
+   "pitcher_scale": 0.1875,
    "half_life_days": 365.0,
    "log_loss": 1.745510653521348
   },
@@ -207,6 +339,18 @@
    "pitcher_scale": 0.1875,
    "half_life_days": 1095.0,
    "log_loss": 1.7461450629256958
+  },
+  {
+   "batter_scale": 0.5,
+   "pitcher_scale": 0.375,
+   "half_life_days": 180.0,
+   "log_loss": 1.7455405588296076
+  },
+  {
+   "batter_scale": 0.5,
+   "pitcher_scale": 0.375,
+   "half_life_days": 270.0,
+   "log_loss": 1.7447432364684408
   },
   {
    "batter_scale": 0.5,
@@ -229,6 +373,18 @@
   {
    "batter_scale": 0.5,
    "pitcher_scale": 0.75,
+   "half_life_days": 180.0,
+   "log_loss": 1.745503902898013
+  },
+  {
+   "batter_scale": 0.5,
+   "pitcher_scale": 0.75,
+   "half_life_days": 270.0,
+   "log_loss": 1.7446179522142617
+  },
+  {
+   "batter_scale": 0.5,
+   "pitcher_scale": 0.75,
    "half_life_days": 365.0,
    "log_loss": 1.7443657030260384
   },
@@ -243,6 +399,18 @@
    "pitcher_scale": 0.75,
    "half_life_days": 1095.0,
    "log_loss": 1.7447171365601768
+  },
+  {
+   "batter_scale": 0.5,
+   "pitcher_scale": 1.5,
+   "half_life_days": 180.0,
+   "log_loss": 1.7464602317310165
+  },
+  {
+   "batter_scale": 0.5,
+   "pitcher_scale": 1.5,
+   "half_life_days": 270.0,
+   "log_loss": 1.7454087635912539
   },
   {
    "batter_scale": 0.5,
@@ -265,6 +433,18 @@
   {
    "batter_scale": 0.5,
    "pitcher_scale": 3.0,
+   "half_life_days": 180.0,
+   "log_loss": 1.7481267390983746
+  },
+  {
+   "batter_scale": 0.5,
+   "pitcher_scale": 3.0,
+   "half_life_days": 270.0,
+   "log_loss": 1.7469548320480364
+  },
+  {
+   "batter_scale": 0.5,
+   "pitcher_scale": 3.0,
    "half_life_days": 365.0,
    "log_loss": 1.7464407772731705
   },
@@ -279,6 +459,18 @@
    "pitcher_scale": 3.0,
    "half_life_days": 1095.0,
    "log_loss": 1.7460054555712587
+  },
+  {
+   "batter_scale": 1.0,
+   "pitcher_scale": 0.1875,
+   "half_life_days": 180.0,
+   "log_loss": 1.7474218862804418
+  },
+  {
+   "batter_scale": 1.0,
+   "pitcher_scale": 0.1875,
+   "half_life_days": 270.0,
+   "log_loss": 1.746313600974116
   },
   {
    "batter_scale": 1.0,
@@ -301,6 +493,18 @@
   {
    "batter_scale": 1.0,
    "pitcher_scale": 0.375,
+   "half_life_days": 180.0,
+   "log_loss": 1.7464016602683274
+  },
+  {
+   "batter_scale": 1.0,
+   "pitcher_scale": 0.375,
+   "half_life_days": 270.0,
+   "log_loss": 1.7453592807444573
+  },
+  {
+   "batter_scale": 1.0,
+   "pitcher_scale": 0.375,
    "half_life_days": 365.0,
    "log_loss": 1.7450225985485994
   },
@@ -315,6 +519,18 @@
    "pitcher_scale": 0.375,
    "half_life_days": 1095.0,
    "log_loss": 1.745239780989328
+  },
+  {
+   "batter_scale": 1.0,
+   "pitcher_scale": 0.75,
+   "half_life_days": 180.0,
+   "log_loss": 1.746354853341846
+  },
+  {
+   "batter_scale": 1.0,
+   "pitcher_scale": 0.75,
+   "half_life_days": 270.0,
+   "log_loss": 1.7452259634156833
   },
   {
    "batter_scale": 1.0,
@@ -337,6 +553,18 @@
   {
    "batter_scale": 1.0,
    "pitcher_scale": 1.5,
+   "half_life_days": 180.0,
+   "log_loss": 1.74730290121656
+  },
+  {
+   "batter_scale": 1.0,
+   "pitcher_scale": 1.5,
+   "half_life_days": 270.0,
+   "log_loss": 1.7460101877969427
+  },
+  {
+   "batter_scale": 1.0,
+   "pitcher_scale": 1.5,
    "half_life_days": 365.0,
    "log_loss": 1.7454576585481831
   },
@@ -351,6 +579,18 @@
    "pitcher_scale": 1.5,
    "half_life_days": 1095.0,
    "log_loss": 1.7450690879969053
+  },
+  {
+   "batter_scale": 1.0,
+   "pitcher_scale": 3.0,
+   "half_life_days": 180.0,
+   "log_loss": 1.7489638145813777
+  },
+  {
+   "batter_scale": 1.0,
+   "pitcher_scale": 3.0,
+   "half_life_days": 270.0,
+   "log_loss": 1.747551973127829
   },
   {
    "batter_scale": 1.0,
@@ -373,6 +613,18 @@
   {
    "batter_scale": 2.0,
    "pitcher_scale": 0.1875,
+   "half_life_days": 180.0,
+   "log_loss": 1.7494040588834605
+  },
+  {
+   "batter_scale": 2.0,
+   "pitcher_scale": 0.1875,
+   "half_life_days": 270.0,
+   "log_loss": 1.7479716112265808
+  },
+  {
+   "batter_scale": 2.0,
+   "pitcher_scale": 0.1875,
    "half_life_days": 365.0,
    "log_loss": 1.7473897888948884
   },
@@ -387,6 +639,18 @@
    "pitcher_scale": 0.1875,
    "half_life_days": 1095.0,
    "log_loss": 1.7470873560148437
+  },
+  {
+   "batter_scale": 2.0,
+   "pitcher_scale": 0.375,
+   "half_life_days": 180.0,
+   "log_loss": 1.7483735742002302
+  },
+  {
+   "batter_scale": 2.0,
+   "pitcher_scale": 0.375,
+   "half_life_days": 270.0,
+   "log_loss": 1.7470085842749559
   },
   {
    "batter_scale": 2.0,
@@ -409,6 +673,18 @@
   {
    "batter_scale": 2.0,
    "pitcher_scale": 0.75,
+   "half_life_days": 180.0,
+   "log_loss": 1.7483164545994037
+  },
+  {
+   "batter_scale": 2.0,
+   "pitcher_scale": 0.75,
+   "half_life_days": 270.0,
+   "log_loss": 1.7468664364873907
+  },
+  {
+   "batter_scale": 2.0,
+   "pitcher_scale": 0.75,
    "half_life_days": 365.0,
    "log_loss": 1.7462154064362791
   },
@@ -427,6 +703,18 @@
   {
    "batter_scale": 2.0,
    "pitcher_scale": 1.5,
+   "half_life_days": 180.0,
+   "log_loss": 1.7492555436383541
+  },
+  {
+   "batter_scale": 2.0,
+   "pitcher_scale": 1.5,
+   "half_life_days": 270.0,
+   "log_loss": 1.7476430233631453
+  },
+  {
+   "batter_scale": 2.0,
+   "pitcher_scale": 1.5,
    "half_life_days": 365.0,
    "log_loss": 1.7468560035986045
   },
@@ -441,6 +729,18 @@
    "pitcher_scale": 1.5,
    "half_life_days": 1095.0,
    "log_loss": 1.7459011549808114
+  },
+  {
+   "batter_scale": 2.0,
+   "pitcher_scale": 3.0,
+   "half_life_days": 180.0,
+   "log_loss": 1.750909788477252
+  },
+  {
+   "batter_scale": 2.0,
+   "pitcher_scale": 3.0,
+   "half_life_days": 270.0,
+   "log_loss": 1.749179329477148
   },
   {
    "batter_scale": 2.0,
@@ -470,6 +770,6 @@
  "selected_on_grid_boundary": {
   "batter_scale": false,
   "pitcher_scale": false,
-  "half_life_days": true
+  "half_life_days": false
  }
 }

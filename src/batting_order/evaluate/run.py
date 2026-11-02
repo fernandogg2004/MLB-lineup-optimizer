@@ -202,7 +202,7 @@ def e1(pa: pl.DataFrame) -> None:
 # both prior strengths; still tuned on 2024 only, before any test-season metric was viewed.
 BS_GRID = (0.125, 0.25, 0.5, 1.0, 2.0)
 PS_GRID = (0.1875, 0.375, 0.75, 1.5, 3.0)
-HL_GRID = (365.0, 730.0, 1095.0)
+HL_GRID = (180.0, 270.0, 365.0, 730.0, 1095.0)
 
 
 def e2_tune(pa: pl.DataFrame, quick: bool) -> Hyper:
@@ -453,7 +453,8 @@ def e2_legacy(pa: pl.DataFrame) -> None:
         return
     leg = pl.read_parquet(path).with_columns(pl.col("game_date").str.to_date())
     pcols = [f"p{k}" for k in range(8)]
-    # Daily-grain features => identical predictions within (batter, pitcher, date).
+    # Legacy features are (almost) daily-grain: predictions within (batter, pitcher, date)
+    # differ by at most the recorded spread (doubleheaders); the first PA's prediction is used.
     spread = leg.group_by(["batter_id", "pitcher_id", "game_date"]).agg(
         *[(pl.col(c).max() - pl.col(c).min()).alias(c) for c in pcols]
     )
@@ -561,6 +562,11 @@ def e3_e4b(pa: pl.DataFrame, lineups: pl.DataFrame, quick: bool) -> None:
             g.write_parquet(path)
         parts.append(g)
     g = pl.concat(parts).filter(pl.col("runs_8").is_not_null())
+    # Only team-games that batted at least 8 innings can be compared with E[R_1..8].
+    innings = pa.group_by(["game_pk", "bat_team"]).agg(pl.col("inning").max().alias("max_inn"))
+    n_before = g.height
+    g = g.join(innings, on=["game_pk", "bat_team"], how="left").filter(pl.col("max_inn") >= 8)
+    n_short = n_before - g.height
     obs = g["runs_8"].to_numpy().astype(float)
     pred = g["pred_r8"].to_numpy()
     team_base = _team_history_baseline(pa, g)
@@ -590,6 +596,7 @@ def e3_e4b(pa: pl.DataFrame, lineups: pl.DataFrame, quick: bool) -> None:
 
     e3 = {
         "n_team_games": n,
+        "excluded_fewer_than_8_innings": n_short,
         "mean_observed_r8": float(obs.mean()),
         "mean_predicted_r8": float(pred.mean()),
         "bias_obs_minus_pred": float((obs - pred).mean()),
@@ -687,7 +694,7 @@ def _pit(
         ["game_pk", "bat_team", "lineup", "opp_starter", "opp_starter_throws", "fld_team"]
     )
     sub = sub.join(lu, on=["game_pk", "bat_team", "fld_team"], how="left")
-    pits, cover80 = [], []
+    pits, cover80, implied = [], [], []
     kernels: dict[date, Any] = {}
     snaps: dict[date, Any] = {}
     for r in sub.iter_rows(named=True):
@@ -710,11 +717,15 @@ def _pit(
         lo = int(np.searchsorted(cdf, 0.1))
         hi = int(np.searchsorted(cdf, 0.9))
         cover80.append(lo <= y <= hi)
+        implied.append(float(dist[lo : hi + 1].sum()))
     hist = np.histogram(pits, bins=10, range=(0, 1))[0]
     return {
         "n": len(pits),
         "pit_hist": hist.tolist(),
         "coverage_80_nominal": float(np.mean(cover80)),
+        # The discrete "central 80%" interval holds more than 80% of the model's own mass;
+        # observed coverage should be compared with this model-implied value.
+        "coverage_80_model_implied": float(np.mean(implied)),
     }
 
 
@@ -843,6 +854,37 @@ def e4a(pa: pl.DataFrame, lineups: pl.DataFrame, quick: bool) -> None:
     )
 
 
+def e4a_matched(pa: pl.DataFrame, lineups: pl.DataFrame) -> None:
+    """Gap of the order actually used on the same instances as the Monte Carlo GA (E4a).
+
+    E4a ran the noisy GA only on the first 30 of its 200 sampled team-games; comparisons with
+    the order used must be made on those same instances (audit findings B-1/D-1).
+    """
+    path = OUT / "e4a_search_methods.json"
+    res = json.loads(path.read_text(encoding="utf-8"))
+    n_noisy = int(res["noisy_ga"]["n"])
+    h = tuned_hyper()
+    games = lineups.filter(
+        pl.col("reliable") & (pl.col("season") == 2026) & (pl.col("game_type") == "R")
+    ).sample(200, seed=42)
+    kernels: dict[date, Any] = {}
+    gaps = []
+    for r in games.head(n_noisy).iter_rows(named=True):
+        d = r["game_date"]
+        m = build_matchup(
+            build_snapshot(pa, d, h),
+            GameContext(
+                list(r["lineup"]), r["opp_starter"], r["opp_starter_throws"], r["fld_team"]
+            ),
+        )
+        ex = exhaustive(kernel_for(pa, d, kernels), m)
+        gaps.append(ex.best()[1] - ex.value_of(np.arange(9)))
+    res["noisy_ga"]["actual_mean_gap_same_instances"] = float(np.mean(gaps))
+    res["noisy_ga"]["actual_max_gap_same_instances"] = float(np.max(gaps))
+    path.write_text(json.dumps(res, indent=1, default=float), encoding="utf-8")
+    log.info("e4a matched: actual gap on %d GA instances = %.5f", n_noisy, np.mean(gaps))
+
+
 # ----------------------------------------------------------------------
 # E4c — parameter uncertainty
 # ----------------------------------------------------------------------
@@ -963,6 +1005,7 @@ def e5(pa: pl.DataFrame, quick: bool) -> None:
     snap_main = build_snapshot(pa, date(2026, 10, 28), tuned_hyper())
     kernel_main = kernel_for(pa, date(2026, 10, 28), {})
     q_min = 1.0
+    certificate: dict[str, dict[str, float]] = {}
     for side, t in ref["teams"].items():
         opp = ref["teams"]["home" if side == "away" else "away"]
         ctx = GameContext(
@@ -971,7 +1014,10 @@ def e5(pa: pl.DataFrame, quick: bool) -> None:
             t["opponent_starter"]["throws"],
             opp["team"],
         )
-        q_min = min(q_min, out_probability_floor(kernel_main, build_matchup(snap_main, ctx)))
+        m_ref = build_matchup(snap_main, ctx)
+        q_min = min(q_min, out_probability_floor(kernel_main, m_ref))
+        vals = np.sort(exhaustive(kernel_main, m_ref).values.ravel())
+        certificate[t["team"]] = {"best_minus_second": float(vals[-1] - vals[-2])}
     _save(
         "e5_reference_game",
         {
@@ -979,6 +1025,8 @@ def e5(pa: pl.DataFrame, quick: bool) -> None:
             "teams": summary,
             "sensitivity": sens,
             "q_min": q_min,
+            "truncated_mass_max": max(t["truncated_mass"] for t in ref["teams"].values()),
+            "certificate": certificate,
             "kernel": ref["cutoff"]["kernel"],
         },
     )
@@ -994,7 +1042,7 @@ def main(only: list[str] | None = None, quick: bool = False) -> None:
     seasons = [s for s in SEASONS if (DATA / "processed" / f"transitions_{s}.parquet").exists()]
     pa = load_transitions(DATA, seasons)
     lineups = load_lineups(DATA, seasons)
-    todo = only or ["e0", "e1", "e2", "e2b", "e2c", "e3", "e4a", "e4c", "e5"]
+    todo = only or ["e0", "e1", "e2", "e2b", "e2c", "e3", "e4a", "e4a_matched", "e4c", "e5"]
     for name in todo:
         t = time.time()
         {
@@ -1005,6 +1053,7 @@ def main(only: list[str] | None = None, quick: bool = False) -> None:
             "e2c": lambda: e2c_decision_sensitivity(pa, lineups, quick),
             "e3": lambda: e3_e4b(pa, lineups, quick),
             "e4a": lambda: e4a(pa, lineups, quick),
+            "e4a_matched": lambda: e4a_matched(pa, lineups),
             "e4c": lambda: e4c(pa, lineups, quick),
             "e5": lambda: e5(pa, quick),
         }[name]()

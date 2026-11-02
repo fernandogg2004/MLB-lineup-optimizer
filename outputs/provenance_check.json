@@ -1,7 +1,9 @@
 {
- "git": "07d570c",
+ "git": "fc12f7f-dirty",
  "sample_team_games": 25,
- "max_abs_deviation_games": 0.0,
- "max_abs_deviation_reference": 0.0,
- "passed": true
+ "max_abs_deviation_games": 0.0003544390607448378,
+ "max_abs_deviation_reference": 0.00011902059922341834,
+ "bit_exact": false,
+ "tolerance": 0.0001,
+ "passed": false
 }

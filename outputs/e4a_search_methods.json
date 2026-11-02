@@ -90,7 +90,9 @@
  "noisy_ga": {
   "n": 30,
   "mean_winners_curse": 0.163527715303886,
-  "mean_gap_to_opt": 0.022308510883220833
+  "mean_gap_to_opt": 0.022308510883220833,
+  "actual_mean_gap_same_instances": 0.024013544997209927,
+  "actual_max_gap_same_instances": 0.041194522734679495
  },
  "note": "gap = exact E[R_9] of the exhaustive optimum minus exact E[R_9] of the returned order."
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import vectors from "./fixtures/vectors.json";
-import { cyclicOrders, evaluate, exhaustiveSearch, isPermutation, operators } from "./markov";
+import { cyclicOrders, evaluate, exhaustiveSearch, isPermutation, operators, scaleStarterDepth } from "./markov";
 
 const op = operators(vectors.kernel, vectors.matchup);
 
@@ -40,5 +40,22 @@ describe("exact evaluator (parity with Python)", () => {
   it("rejects invalid orders", () => {
     expect(isPermutation([0, 0, 1, 2, 3, 4, 5, 6, 7])).toBe(false);
     expect(() => evaluate(op, [0, 1, 2])).toThrow();
+  });
+});
+
+describe("scenario workload transform", () => {
+  const w = [1, 0.97, 0.93, 0.89, 0.76, 0.45, 0.14, 0.03, 0].flatMap((s) => [s, 1 - s]);
+  it("is the identity at factor 1 and keeps rows summing to one", () => {
+    const same = scaleStarterDepth(w, 2, 1);
+    same.forEach((v, i) => expect(v).toBeCloseTo(w[i], 12));
+    for (const f of [0.5, 1.5, 2]) {
+      const out = scaleStarterDepth(w, 2, f);
+      for (let k = 0; k < 9; k++) expect(out[2 * k] + out[2 * k + 1]).toBeCloseTo(1, 12);
+    }
+  });
+  it("moves starter shares monotonically with the factor", () => {
+    const lo = scaleStarterDepth(w, 2, 0.5);
+    const hi = scaleStarterDepth(w, 2, 2);
+    for (let k = 0; k < 9; k++) expect(hi[2 * k]).toBeGreaterThanOrEqual(lo[2 * k]);
   });
 });

@@ -1,19 +1,20 @@
 \subsection{Data and kernel (E1)}
 
-\Cref{tab:data} summarizes the processed data. Bookkeeping violations are rare (about one PA in
-two thousand, after excluding censored walk-off transitions). The kernel reproduces observed run
+\Cref{tab:data} summarizes the processed data. Outside the censored end-of-game transitions,
+bookkeeping violations (scorer errors) number between 0 and 10 per season. The kernel reproduces observed run
 expectancy at the start of an inning (state 0) within \EoneStateZeroMaxDiff{} runs in every season
 2023--2026 (e.g.\ $\mathrm{RE}(0)=\EoneREzero$ in 2026), and the visit-weighted mean absolute
 difference over all 24 states is at most \EoneWeightedDiff{} (\cref{fig:re24}). The largest
-differences (up to \EoneMaxDiff{} runs) occur in states with a runner on third and fewer than two
-outs, where the model is \emph{below} the empirical value. Two observations show that this is a
+differences (up to \EoneMaxDiff{} runs) occur in crowded no-out states (for example first and third,
+or bases loaded), where the model is \emph{below} the empirical value. Two observations suggest that this is mainly a
 selection effect rather than a kernel error: the expected immediate runs of each outcome out of
 first-and-third with no outs match the data within \EoneFiveImmDiff{} runs (2024), and the
 outcome mix observed in that state is markedly more favourable to the offence than the league mix
 (\EoneFiveSingle{} singles and \EoneFiveK{} strikeouts versus \EoneAllSingle{} and \EoneAllK{}
 overall). Innings reach those states
 disproportionately against weak pitching or with strong hitters at the plate, which a
-league-average run-expectancy calculation cannot reflect. Game-level predictions (E3) use the
+league-average run-expectancy calculation cannot reflect. Censoring of end-of-game transitions,
+which score runs by construction, pushes in the same direction but is too rare to explain the gaps. Game-level predictions (E3) use the
 actual hitters and pitchers and are the relevant check.
 
 \begin{figure}[t]\centering
@@ -27,8 +28,8 @@ Right: observed runs in innings 1--8 versus predicted expected runs, by decile o
 \subsection{Plate-appearance model (E2)}
 
 Tuning on 2024 selected prior-strength scales $\lambda_B=\EtwoBatterScale$,
-$\lambda_P=\EtwoPitcherScale$ and half-life $H=\EtwoHalfLife$ days; the strength scales are
-interior to the final grid, and $H=180$ days, evaluated in the first grid, was worse.
+$\lambda_P=\EtwoPitcherScale$ and half-life $H=\EtwoHalfLife$ days (half-lives searched:
+\EtwoHalfLifeGrid{} days); \EtwoBoundaryNote{}.
 \Cref{tab:e2} reports the test seasons. Batter multipliers reduce log-loss relative to the league
 model by \EtwoBatterGain{} nats per PA (mean of the two seasons), and pitcher multipliers by a
 further \EtwoPitcherGain{}; both differences are large relative to their bootstrap intervals.
@@ -79,8 +80,11 @@ the team's mean over its previous 60 games. The correlation between predicted an
 is only \EthreeCorr{}: almost all of the variance of a single game's runs is unpredictable before
 the game. Randomized PIT values of the exact predicted run distributions on \EthreePitN{} random
 team-games are close to uniform, and the central 80\% predictive interval covers
-\EthreeCoverage{} of outcomes (\cref{fig:pit}); with integer-valued outcomes and inclusive interval
-endpoints, coverage slightly above nominal is expected.
+\EthreeCoverage{} of outcomes (\cref{fig:pit}). Because the outcome is an integer, this
+``central 80\%'' interval holds on average \EthreeCoverageModel{} of the model's own probability,
+and observed coverage should be compared with that value: the difference is \EthreeCoverageZ{}
+binomial standard errors, consistent with calibration of the predictive distribution. Team-games that batted fewer than eight
+innings (\EthreeShort{}, e.g.\ called games) are excluded from E3.
 
 \begin{figure}[t]\centering
 \includegraphics[width=0.48\textwidth]{figures/pit.pdf}
@@ -97,11 +101,14 @@ competent search methods is unimportant once the objective is exact; exhaustive 
 preferred because it provides the certificate of \cref{cor:cert}. The heuristic guideline of
 \citet{tango2007} recovers about half of the gap between the actual order and the optimum.
 
-The genetic algorithm with Monte Carlo fitness, as in the predecessor system, performs worse
-than the managers' own orders (mean gap \EfouraNoisyGap{} runs), and its reported value of the
-chosen order exceeds the order's exact value by \EfouraCurse{} runs on average
-(\EfouraNoisyN{} instances): the optimizer's curse is an order of magnitude larger than the
-effect being optimized. With 4{,}000 simulated games, the standard error of one fitness evaluation
+The genetic algorithm with Monte Carlo fitness, as in the predecessor system, ends about as far
+from the optimum as the managers' own orders: on the same \EfouraNoisyN{} instances its mean gap is
+\EfouraNoisyGap{} runs, against \EfouraActualSameGap{} for the order actually used. Its reported
+value of the chosen order, however, exceeds that order's exact value by \EfouraCurse{} runs on
+average: the optimizer's curse is an order of magnitude larger than the effect being optimized.
+(The heuristic orders in \cref{tab:e4a} use run values averaged over the starter and bullpen
+regimes; in E4b they use the starter regime only, which explains the small difference between the
+two experiments' heuristic gaps.) With 4{,}000 simulated games, the standard error of one fitness evaluation
 is about $3/\sqrt{4000}\approx0.05$ runs, larger than the differences among good orders.
 
 \input{generated/table_e4a.tex}
@@ -139,7 +146,9 @@ cannot single out one of them. What the data do support is a statement about a s
 Milwaukee won 4--1 at Tropicana Field. Facing Drew Rasmussen and the Tampa Bay bullpen, the order
 Milwaukee used has model value \RefActualAway{} expected runs over nine innings; the optimal order
 \RefOptimalAway{} (gain \RefUpliftAway{}, 90\% interval \RefLoAway{} to \RefHiAway{}, optimal
-better in \RefPBetterAway{} of \RefDraws{} posterior draws). The order used ranks above
+better in \RefPBetterAway{} of \RefDraws{} posterior draws; the exact top order recurs in
+\RefSameAway{} of draws, and its mean regret against each draw's own optimum is \RefRegretAway{}
+runs, as large as the point gain). The order used ranks above
 \RefPctAway{} of all orders. For Tampa Bay, facing Jacob Misiorowski and the Milwaukee bullpen, the
 values are \RefActualHome{} and \RefOptimalHome{} (gain \RefUpliftHome{}, interval \RefLoHome{} to
 \RefHiHome{}, better in \RefPBetterHome{} of draws; rank \RefPctHome{}). The observed scores

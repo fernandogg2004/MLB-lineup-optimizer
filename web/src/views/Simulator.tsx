@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
   DndContext,
   KeyboardSensor,
@@ -156,10 +156,12 @@ export function Simulator({ snap, team }: { snap: GameSnapshot; team: Team }) {
     () => drawOps.map((o) => evaluate(o, team.actual.order).expectedRuns),
     [drawOps, team],
   );
+  // 400 exact evaluations per change: computed from a deferred copy so dragging stays responsive.
+  const deferredOrder = useDeferredValue(order);
   const diffInterval = useMemo(() => {
-    const d = drawOps.map((o, i) => evaluate(o, order).expectedRuns - usedByDraw[i]).sort((a, b) => a - b);
+    const d = drawOps.map((o, i) => evaluate(o, deferredOrder).expectedRuns - usedByDraw[i]).sort((a, b) => a - b);
     return [quantile(d, 0.05), quantile(d, 0.95)];
-  }, [drawOps, usedByDraw, order]);
+  }, [drawOps, usedByDraw, deferredOrder]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),

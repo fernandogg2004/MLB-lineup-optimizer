@@ -241,3 +241,20 @@ def test_runs_never_exceed_plate_appearances_minus_three() -> None:
     m = Matchup.single_regime(_probs(rng))
     ev = evaluate(DET, m, np.arange(9))
     assert ev.expected_runs <= ev.pa_by_slot.sum() - 27 + 1e-9
+
+
+def test_kernel_rejects_out_decreasing_transitions() -> None:
+    J = DET.J.copy()
+    J[K, 8] = 0.0
+    J[K, 8, 1, 0] = 1.0  # (1 out, empty) -> (0 outs, runner on 1st): violates A4
+    with pytest.raises(ValueError, match="A4"):
+        Kernel(J)
+
+
+def test_non_terminating_inning_raises_instead_of_truncating() -> None:
+    """D-8: with q ~ 0.004 the old evaluator silently returned a truncated value."""
+    x = np.zeros((9, N_OUT))
+    x[:, K] = 0.004
+    x[:, HR] = 0.996
+    with pytest.raises(RuntimeError, match="MAX_STEPS"):
+        evaluate(DET, Matchup.single_regime(x), np.arange(9))

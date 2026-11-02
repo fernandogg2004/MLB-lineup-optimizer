@@ -112,6 +112,10 @@ def _inning(
             v[s] = w[s]
             mass += w[s]
         steps += 1
+    if mass > tol:
+        raise RuntimeError(
+            "half-inning did not terminate within MAX_STEPS (out probability too small)"
+        )
     return runs, nxt, mass
 
 

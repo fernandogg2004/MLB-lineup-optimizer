@@ -3,7 +3,7 @@
  "generated_at": "2026-11-02",
  "software": {
   "package": "2.0.0",
-  "git": "unknown"
+  "git": "fc12f7f-dirty"
  },
  "game": {
   "game_pk": 849799,
@@ -18,18 +18,19 @@
   "away_abbr": "MIL",
   "home_abbr": "TB",
   "away_runs": 4,
-  "home_runs": 1
+  "home_runs": 1,
+  "reference": "true"
  },
  "teams": {
   "away": {
    "team": "MIL",
    "name": "Milwaukee Brewers",
    "observed_runs": 4,
-   "actual_er9": 3.833073069557834,
-   "optimal_er9": 3.8427352058490603,
-   "percentile": 0.9790702160493827,
-   "the_book_er9": 3.837273476583953,
-   "worst_er9": 3.7890867942468254,
+   "actual_er9": 3.8331912341624066,
+   "optimal_er9": 3.8428542264482837,
+   "percentile": 0.979064704585538,
+   "the_book_er9": 3.8373923317251504,
+   "worst_er9": 3.7892054344287853,
    "actual_order": [
     "Jackson Chourio",
     "Jake Bauers",
@@ -54,15 +55,15 @@
    ],
    "uncertainty": {
     "n_draws": 400,
-    "diff_mean": 0.010187764022494751,
-    "diff_q05": -0.0023797257548987755,
-    "diff_q95": 0.021326562415962615,
+    "diff_mean": 0.010188648869334231,
+    "diff_q05": -0.002379507899269639,
+    "diff_q95": 0.021327342258151773,
     "p_opt_better": 0.9125,
-    "actual_q05": 3.34128505341969,
-    "actual_q95": 4.382581500383437,
-    "opt_q05": 3.34787321114916,
-    "opt_q95": 4.3876962105648,
-    "regret_of_point_optimum_mean": 0.013077119982665452,
+    "actual_q05": 3.3413875022984514,
+    "actual_q95": 4.38270952206524,
+    "opt_q05": 3.3479668103943685,
+    "opt_q95": 4.387836225546706,
+    "regret_of_point_optimum_mean": 0.013077365804331182,
     "p_same_optimum": 0.0025
    }
   },
@@ -70,11 +71,11 @@
    "team": "TB",
    "name": "Tampa Bay Rays",
    "observed_runs": 1,
-   "actual_er9": 3.33599571852404,
-   "optimal_er9": 3.3597720580558708,
-   "percentile": 0.9932732583774251,
-   "the_book_er9": 3.3468361435010574,
-   "worst_er9": 3.2457684909660824,
+   "actual_er9": 3.3361033074898865,
+   "optimal_er9": 3.3598806134365784,
+   "percentile": 0.9932760141093474,
+   "the_book_er9": 3.346943238002641,
+   "worst_er9": 3.245874765286273,
    "actual_order": [
     "Yandy D\u00edaz",
     "Jonathan Aranda",
@@ -99,15 +100,15 @@
    ],
    "uncertainty": {
     "n_draws": 400,
-    "diff_mean": 0.023911088205364913,
-    "diff_q05": 0.008628750388660867,
-    "diff_q95": 0.04134016319104742,
+    "diff_mean": 0.023912176260760996,
+    "diff_q05": 0.008628186571941065,
+    "diff_q95": 0.041342535877783596,
     "p_opt_better": 0.995,
-    "actual_q05": 2.91266236743158,
-    "actual_q95": 3.8713534846992617,
-    "opt_q05": 2.937695403766587,
-    "opt_q95": 3.8939863894413875,
-    "regret_of_point_optimum_mean": 0.005241134708442887,
+    "actual_q05": 2.9127591948399023,
+    "actual_q95": 3.8714935180480707,
+    "opt_q05": 2.9377925507257756,
+    "opt_q95": 3.894114124134175,
+    "regret_of_point_optimum_mean": 0.005239869375250122,
     "p_same_optimum": 0.095
    }
   }
@@ -126,7 +127,7 @@
      "Sal Frelick",
      "David Hamilton"
     ],
-    "uplift": 0.009839291837118402,
+    "uplift": 0.009842827484983996,
     "same_as_main": true
    },
    "TB": {
@@ -141,7 +142,7 @@
      "Ben Williamson",
      "Taylor Walls"
     ],
-    "uplift": 0.023702879474393423,
+    "uplift": 0.02370983222878298,
     "same_as_main": true
    }
   },
@@ -158,7 +159,7 @@
      "Cooper Pratt",
      "David Hamilton"
     ],
-    "uplift": 0.007676588159112541,
+    "uplift": 0.007677454945554274,
     "same_as_main": false
    },
    "TB": {
@@ -173,14 +174,23 @@
      "Ben Williamson",
      "Taylor Walls"
     ],
-    "uplift": 0.021458724511428606,
+    "uplift": 0.021459689542049354,
     "same_as_main": true
    }
   }
  },
  "q_min": 0.6333486273956199,
+ "truncated_mass_max": 6.711009477849174e-14,
+ "certificate": {
+  "MIL": {
+   "best_minus_second": 8.201365499305169e-05
+  },
+  "TB": {
+   "best_minus_second": 0.000542533900862896
+  }
+ },
  "kernel": {
-  "n_transitions": 559161,
+  "n_transitions": 559151,
   "alpha": 2.0,
   "start": "2023-10-02",
   "cutoff": "2026-10-01"

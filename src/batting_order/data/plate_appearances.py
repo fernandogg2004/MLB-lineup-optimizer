@@ -130,8 +130,13 @@ def transitions(dec: pl.DataFrame) -> pl.DataFrame:
     """One row per PA with its outcome class and observed base-out transition.
 
     Adds ``s`` (state), ``s_next`` (next state, 24 = three outs), ``runs``,
-    ``censored`` (walk-off: excluded from kernel estimation) and ``conserved``
-    (bookkeeping identity holds; rows failing it indicate data errors).
+    ``censored`` (the half-inning was cut short by the end of the game: excluded from kernel
+    estimation) and ``conserved`` (bookkeeping identity holds; rows failing it are data errors).
+
+    Censoring rule: the last transition of a game's final half-inning is censored unless the
+    game ended normally after three outs, i.e. a top half of the 9th or later with the home team
+    ahead, or a bottom half of the 9th or later with the visitors ahead. Walk-offs (any inning),
+    called and suspended games, and seven-inning games are therefore censored conservatively.
     """
     half = ["game_pk", "inning", "inning_topbot"]
     # Final score of each half-inning, including any truncated PA at its end.
@@ -141,17 +146,27 @@ def transitions(dec: pl.DataFrame) -> pl.DataFrame:
         pl.col("post_away_score").last().alias("end_away"),
         pl.col("events").last().alias("last_event"),
     )
-    pa = dec.filter(pl.col("outcome").is_not_null()).join(ends, on=half, how="left")
+    final_half = dec.group_by("game_pk").agg(
+        pl.col("inning").last().alias("final_inning"),
+        pl.col("inning_topbot").last().alias("final_topbot"),
+    )
+    pa = (
+        dec.filter(pl.col("outcome").is_not_null())
+        .join(ends, on=half, how="left")
+        .join(final_half, on="game_pk", how="left")
+    )
     pa = pa.sort(["game_pk", "at_bat_number"]).with_columns(
         pl.col("outs").shift(-1).over(half).alias("outs_next"),
         pl.col("bases").shift(-1).over(half).alias("bases_next"),
         pl.col("bat_score").shift(-1).over(half).alias("score_next"),
     )
     is_last = pl.col("outs_next").is_null()
-    walkoff = (
-        (pl.col("inning_topbot") == "Bot")
-        & (pl.col("inning") >= 9)
-        & (pl.col("end_home") > pl.col("end_away"))
+    game_final_half = (pl.col("inning") == pl.col("final_inning")) & (
+        pl.col("inning_topbot") == pl.col("final_topbot")
+    )
+    ended_normally = (pl.col("inning") >= 9) & (
+        ((pl.col("inning_topbot") == "Top") & (pl.col("end_home") > pl.col("end_away")))
+        | ((pl.col("inning_topbot") == "Bot") & (pl.col("end_away") > pl.col("end_home")))
     )
     pa = pa.with_columns(
         (8 * pl.col("outs") + pl.col("bases")).alias("s"),
@@ -163,7 +178,7 @@ def transitions(dec: pl.DataFrame) -> pl.DataFrame:
         .then(pl.col("half_final_score") - pl.col("bat_score"))
         .otherwise(pl.col("score_next") - pl.col("bat_score"))
         .alias("runs"),
-        (is_last & walkoff).alias("censored"),
+        (is_last & game_final_half & ~ended_normally).fill_null(False).alias("censored"),
         pl.col("outcome").replace_strict(CLASS_INDEX, return_dtype=pl.Int64).alias("c"),
     )
 
@@ -173,13 +188,12 @@ def transitions(dec: pl.DataFrame) -> pl.DataFrame:
 
     n_run = _count("bases")
     n_run_next = _count("bases_next")
-    conserved = (
-        pl.when(pl.col("s_next") == ABSORB)
-        .then(pl.col("runs") + (3 - pl.col("outs")) <= n_run + 1)
-        .otherwise(
-            n_run + 1 == n_run_next + pl.col("runs") + (pl.col("outs_next") - pl.col("outs"))
-        )
-    )
+    conserved = pl.when(pl.col("s_next") == ABSORB).then(
+        pl.col("runs") + (3 - pl.col("outs")) <= n_run + 1
+    ).otherwise(
+        (n_run + 1 == n_run_next + pl.col("runs") + (pl.col("outs_next") - pl.col("outs")))
+        & (pl.col("outs_next") >= pl.col("outs"))  # A4: outs never decrease
+    ) & (pl.col("runs") >= 0)
     pa = pa.with_columns(
         conserved.fill_null(False).alias("conserved"),
         (pl.col("runs") >= 0).alias("runs_nonneg"),
@@ -193,6 +207,8 @@ def transitions(dec: pl.DataFrame) -> pl.DataFrame:
             "end_away",
             "half_final_score",
             "last_event",
+            "final_inning",
+            "final_topbot",
             "post_bat_score",
             "post_home_score",
             "post_away_score",
@@ -239,6 +255,8 @@ def data_quality(pa: pl.DataFrame) -> dict[str, float]:
         "pa": n,
         "censored": int(pa["censored"].sum()),
         "non_conserved": int((~pa["conserved"]).sum()),
+        # Data errors proper: bookkeeping violations outside censored walk-off transitions.
+        "non_conserved_uncensored": int((~pa["conserved"] & ~pa["censored"]).sum()),
         "negative_runs": int((~pa["runs_nonneg"]).sum()),
         "non_conserved_rate": float((~pa["conserved"]).sum() / max(n, 1)),
     }

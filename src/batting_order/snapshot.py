@@ -31,7 +31,6 @@ from batting_order.optimize.search import batter_summaries, heuristic_the_book
 
 log = logging.getLogger(__name__)
 SCHEMA_VERSION = 1
-BROWSER_DRAWS = 100
 
 
 def git_revision(root: Path) -> str:
@@ -169,9 +168,8 @@ def _team(
             "regret_of_point_optimum_mean": float((d_best_a - d_opt_a).mean()),
             "p_same_optimum": float(np.mean(same)),
             "slot_player_freq": _r(slot_freq / n_draws, 3),
-            # The browser re-evaluates custom orders on a subset of draws (live interval);
-            # summary statistics above use all draws.
-            "draws_x": [_r(x, 4) for x in draws_x[:BROWSER_DRAWS]],
+            # All posterior draws (6 decimals) so the browser reproduces the summary interval.
+            "draws_x": [_r(x, 6) for x in draws_x],
         },
         "truncated_mass": max(ev_act.truncated_mass, ex.truncated_mass),
     }
@@ -200,7 +198,7 @@ def build_game_snapshot(
     kernels: dict[date, Kernel] = {}
     kernel = kernel_for(pa, game_date, kernels)
     rng = np.random.default_rng(seed)
-    throws = _throws(pa, box)
+    throws = _throws(pa.filter(pl.col("game_date") < game_date), box)
     for side in ("away", "home"):
         abbr = lus[side].abbreviation
         if abbr not in snap.bullpen_mult:

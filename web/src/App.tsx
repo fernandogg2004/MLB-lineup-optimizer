@@ -83,12 +83,13 @@ function Shell() {
               {t("nav.code")}
             </a>
           </nav>
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-3 min-w-0 max-w-full">
             {route.page === "game" && index && index.games.length > 1 && (
               <label className="text-sm flex items-center gap-2">
-                <span className="text-muted">{t("game.picker")}</span>
+                <span className="text-muted hidden sm:inline">{t("game.picker")}</span>
                 <select
                   className="select"
+                  aria-label={t("game.picker")}
                   value={gamePk}
                   onChange={(e) => (window.location.hash = `#/game/${e.target.value}`)}
                 >

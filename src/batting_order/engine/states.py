@@ -67,6 +67,11 @@ class Kernel:
             raise ValueError(f"kernel has shape {self.J.shape}")
         if not np.all(np.isfinite(self.J)) or np.any(self.J < 0):
             raise ValueError("kernel has negative or non-finite entries")
+        P = self.J.sum(axis=3)
+        for s in range(N_STATES):
+            o = s // 8
+            if P[:, s, : 8 * o].sum() > 0:
+                raise ValueError(f"kernel decreases outs from state {s} (assumption A4)")
         sums = self.J.sum(axis=(2, 3))
         if not np.allclose(sums, 1.0, atol=1e-9):
             raise ValueError(

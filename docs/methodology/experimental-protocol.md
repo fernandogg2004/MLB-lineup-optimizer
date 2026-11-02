@@ -75,3 +75,11 @@ four-week test windows (June 2025 and June 2026) with a 3-configuration grid, an
 quantities on 120 and 20 test team-games, to debug the code. The grid extension was motivated
 solely by the 2024 boundary result; no model structure was changed after those smoke tests. `outputs/e2_tuning.json` records whether the
 final selection lies on the grid boundary.
+
+## Amendment 2 (2026-11-02, after the round-1 audit)
+
+Auditors noted (B-4, D-20) that the selected half-life lay on the lower edge of the final grid and
+that the first grid's output (which contained 180 days) had been overwritten. The half-life grid
+was extended to {180, 270, 365, 730, 1095} days and tuning was re-run on 2024 only. All tuning
+outputs are now kept in `outputs/e2_tuning.json`, including a per-parameter boundary flag that the
+paper reports verbatim.

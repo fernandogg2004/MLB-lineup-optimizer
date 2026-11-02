@@ -80,12 +80,14 @@ def _half_inning() -> pl.DataFrame:
         _pitch(1, 3, 1, "Top", 103, "strikeout", 0, score=2),
         _pitch(1, 4, 1, "Top", 104, "field_out", 1, score=2, bb_type="ground_ball"),
         _pitch(1, 5, 1, "Top", 105, "field_out", 2, score=2, bb_type="fly_ball"),
+        # The game then ends normally: bottom of the 9th, visitors ahead, third out.
+        _pitch(1, 60, 9, "Bot", 201, "strikeout", 2, home=0, away=2),
     ]
     return pl.DataFrame(rows)
 
 
 def test_transitions_chain_states_and_runs() -> None:
-    pa = transitions(decisive_rows(_half_inning()))
+    pa = transitions(decisive_rows(_half_inning())).filter(pl.col("inning") == 1)
     assert pa["outcome"].to_list() == ["1B", "HR", "K", "GB", "AIR"]
     assert pa["s"].to_list() == [0, 1, 0, 8, 16]
     assert pa["s_next"].to_list() == [1, 0, 8, 16, ABSORB]
@@ -242,3 +244,61 @@ def test_verify_detects_changed_missing_and_extra_files(tmp_path: Path) -> None:
     pl.DataFrame({"x": [4]}).write_parquet(d / "c.parquet")
     res = verify_season(d, ref)
     assert res == {"missing": ["b.parquet"], "changed": ["a.parquet"], "extra": ["c.parquet"]}
+
+
+def test_out_decreasing_or_negative_run_transitions_are_not_conserved() -> None:
+    rows = [
+        _pitch(5, 1, 1, "Top", 1, "single", 1),
+        _pitch(5, 2, 1, "Top", 2, "walk", 0, b1=True),  # outs went 1 -> 0: scorer error
+        _pitch(5, 3, 1, "Top", 3, "strikeout", 0, b1=True, b2=True),
+        _pitch(5, 4, 1, "Top", 4, "strikeout", 1, b1=True, b2=True),
+        _pitch(5, 5, 1, "Top", 5, "strikeout", 2, b1=True, b2=True),
+    ]
+    pa = transitions(decisive_rows(pl.DataFrame(rows)))
+    assert pa["conserved"].to_list()[0] is False
+    assert pa["conserved"].to_list()[1:] == [True, True, True, True]
+
+
+def test_called_games_and_short_walkoffs_are_censored() -> None:
+    called = [  # game called in the top of the 5th
+        _pitch(6, 1, 5, "Top", 1, "single", 0, home=1, away=0),
+        _pitch(6, 2, 5, "Top", 2, "strikeout", 0, b1=True, home=1, away=0),
+    ]
+    seven = [  # seven-inning doubleheader game ending on a walk-off in the 7th
+        _pitch(7, 50, 7, "Bot", 3, "walk", 1, home=2, away=2),
+        _pitch(7, 51, 7, "Bot", 4, "single", 1, b1=True, b2=True, score=2, post=3, home=3, away=2),
+    ]
+    pa = transitions(decisive_rows(pl.DataFrame(called + seven)))
+    by_game = {g: df["censored"].to_list() for (g,), df in pa.group_by(["game_pk"])}
+    assert by_game[6] == [False, True]
+    assert by_game[7] == [False, True]
+
+
+def test_every_snapshot_field_ignores_data_on_or_after_cutoff() -> None:
+    """Extends the leakage test to pitchers, bullpens, starter curves and batter sides."""
+    pa = _synthetic_pa()
+    cut = date(2026, 5, 1)
+    later = pl.col("game_date") >= cut
+    tampered = pa.with_columns(
+        pl.when(later).then((pl.col("c") + 5) % 8).otherwise(pl.col("c")).alias("c"),
+        pl.when(later).then(pl.lit("L")).otherwise(pl.col("stand")).alias("stand"),
+        pl.when(later).then(pl.col("inning") + 1).otherwise(pl.col("inning")).alias("inning"),
+    )
+    a, b = build_snapshot(pa, cut, Hyper()), build_snapshot(tampered, cut, Hyper())
+    for name in ("batter_mult", "pitcher_mult", "bullpen_mult", "starter_curve"):
+        da, db = getattr(a, name), getattr(b, name)
+        assert da.keys() == db.keys(), name
+        for k in da:
+            np.testing.assert_array_equal(da[k], db[k])
+    assert a.batter_side == b.batter_side
+    assert a.bullpen_hand_share == b.bullpen_hand_share
+    np.testing.assert_array_equal(a.league_starter_curve, b.league_starter_curve)
+
+
+def test_kernel_window_ends_on_first_day_of_month() -> None:
+    from batting_order.model.kernel import kernel_for
+
+    pa = _synthetic_pa(60)
+    k = kernel_for(pa, date(2026, 5, 20), {})
+    assert k.meta["cutoff"] == "2026-05-01"
+    assert date.fromisoformat(str(k.meta["start"])) <= date(2026, 4, 1)

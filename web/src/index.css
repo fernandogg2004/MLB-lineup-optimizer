@@ -88,7 +88,7 @@ html { scroll-padding-top: 4.5rem; }
 @media (prefers-color-scheme: dark) { .btn-primary { background: var(--accent-text); border-color: var(--accent-text); color: var(--on-accent); } }
 .btn-primary:hover:not(:disabled) { filter: brightness(1.08); border-color: var(--accent); }
 .link-btn { color: var(--accent-text); font-size: .875rem; text-decoration: underline; text-underline-offset: 2px; padding: .3rem .1rem; min-height: 24px; }
-.select { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: .3rem .5rem; color: var(--text-primary); max-width: 16rem; }
+.select { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: .3rem .5rem; color: var(--text-primary); max-width: min(16rem, 62vw); }
 
 .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; padding: 1.25rem; }
 .card-title { font-size: 1.05rem; font-weight: 650; letter-spacing: -0.01em; }

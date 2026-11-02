@@ -269,9 +269,13 @@ export function exhaustiveSearch(
   return { best, bestValue, feasible, hist: { lo, hi, counts } };
 }
 
-/** Linear mixing helper: regime weights with the starter's share scaled for "depth". */
+/**
+ * Scenario control "opposing starter's workload" (not part of the fitted model).
+ * Each inning's starter share w_k is replaced by w_k^(1/factor): factor = 1 is the identity,
+ * factor > 1 raises every share (starter pitches deeper), factor < 1 lowers it. Shares stay in
+ * [0, 1], keep their ordering across innings, and the bullpen weight is the complement (G = 2).
+ */
 export function scaleStarterDepth(w: number[], G: number, factor: number): number[] {
-  // factor > 1 keeps the starter in longer; computed on the survival curve.
   const out = w.slice();
   for (let k = 0; k < INNINGS; k++) {
     const s = Math.min(1, Math.max(0, w[k * G] ** (1 / factor)));

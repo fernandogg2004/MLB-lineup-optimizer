@@ -52,3 +52,9 @@ def test_dag_imports_when_airflow_is_installed(monkeypatch: pytest.MonkeyPatch) 
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     assert mod.dag.schedule_interval is None
+
+
+def test_no_literal_tab_characters_in_python_sources() -> None:
+    """Guards against "\t"-escape accidents in LaTeX strings (audit finding A-3)."""
+    for py in [*ROOT.joinpath("src").rglob("*.py"), *ROOT.joinpath("scripts").glob("*.py")]:
+        assert "\t" not in py.read_text(encoding="utf-8"), py

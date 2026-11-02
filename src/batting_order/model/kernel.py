@@ -71,7 +71,8 @@ def kernel_for(pa: pl.DataFrame, d: date, cache: dict[date, Kernel]) -> Kernel:
     key = date(d.year, d.month, 1)
     if key not in cache:
         start = max(KERNEL_ERA_START, key - timedelta(days=365 * KERNEL_YEARS))
-        if start >= key:  # early 2023: fall back to the previous year rather than nothing
+        # Early in the 2023 era the window would be too short; use the previous year instead.
+        if (key - start).days < 180:
             start = key - timedelta(days=365)
         cache[key] = fit_kernel(pa, key, start)
     return cache[key]

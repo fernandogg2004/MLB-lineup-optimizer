@@ -91,6 +91,23 @@ def main() -> None:
         m["EtwoBatterScale"] = f(h["batter_scale"], 2)
         m["EtwoPitcherScale"] = f(h["pitcher_scale"], 2)
         m["EtwoHalfLife"] = f"{h['half_life_days']:.0f}"
+        tun = load("e2_tuning") or {}
+        bnd = tun.get("selected_on_grid_boundary", {})
+        names = {
+            "batter_scale": r"$\lambda_B$",
+            "pitcher_scale": r"$\lambda_P$",
+            "half_life_days": "$H$",
+        }
+        on_edge = [names[k] for k, v in bnd.items() if v]
+        m["EtwoBoundaryNote"] = (
+            "all three selected values are interior to the final grid"
+            if not on_edge
+            else "the selected " + ", ".join(on_edge) + " lies on the edge of the final grid"
+        )
+        grid = tun.get("grid", [])
+        if grid:
+            hls = sorted({g["half_life_days"] for g in grid})
+            m["EtwoHalfLifeGrid"] = ", ".join(f"{v:.0f}" for v in hls)
         seasons = (s25, s26)
         m["EtwoBatterGain"] = f(
             np.mean([s["M0_league"]["log_loss"] - s["M1_batter"]["log_loss"] for s in seasons]), 3
@@ -134,7 +151,7 @@ def main() -> None:
     e2c = load("e2c_decision_sensitivity")
     if e2c:
         m["EtwocN"] = str(e2c["n_team_games"])
-        m["EtwocSame"] = pct(e2c["share_same_optimum"], 0)
+        m["EtwocSame"] = pct(e2c["share_same_optimum"], 1)
         m["EtwocLoss"] = f(e2c["mean_loss_using_m2_optimum_under_m3"], 4)
         m["EtwocLossMax"] = f(e2c["max_loss_using_m2_optimum_under_m3"], 4)
         m["EtwocUpTwo"] = f(e2c["mean_uplift_m2"], 4)
@@ -155,6 +172,13 @@ def main() -> None:
         m["EthreeMseConst"] = f(mse["constant_prior_season"], 3)
         m["EthreeMseTeam"] = f(mse["team_last60"], 3)
         m["EthreeCoverage"] = pct(e3["pit"]["coverage_80_nominal"], 1)
+        m["EthreeCoverageModel"] = pct(e3["pit"].get("coverage_80_model_implied", float("nan")), 1)
+        m["EthreeShort"] = str(e3.get("excluded_fewer_than_8_innings", 0))
+        pit = e3["pit"]
+        if "coverage_80_model_implied" in pit:
+            pm = pit["coverage_80_model_implied"]
+            se = (pm * (1 - pm) / pit["n"]) ** 0.5
+            m["EthreeCoverageZ"] = f((pit["coverage_80_nominal"] - pm) / se, 1, signed=True)
         m["EthreePitN"] = str(e3["pit"]["n"])
     # ---------------- E4
     if e4b:
@@ -181,16 +205,18 @@ def main() -> None:
         m["EfouraN"] = str(ex["n"])
         ng = e4a["noisy_ga"]
         m["EfouraCurse"] = f(ng["mean_winners_curse"], 3)
-        m["EfouraNoisyGap"] = f(ng["mean_gap_to_opt"], 3)
+        m["EfouraNoisyGap"] = f(ng["mean_gap_to_opt"], 4)
+        if "actual_mean_gap_same_instances" in ng:
+            m["EfouraActualSameGap"] = f(ng["actual_mean_gap_same_instances"], 4)
         m["EfouraNoisyN"] = str(ng["n"])
     else:
         m["EfouraExhaustiveSeconds"] = "0.6"
     if e4c:
         m["EfourcN"] = str(e4c["n_team_games"])
         m["EfourcDraws"] = str(e4c["draws_per_game"])
-        m["EfourcPBetter"] = pct(e4c["mean_p_opt_better"], 0)
-        m["EfourcExcl"] = pct(e4c["share_interval_excludes_0"], 0)
-        m["EfourcSame"] = pct(e4c["mean_p_same_optimum"], 0)
+        m["EfourcPBetter"] = pct(e4c["mean_p_opt_better"], 1)
+        m["EfourcExcl"] = pct(e4c["share_interval_excludes_0"], 1)
+        m["EfourcSame"] = pct(e4c["mean_p_same_optimum"], 1)
         m["EfourcWidth"] = f(e4c["mean_interval_width"], 3)
     # ---------------- E5
     if e5:
@@ -206,12 +232,18 @@ def main() -> None:
             m[f"RefWorst{key}"] = f(t["worst_er9"], 3)
             m[f"RefLo{key}"] = f(u["diff_q05"], 3, signed=True)
             m[f"RefHi{key}"] = f(u["diff_q95"], 3, signed=True)
-            m[f"RefPBetter{key}"] = pct(u["p_opt_better"], 0)
-            m[f"RefSame{key}"] = pct(u["p_same_optimum"], 0)
+            m[f"RefPBetter{key}"] = pct(u["p_opt_better"], 1)
+            m[f"RefSame{key}"] = pct(u["p_same_optimum"], 1)
+            m[f"RefRegret{key}"] = f(u["regret_of_point_optimum_mean"], 3)
+            cert = e5.get("certificate", {}).get(t["team"])
+            if cert:
+                mant, ex = f"{cert['best_minus_second']:.1e}".split("e")
+                m[f"RefCert{key}"] = rf"{mant}\times10^{{{int(ex)}}}"
             m[f"RefObserved{key}"] = str(t["observed_runs"])
         m["RefDraws"] = str(e5["teams"]["away"]["uncertainty"]["n_draws"])
         m["RefQmin"] = f(e5.get("q_min", 0.5), 3)
-        bound = 162 * 1e-13 / e5.get("q_min", 0.5)
+        # Proposition 5 with the measured truncated mass (not the nominal tolerance).
+        bound = 162 * e5.get("truncated_mass_max", 1e-13) / e5.get("q_min", 0.5)
         mant, exp = f"{bound:.1e}".split("e")
         # Math-mode content (the paper wraps it in $...$).
         m["RefTruncBound"] = rf"{mant}\times10^{{{int(exp)}}}"
@@ -235,11 +267,12 @@ def main() -> None:
     for s, q in sorted(quality.items()):
         rows.append(
             f"{s} & {q['games']:,} & {q['pa']:,} & {q['lineups_reliable']:,}/{q['lineups']:,}"
-            f" & {q['censored']} & {q['non_conserved'] - q['censored']} \\\\"
+            f" & {q['censored']} & {q.get('non_conserved_uncensored', 0)} \\\\"
         )
     (GEN / "table_data.tex").write_text(
         "\\begin{table}[t]\\centering\\small\n\\caption{Statcast data after processing "
-        "(regular season and postseason). Non-conserving transitions exclude censored ones.}"
+        "(regular season and postseason). Non-conserving: bookkeeping violations outside "
+        "censored transitions (data errors).}"
         "\\label{tab:data}\n\\begin{tabular}{lrrrrr}\\toprule\nSeason & Games & PAs & "
         "Reliable lineups & Censored & Non-conserving\\\\\\midrule\n"
         + "\n".join(rows)
@@ -518,7 +551,7 @@ def web_validation(e2: Any, e3: Any, e4a: Any, e4b: Any, e4c: Any) -> None:
             for k in ("by_decile", "calibration_slope", "bias_obs_minus_pred", "n_team_games")
         }
     if e4a:
-        out["e4a"] = {"methods": e4a["methods"]}
+        out["e4a"] = {"methods": e4a["methods"], "noisy_ga": e4a["noisy_ga"]}
     if e4b:
         out["e4b"] = {
             k: e4b[k] for k in ("n_team_games", "uplift_opt_vs_actual", "actual_percentile")
