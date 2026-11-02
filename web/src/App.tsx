@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { fetchJson, validateSnapshot } from "./data";
 import type { GameIndex, GameSnapshot } from "./data";
-import { I18nProvider, useI18n } from "./i18n";
+import { I18nProvider } from "./i18n";
+import { useI18n } from "./i18n-context";
 import { GameView } from "./views/GameView";
 import { MethodView } from "./views/MethodView";
 
@@ -20,8 +21,8 @@ function Shell() {
   const { t, lang, setLang } = useI18n();
   const [route, setRoute] = useState<Route>(parseHash);
   const [index, setIndex] = useState<GameIndex | null>(null);
-  const [snap, setSnap] = useState<GameSnapshot | null>(null);
-  const [error, setError] = useState(false);
+  const [loaded, setLoaded] = useState<{ pk: number; snap: GameSnapshot | null; error: boolean } | null>(null);
+  const [indexError, setIndexError] = useState(false);
 
   useEffect(() => {
     const on = () => setRoute(parseHash());
@@ -30,22 +31,29 @@ function Shell() {
   }, []);
 
   useEffect(() => {
-    fetchJson<GameIndex>("index.json").then(setIndex, () => setError(true));
+    fetchJson<GameIndex>("index.json").then(setIndex, () => setIndexError(true));
   }, []);
 
   const gamePk = route.page === "game" ? (route.gamePk ?? index?.reference_game) : undefined;
   useEffect(() => {
     if (!index || gamePk === undefined) return;
     const entry = index.games.find((g) => g.game_pk === gamePk) ?? index.games[0];
-    setSnap(null);
-    setError(false);
+    let cancelled = false;
     fetchJson<GameSnapshot>(entry.path)
       .then((s) => {
         validateSnapshot(s);
-        setSnap(s);
+        if (!cancelled) setLoaded({ pk: gamePk, snap: s, error: false });
       })
-      .catch(() => setError(true));
+      .catch(() => {
+        if (!cancelled) setLoaded({ pk: gamePk, snap: null, error: true });
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [index, gamePk]);
+  const current = loaded && loaded.pk === gamePk ? loaded : null;
+  const snap = current?.snap ?? null;
+  const error = indexError || (current?.error ?? false);
 
   useEffect(() => {
     document.title = `${t("app.name")} — ${t("app.tagline")}`;
@@ -54,14 +62,14 @@ function Shell() {
   return (
     <div className="min-h-screen flex flex-col">
       <a href="#main" className="skip-link">
-        Skip to content
+        {t("a11y.skip")}
       </a>
       <header className="topbar">
         <div className="container flex flex-wrap items-center gap-x-6 gap-y-2 py-3">
           <a href="#/" className="brand">
             <span aria-hidden className="brand-mark">◆</span> {t("app.name")}
           </a>
-          <nav aria-label="Main" className="flex flex-wrap gap-4 text-sm">
+          <nav aria-label={t("a11y.nav")} className="flex flex-wrap gap-4 text-sm">
             <a href="#/" aria-current={route.page === "game" ? "page" : undefined} className="nav-link">
               {t("nav.game")}
             </a>

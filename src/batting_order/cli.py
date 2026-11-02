@@ -25,12 +25,11 @@ import polars as pl
 from batting_order.data.build import build_season, load_transitions
 from batting_order.data.statcast import download_season
 from batting_order.data.statsapi import StatsApi
-from batting_order.snapshot import build_game_snapshot, write_snapshot
+from batting_order.snapshot import REFERENCE_GAME, build_game_snapshot, write_snapshot
 
 ROOT = Path(__file__).resolve().parents[2]
 DATA = ROOT / "data"
 WEB_DATA = ROOT / "web" / "public" / "data"
-REFERENCE_GAME = 849799  # 2026 World Series Game 5 (MIL 4 @ TB 1, 2026-10-28)
 HISTORY_SEASONS = 3
 
 

@@ -1,0 +1,15 @@
+\begin{table}[t]\centering\small
+\caption{Search methods on 200 random 2026 regular-season team-games. Gap: exact $V(\pi^\star)-V(\hat\pi)$ in runs per game; Optimal: share of instances where the exact optimum was returned. $^\dagger$On 30 of them.}\label{tab:e4a}
+\begin{tabular}{lrrrr}\toprule
+Method & Mean gap & Max gap & Optimal & Evaluations\\ \midrule
+Exhaustive search (exact) & 0.0000 & 0.0000 & 100\% & 362,880 \\
+2-swap local search, 10 starts & 0.0000 & 0.0000 & 100\% & 1,933 \\
+Simulated annealing & 0.0000 & 0.0021 & 94\% & 1,707 \\
+Genetic algorithm, exact fitness & 0.0001 & 0.0034 & 82\% & 523 \\
+2-swap local search from actual order & 0.0004 & 0.0091 & 68\% & 203 \\
+\citeauthor{tango2007} guideline & 0.0092 & 0.0251 & 0\% & 0 \\
+Sort by run value & 0.0092 & 0.0306 & 1\% & 0 \\
+Sort by on-base probability & 0.0110 & 0.0341 & 0\% & 0 \\
+Order actually used & 0.0186 & 0.0641 & 0\% & 0 \\
+Original GA, Monte Carlo fitness$^\dagger$ & 0.0223 & 0.0526 & 0\% & 1,710 \\
+\bottomrule\end{tabular}\end{table}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dictionaries } from "./i18n";
+import { dictionaries } from "./strings";
 
 describe("translations", () => {
   const en = dictionaries.en;

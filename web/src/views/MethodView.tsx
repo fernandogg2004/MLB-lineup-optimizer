@@ -1,25 +1,22 @@
 import { useEffect, useState } from "react";
 import { fetchJson } from "../data";
-import { useI18n } from "../i18n";
-import { ChartCard, niceTicks } from "../components/charts";
+import { useI18n } from "../i18n-context";
+import type { Key } from "../strings";
+import { ChartCard } from "../components/charts";
+import { niceTicks } from "../components/ticks";
 
 interface Validation {
   e2?: { by_season: Record<string, { n_pa: number; models: Record<string, { log_loss: number; diff_vs_M2: { mean: number; ci_low: number; ci_high: number } }> }> };
+  e2b?: { window: string[]; n_pa_matched: number; models: Record<string, { log_loss: number; diff_vs_M2: { mean: number; ci_low: number; ci_high: number } }> };
   e3?: { by_decile: { decile: number; pred: number; obs: number; obs_se: number }[]; calibration_slope: number; bias_obs_minus_pred: number; n_team_games: number };
   e4a?: { methods: Record<string, { mean_gap: number; share_optimal: number; mean_evaluations: number }> };
   e4b?: { uplift_opt_vs_actual: { mean: number; per_162_games: number }; actual_percentile: { median: number } };
 }
 
-const MODEL_LABELS: Record<string, string> = {
-  M0_league: "M0 · league average",
-  M1_batter: "M1 · + batter",
-  M2_batter_pitcher: "M2 · + pitcher (selected)",
-  M2_default_hyper: "M2 · untuned priors",
-  M3_lightgbm: "M3 · gradient boosting",
-};
+const MODELS = ["M0_league", "M1_batter", "M2_batter_pitcher", "M2_default_hyper", "M3_lightgbm"] as const;
 
 export function MethodView() {
-  const { t, fmt, pct, signed } = useI18n();
+  const { t, fmt, pct, signed, int } = useI18n();
   const [v, setV] = useState<Validation | null | "error">(null);
   useEffect(() => {
     fetchJson<Validation>("validation.json").then(setV, () => setV("error"));
@@ -47,15 +44,15 @@ export function MethodView() {
                       <th scope="col">{t("method.model")}</th>
                       {Object.keys(v.e2.by_season).map((s) => (
                         <th key={s} scope="col" className="num" colSpan={2}>
-                          {s} ({v.e2!.by_season[s].n_pa.toLocaleString()} {t("method.n")})
+                          {s} ({int(v.e2!.by_season[s].n_pa)} {t("method.n")})
                         </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {Object.keys(MODEL_LABELS).map((m) => (
+                    {MODELS.map((m) => (
                       <tr key={m}>
-                        <th scope="row" className="text-left font-normal">{MODEL_LABELS[m]}</th>
+                        <th scope="row" className="text-left font-normal">{t(`model.${m}` as Key)}</th>
                         {Object.values(v.e2!.by_season).flatMap((s, i) => {
                           const r = s.models[m];
                           if (!r) return [<td key={`${i}a`} />, <td key={`${i}b`} />];
@@ -72,6 +69,39 @@ export function MethodView() {
                 </table>
               </div>
               <p className="text-xs text-muted mt-2">{t("method.diff")}</p>
+            </ChartCard>
+          )}
+          {v.e2b && (
+            <ChartCard title={t("method.legacy")} subtitle={`${v.e2b.window[0]} – ${v.e2b.window[1]} · ${int(v.e2b.n_pa_matched)} ${t("method.n")}`}>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th scope="col">{t("method.model")}</th>
+                    <th scope="col" className="num">{t("method.ll")}</th>
+                    <th scope="col" className="num">{t("method.diff")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(
+                    [
+                      ["legacy_lightgbm_51_features", "model.legacy"],
+                      ["M0_league", "model.M0_league"],
+                      ["M2_batter_pitcher", "model.M2_batter_pitcher"],
+                    ] as const
+                  ).map(([k, label]) => {
+                    const r = v.e2b!.models[k];
+                    return (
+                      <tr key={k}>
+                        <th scope="row" className="text-left font-normal">{t(label)}</th>
+                        <td className="num">{fmt(r.log_loss, 4)}</td>
+                        <td className="num text-xs text-muted">
+                          {k === "M2_batter_pitcher" ? "—" : `${signed(r.diff_vs_M2.mean, 4)} [${signed(r.diff_vs_M2.ci_low, 4)}, ${signed(r.diff_vs_M2.ci_high, 4)}]`}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </ChartCard>
           )}
           {v.e3 && <Calibration e3={v.e3} />}
@@ -91,10 +121,10 @@ export function MethodView() {
                     .sort((a, b) => a[1].mean_gap - b[1].mean_gap)
                     .map(([k, r]) => (
                       <tr key={k}>
-                        <th scope="row" className="text-left font-normal">{k.replaceAll("_", " ")}</th>
+                        <th scope="row" className="text-left font-normal">{t(`search.${k}` as Key)}</th>
                         <td className="num">{fmt(r.mean_gap, 4)}</td>
                         <td className="num">{pct(r.share_optimal)}</td>
-                        <td className="num">{Math.round(r.mean_evaluations).toLocaleString()}</td>
+                        <td className="num">{int(r.mean_evaluations)}</td>
                       </tr>
                     ))}
                 </tbody>
@@ -125,7 +155,7 @@ export function MethodView() {
 }
 
 function Calibration({ e3 }: { e3: NonNullable<Validation["e3"]> }) {
-  const { t, fmt } = useI18n();
+  const { t, fmt, int } = useI18n();
   const W = 420;
   const H = 300;
   const m = { l: 52, r: 16, t: 16, b: 44 };
@@ -138,7 +168,7 @@ function Calibration({ e3 }: { e3: NonNullable<Validation["e3"]> }) {
   return (
     <ChartCard
       title={t("method.calib")}
-      subtitle={`n = ${e3.n_team_games.toLocaleString()} · slope ${fmt(e3.calibration_slope, 2)} · bias ${fmt(e3.bias_obs_minus_pred, 3)}`}
+      subtitle={t("method.calib_sub", { n: int(e3.n_team_games), slope: fmt(e3.calibration_slope, 2), bias: fmt(e3.bias_obs_minus_pred, 3) })}
       table={
         <table className="data-table">
           <thead>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { allowedMatrix, locksConsistent } from "./Simulator";
+import { allowedMatrix, locksConsistent } from "./constraints";
 
 describe("simulator constraints", () => {
   it("detects a hitter locked to two slots", () => {

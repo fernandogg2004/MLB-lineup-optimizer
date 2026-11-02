@@ -1,0 +1,96 @@
+{
+ "experiment": "e4a_search_methods",
+ "generated_at": "2026-11-02",
+ "software": {
+  "package": "2.0.0",
+  "git": "51cbe64"
+ },
+ "methods": {
+  "exhaustive": {
+   "n": 200,
+   "mean_gap": 0.0,
+   "max_gap": 0.0,
+   "share_optimal": 1.0,
+   "mean_evaluations": 362880.0,
+   "mean_seconds": 1.4015642680010933
+  },
+  "actual": {
+   "n": 200,
+   "mean_gap": 0.01856526095679423,
+   "max_gap": 0.06408067636038206,
+   "share_optimal": 0.0,
+   "mean_evaluations": 0.0,
+   "mean_seconds": 0.0
+  },
+  "the_book": {
+   "n": 200,
+   "mean_gap": 0.009182606630202064,
+   "max_gap": 0.02513755526624717,
+   "share_optimal": 0.0,
+   "mean_evaluations": 0.0,
+   "mean_seconds": 0.0
+  },
+  "sort_run_value": {
+   "n": 200,
+   "mean_gap": 0.009239913134790867,
+   "max_gap": 0.0305627636382928,
+   "share_optimal": 0.01,
+   "mean_evaluations": 0.0,
+   "mean_seconds": 0.0
+  },
+  "sort_obp": {
+   "n": 200,
+   "mean_gap": 0.010971857268625342,
+   "max_gap": 0.034067912664746736,
+   "share_optimal": 0.005,
+   "mean_evaluations": 0.0,
+   "mean_seconds": 0.0
+  },
+  "local_search_from_actual": {
+   "n": 200,
+   "mean_gap": 0.0004250388306641573,
+   "max_gap": 0.00914218738706829,
+   "share_optimal": 0.675,
+   "mean_evaluations": 203.36,
+   "mean_seconds": 1.042101043999719
+  },
+  "local_search_x10": {
+   "n": 200,
+   "mean_gap": 0.0,
+   "max_gap": 0.0,
+   "share_optimal": 1.0,
+   "mean_evaluations": 1933.085,
+   "mean_seconds": 9.718869289999565
+  },
+  "simulated_annealing": {
+   "n": 200,
+   "mean_gap": 3.044698621065711e-05,
+   "max_gap": 0.002075426937410363,
+   "share_optimal": 0.945,
+   "mean_evaluations": 1706.705,
+   "mean_seconds": 8.629610969998902
+  },
+  "genetic_exact": {
+   "n": 200,
+   "mean_gap": 0.00012193974153477117,
+   "max_gap": 0.003448031788334305,
+   "share_optimal": 0.82,
+   "mean_evaluations": 522.915,
+   "mean_seconds": 2.8008593875003864
+  },
+  "genetic_mc4000_original": {
+   "n": 30,
+   "mean_gap": 0.022308510883220833,
+   "max_gap": 0.05261755256134126,
+   "share_optimal": 0.0,
+   "mean_evaluations": 1710.0,
+   "mean_seconds": 46.30210750332917
+  }
+ },
+ "noisy_ga": {
+  "n": 30,
+  "mean_winners_curse": 0.163527715303886,
+  "mean_gap_to_opt": 0.022308510883220833
+ },
+ "note": "gap = exact E[R_9] of the exhaustive optimum minus exact E[R_9] of the returned order."
+}

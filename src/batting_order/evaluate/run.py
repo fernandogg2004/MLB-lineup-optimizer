@@ -134,13 +134,15 @@ def e1(pa: pl.DataFrame) -> None:
 # ----------------------------------------------------------------------
 
 
+# Grid extended (2026-11-02) after the first 2024 tuning run selected the lower boundary of
+# both prior strengths; still tuned on 2024 only, before any test-season metric was viewed.
+BS_GRID = (0.125, 0.25, 0.5, 1.0, 2.0)
+PS_GRID = (0.1875, 0.375, 0.75, 1.5, 3.0)
+HL_GRID = (365.0, 730.0, 1095.0)
+
+
 def e2_tune(pa: pl.DataFrame, quick: bool) -> Hyper:
-    grid = [
-        (bs, ps, hl)
-        for bs in (0.5, 1.0, 2.0)
-        for ps in (0.75, 1.5, 3.0)
-        for hl in (180.0, 365.0, 730.0)
-    ]
+    grid = [(bs, ps, hl) for bs in BS_GRID for ps in PS_GRID for hl in HL_GRID]
     if quick:
         grid = grid[:3]
     start, end = date(2024, 4, 1), date(2024, 10, 1)
@@ -152,7 +154,20 @@ def e2_tune(pa: pl.DataFrame, quick: bool) -> Hyper:
         rows.append({"batter_scale": bs, "pitcher_scale": ps, "half_life_days": hl, "log_loss": ll})
         log.info("tune %s -> %.5f", (bs, ps, hl), ll)
     best = min(rows, key=lambda r: r["log_loss"])
-    _save("e2_tuning", {"period": [str(start), str(end)], "grid": rows, "selected": best})
+    on_boundary = {
+        "batter_scale": best["batter_scale"] in (BS_GRID[0], BS_GRID[-1]),
+        "pitcher_scale": best["pitcher_scale"] in (PS_GRID[0], PS_GRID[-1]),
+        "half_life_days": best["half_life_days"] in (HL_GRID[0], HL_GRID[-1]),
+    }
+    _save(
+        "e2_tuning",
+        {
+            "period": [str(start), str(end)],
+            "grid": rows,
+            "selected": best,
+            "selected_on_grid_boundary": on_boundary,
+        },
+    )
     return Hyper(
         batter_scale=best["batter_scale"],
         pitcher_scale=best["pitcher_scale"],
@@ -186,6 +201,9 @@ def _lgbm_train(pa: pl.DataFrame, h: Hyper, quick: bool) -> Any:
         subsample_freq=1,
         colsample_bytree=0.8,
         verbose=-1,
+        random_state=0,
+        deterministic=True,
+        force_row_wise=True,
     )
     model.fit(
         X[:cut],
@@ -261,6 +279,99 @@ def e2(pa: pl.DataFrame, quick: bool) -> None:
             "block_days": 14,
             "by_season": results,
             "lightgbm_iterations": int(lgbm.best_iteration_ or 0),
+        },
+    )
+
+
+def _m3_matchup(snap: Any, ctx: GameContext, lgbm: Any) -> Matchup:
+    """Matchup whose outcome probabilities come from the gradient-boosting model M3."""
+    from batting_order.evaluate.pa_eval import snapshot_features
+
+    base = build_matchup(snap, ctx)
+    rows_sp = pl.DataFrame(
+        {
+            "batter": ctx.batters,
+            "pitcher": [ctx.opp_starter] * 9,
+            "p_throws": [ctx.opp_starter_throws] * 9,
+        }
+    )
+    x_sp = lgbm.predict_proba(snapshot_features(snap, rows_sp))
+    # Bullpen: mix over hands, using the bullpen multiplier as the pitcher multiplier.
+    share_r = snap.bullpen_hand_share.get(ctx.opp_team, 0.72)
+    mult = snap.bullpen_mult.get(ctx.opp_team, np.ones(N_OUT))
+    x_bp = np.zeros((9, N_OUT))
+    for hand, wgt in (("R", share_r), ("L", 1 - share_r)):
+        feats = []
+        for b in ctx.batters:
+            st = snap.side(b, hand)
+            q = snap.league[(st, hand)]
+            feats.append(
+                np.concatenate(
+                    [
+                        np.log(q),
+                        np.log(snap.batter_mult.get(b, np.ones(N_OUT))),
+                        np.log(mult),
+                        [
+                            np.log1p(snap.batter_n.get(b, 0.0)),
+                            np.log1p(1e4),
+                            float(st == "L"),
+                            float(hand == "L"),
+                        ],
+                    ]
+                )
+            )
+        x_bp += wgt * lgbm.predict_proba(np.array(feats))
+    x = np.stack([x_sp, x_bp])
+    x = x / x.sum(axis=2, keepdims=True)
+    return Matchup(x, base.w)
+
+
+def e2c_decision_sensitivity(pa: pl.DataFrame, lineups: pl.DataFrame, quick: bool) -> None:
+    """Do M2 and M3 lead to the same lineup decisions on test games?"""
+    h = tuned_hyper()
+    lgbm = _lgbm_train(pa, h, quick)
+    games = lineups.filter(pl.col("reliable") & (pl.col("season") >= 2025)).sample(
+        20 if quick else 300, seed=5
+    )
+    kernels: dict[date, Any] = {}
+    rows = []
+    for r in games.iter_rows(named=True):
+        d = r["game_date"]
+        snap = build_snapshot(pa, d, h)
+        kernel = kernel_for(pa, d, kernels)
+        ctx = GameContext(
+            list(r["lineup"]), r["opp_starter"], r["opp_starter_throws"], r["fld_team"]
+        )
+        ex2 = exhaustive(kernel, build_matchup(snap, ctx))
+        ex3 = exhaustive(kernel, _m3_matchup(snap, ctx, lgbm))
+        o2, v2 = ex2.best()
+        o3, v3 = ex3.best()
+        ident = np.arange(9)
+        rows.append(
+            {
+                "same_optimum": bool(np.array_equal(o2, o3)),
+                "uplift_m2": v2 - ex2.value_of(ident),
+                "uplift_m3": v3 - ex3.value_of(ident),
+                "m3_value_of_m2_optimum_gap": v3 - ex3.value_of(o2),
+                "er_actual_m2": ex2.value_of(ident),
+                "er_actual_m3": ex3.value_of(ident),
+                "corr_all_orders": float(np.corrcoef(ex2.values.ravel(), ex3.values.ravel())[0, 1]),
+            }
+        )
+    df = pl.DataFrame(rows)
+    _save(
+        "e2c_decision_sensitivity",
+        {
+            "n_team_games": df.height,
+            "share_same_optimum": float(df["same_optimum"].mean()),
+            "mean_uplift_m2": float(df["uplift_m2"].mean()),
+            "mean_uplift_m3": float(df["uplift_m3"].mean()),
+            "mean_loss_using_m2_optimum_under_m3": float(df["m3_value_of_m2_optimum_gap"].mean()),
+            "max_loss_using_m2_optimum_under_m3": float(df["m3_value_of_m2_optimum_gap"].max()),
+            "mean_abs_diff_er_actual": float(
+                (df["er_actual_m2"] - df["er_actual_m3"]).abs().mean()
+            ),
+            "mean_corr_values_over_all_orders": float(df["corr_all_orders"].mean()),
         },
     )
 
@@ -825,6 +936,7 @@ def main(only: list[str] | None = None, quick: bool = False) -> None:
             "e1": lambda: e1(pa),
             "e2": lambda: e2(pa, quick),
             "e2b": lambda: e2_legacy(pa),
+            "e2c": lambda: e2c_decision_sensitivity(pa, lineups, quick),
             "e3": lambda: e3_e4b(pa, lineups, quick),
             "e4a": lambda: e4a(pa, lineups, quick),
             "e4c": lambda: e4c(pa, lineups, quick),

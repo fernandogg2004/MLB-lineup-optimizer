@@ -31,6 +31,8 @@ from batting_order.optimize.search import batter_summaries, heuristic_the_book
 
 log = logging.getLogger(__name__)
 SCHEMA_VERSION = 1
+BROWSER_DRAWS = 100
+REFERENCE_GAME = 849799  # 2026 World Series Game 5
 # Statcast team abbreviations differ from StatsAPI in a few cases.
 STATSAPI_TO_STATCAST = {
     "AZ": "AZ",
@@ -179,7 +181,9 @@ def _team(
             "regret_of_point_optimum_mean": float((d_best_a - d_opt_a).mean()),
             "p_same_optimum": float(np.mean(same)),
             "slot_player_freq": _r(slot_freq / n_draws, 3),
-            "draws_x": [_r(x, 4) for x in draws_x],
+            # The browser re-evaluates custom orders on a subset of draws (live interval);
+            # summary statistics above use all draws.
+            "draws_x": [_r(x, 4) for x in draws_x[:BROWSER_DRAWS]],
         },
         "truncated_mass": max(ev_act.truncated_mass, ex.truncated_mass),
     }
@@ -237,6 +241,7 @@ def build_game_snapshot(
             "home_abbr": lus["home"].abbreviation,
             "away_runs": lus["away"].runs,
             "home_runs": lus["home"].runs,
+            **({"reference": "true"} if game_pk == REFERENCE_GAME else {}),
             **(label or {}),
         },
         "cutoff": {

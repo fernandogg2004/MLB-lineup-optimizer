@@ -1,0 +1,22 @@
+Under explicit Markov assumptions, the expected runs of a batting order can be computed exactly and
+cheaply, which turns batting-order optimization from a noisy search into an exhaustive one with a
+certificate. With an empirical-Bayes plate-appearance model that uses only pregame information,
+the model's run predictions are calibrated on two held-out seasons, and the simple model is at
+least as good as the predecessor system's 51-feature gradient-boosting model.
+
+The substantive conclusion is modest and, we think, robust: in this model the batting orders that
+MLB teams actually used in 2025--2026 were close to optimal (median rank above \EfourbPctMedian{}
+of all orders), and reordering would add about \EfourbUpliftMean{} expected runs per game, roughly
+\EfourbUpliftSeason{} runs over a season. The best and worst possible orders of the same nine
+hitters differ by less than a tenth of a run per game. For the 2026 World Series Game 5 the
+estimated gains were \RefUpliftAway{} (Milwaukee) and \RefUpliftHome{} (Tampa Bay) runs, with
+parameter uncertainty of the same size, and the identity of the single best order is not
+statistically determined. We find no evidence that either manager's order was materially worse
+than the model's recommendation, and the actual result of the game cannot speak to that question.
+
+What remains uncertain is everything outside the model: base-running speed, mid-inning pitching
+changes, individual platoon effects and in-game substitutions. Each of these could change the
+ranking of nearly tied orders; we expect none of them to change the order of magnitude of the
+effect. The method itself is the paper's practical contribution: a reproducible, leakage-free
+pipeline and an exact optimizer, with an interactive public interface that runs the same
+computation in the browser.

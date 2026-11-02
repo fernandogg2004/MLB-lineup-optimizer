@@ -85,6 +85,27 @@ def main() -> None:
         m["EtwoBatterScale"] = f(h["batter_scale"], 2)
         m["EtwoPitcherScale"] = f(h["pitcher_scale"], 2)
         m["EtwoHalfLife"] = f"{h['half_life_days']:.0f}"
+    e2b = load("e2b_legacy_comparison")
+    if e2b:
+        lm = e2b["models"]
+        m["EtwobN"] = f"{e2b['n_pa_matched']:,}".replace(",", "{,}")
+        m["EtwobWindow"] = f"{e2b['window'][0]} to {e2b['window'][1]}"
+        m["EtwobLegacyLL"] = f(lm["legacy_lightgbm_51_features"]["log_loss"], 4)
+        m["EtwobMtwoLL"] = f(lm["M2_batter_pitcher"]["log_loss"], 4)
+        m["EtwobMzeroLL"] = f(lm["M0_league"]["log_loss"], 4)
+        d = lm["legacy_lightgbm_51_features"]["diff_vs_M2"]
+        m["EtwobDiff"] = f(d["mean"], 4)
+        m["EtwobDiffLo"] = f(d["ci_low"], 4)
+        m["EtwobDiffHi"] = f(d["ci_high"], 4)
+    e2c = load("e2c_decision_sensitivity")
+    if e2c:
+        m["EtwocN"] = str(e2c["n_team_games"])
+        m["EtwocSame"] = pct(e2c["share_same_optimum"], 0)
+        m["EtwocLoss"] = f(e2c["mean_loss_using_m2_optimum_under_m3"], 4)
+        m["EtwocLossMax"] = f(e2c["max_loss_using_m2_optimum_under_m3"], 4)
+        m["EtwocUpTwo"] = f(e2c["mean_uplift_m2"], 4)
+        m["EtwocUpThree"] = f(e2c["mean_uplift_m3"], 4)
+        m["EtwocCorr"] = f(e2c["mean_corr_values_over_all_orders"], 3)
     # ---------------- E3
     if e3:
         m["EthreeSlope"] = f(e3["calibration_slope"], 2)
@@ -156,11 +177,12 @@ def main() -> None:
             m[f"RefObserved{key}"] = str(t["observed_runs"])
         m["RefDraws"] = str(e5["teams"]["away"]["uncertainty"]["n_draws"])
         m["RefQmin"] = f(e5.get("q_min", 0.5), 3)
-        m["RefTruncBound"] = (
-            f"$<{162 * 1e-13 / e5.get('q_min', 0.5):.1e}$".replace("e-", r"\times10^{-") + "}"
-        )
+        bound = 162 * 1e-13 / e5.get("q_min", 0.5)
+        mant, exp = f"{bound:.1e}".split("e")
+        # Math-mode content (the paper wraps it in $...$).
+        m["RefTruncBound"] = rf"{mant}\times10^{{{int(exp)}}}"
     else:
-        m["RefQmin"], m["RefTruncBound"] = "0.5", "$3\\times10^{-11}$"
+        m["RefQmin"], m["RefTruncBound"] = "0.5", r"3\times10^{-11}"
     for k in (
         "RefUpliftAway",
         "RefUpliftHome",
@@ -191,9 +213,174 @@ def main() -> None:
         encoding="utf-8",
     )
 
+    tables(e1, e2, e4a, m)
+    ref_and_appendix(e1, e5)
     figures(e1, e2, e3, e4b, e5)
     web_validation(e2, e3, e4a, e4b, e4c)
     print("wrote", GEN, FIG)
+
+
+def tables(e1: Any, e2: Any, e4a: Any, m: dict[str, str]) -> None:
+    if e2:
+        names = [
+            ("M0_league", "M0: league, by handedness"),
+            ("M1_batter", "M1: + batter"),
+            ("M2_batter_pitcher", "M2: + pitcher (selected)"),
+            ("M2_default_hyper", "M2 with untuned priors"),
+            ("M3_lightgbm", "M3: gradient boosting on M2 inputs"),
+        ]
+        rows = []
+        for k, lab in names:
+            cells = []
+            for s in ("2025", "2026"):
+                r = e2["by_season"][s]["models"][k]
+                dd = r["diff_vs_M2"]
+                diff = (
+                    "---"
+                    if k == "M2_batter_pitcher"
+                    else (
+                        f"{f(dd['mean'], 4, True)} "
+                        f"[{f(dd['ci_low'], 4, True)}, {f(dd['ci_high'], 4, True)}]"
+                    )
+                )
+                cells.append(f"{r['log_loss']:.4f} & {diff}")
+            rows.append(f"{lab} & " + " & ".join(cells) + r" \\")
+        n25, n26 = (e2["by_season"][s]["n_pa"] for s in ("2025", "2026"))
+        head = (
+            r"\begin{table}[t]\centering\small"
+            "\n"
+            r"\caption{Held-out log-loss (nats per PA) and difference from M2 with 95\% "
+            r"game-cluster bootstrap intervals; negative differences favour the row model. "
+            rf"2025: {n25:,} PAs; 2026: {n26:,} PAs.}}\label{{tab:e2}}"
+            "\n"
+            r"\begin{tabular}{lcccc}\toprule"
+            "\n"
+            r" & \multicolumn{2}{c}{2025} & \multicolumn{2}{c}{2026}\\"
+            "\n"
+            r"\cmidrule(lr){2-3}\cmidrule(lr){4-5}"
+            "\n"
+            r"Model & Log-loss & $\Delta$ vs M2 & Log-loss & $\Delta$ vs M2\\ \midrule"
+            "\n"
+        )
+        (GEN / "table_e2.tex").write_text(
+            head + "\n".join(rows) + "\n" + r"\bottomrule\end{tabular}\end{table}" + "\n",
+            encoding="utf-8",
+        )
+    if e4a:
+        labels = {
+            "exhaustive": "Exhaustive search (exact)",
+            "local_search_x10": "2-swap local search, 10 starts",
+            "simulated_annealing": "Simulated annealing",
+            "genetic_exact": "Genetic algorithm, exact fitness",
+            "local_search_from_actual": "2-swap local search from actual order",
+            "the_book": r"\citeauthor{tango2007} guideline",
+            "sort_run_value": "Sort by run value",
+            "sort_obp": "Sort by on-base probability",
+            "actual": "Order actually used",
+            "genetic_mc4000_original": r"Original GA, Monte Carlo fitness$^\dagger$",
+        }
+        body = "\n".join(
+            f"{labels.get(k, k)} & {v['mean_gap']:.4f} & {v['max_gap']:.4f} & "
+            f"{pct(v['share_optimal'])} & {v['mean_evaluations']:,.0f} " + r"\\"
+            for k, v in sorted(e4a["methods"].items(), key=lambda kv: kv[1]["mean_gap"])
+        )
+        n, nn = e4a["methods"]["exhaustive"]["n"], e4a["noisy_ga"]["n"]
+        head = (
+            r"\begin{table}[t]\centering\small"
+            "\n"
+            rf"\caption{{Search methods on {n} random 2026 regular-season team-games. Gap: exact "
+            r"$V(\pi^\star)-V(\hat\pi)$ in runs per game; Optimal: share of instances where the "
+            rf"exact optimum was returned. $^\dagger$On {nn} of them.}}\label{{tab:e4a}}"
+            "\n"
+            r"\begin{tabular}{lrrrr}\toprule"
+            "\n"
+            r"Method & Mean gap & Max gap & Optimal & Evaluations\\ \midrule"
+            "\n"
+        )
+        (GEN / "table_e4a.tex").write_text(
+            head + body + "\n" + r"\bottomrule\end{tabular}\end{table}" + "\n", encoding="utf-8"
+        )
+    if e1:
+        d = e1["by_season"]
+        m["EoneStateZeroMaxDiff"] = f(
+            max(abs(v["model_re24"][0] - v["empirical_re24"][0]) for v in d.values()), 3
+        )
+        m["EoneWeightedDiff"] = f(max(v["weighted_mean_abs_diff"] for v in d.values()), 3)
+        m["EoneMaxDiff"] = f(max(v["max_abs_diff"] for v in d.values()), 2)
+        m["EoneREzero"] = f(d["2026"]["model_re24"][0], 3)
+    _fill_missing(m)
+    (GEN / "numbers.tex").write_text(macros(m), encoding="utf-8")
+
+
+def _fill_missing(m: dict[str, str]) -> None:
+    """Define every result macro used in the paper; missing ones print a visible marker."""
+    import re
+
+    used: set[str] = set()
+    for tex in [ROOT / "research" / "paper.tex", *(ROOT / "research" / "sections").glob("*.tex")]:
+        text = tex.read_text("utf-8")
+        used |= set(re.findall(r"\\((?:Eone|Etwo|Ethree|Efour|Ref)[A-Za-z]+)", text))
+    for name in sorted(used - m.keys()):
+        m[name] = r"	extbf{??}"
+        print("MISSING macro:", name)
+
+
+def ref_and_appendix(e1: Any, e5: Any) -> None:
+    """Reference-game orders table and the RE24 appendix table."""
+    nl = "\n"
+    if e5:
+        a, h = e5["teams"]["away"], e5["teams"]["home"]
+        rows = [
+            f"{i + 1} & {a['actual_order'][i]} & {a['optimal_order'][i]} & "
+            f"{h['actual_order'][i]} & {h['optimal_order'][i]} " + r"\\"
+            for i in range(9)
+        ]
+        text = (
+            r"\begin{table}[t]\centering\small"
+            + nl
+            + r"\caption{2026 World Series Game 5: starting orders used and model-optimal orders "
+            + r"(information before 2026-10-28).}\label{tab:ref}"
+            + nl
+            + r"\begin{tabular}{rllll}\toprule"
+            + nl
+            + rf" & \multicolumn{{2}}{{c}}{{{a['name']}}} & \multicolumn{{2}}{{c}}{{{h['name']}}}"
+            + r"\\"
+            + nl
+            + r"\cmidrule(lr){2-3}\cmidrule(lr){4-5}"
+            + nl
+            + r"Slot & Used & Optimal & Used & Optimal\\ \midrule"
+            + nl
+            + nl.join(rows)
+            + nl
+            + r"\bottomrule\end{tabular}\end{table}"
+            + nl
+        )
+        (GEN / "table_ref.tex").write_text(text, encoding="utf-8")
+    if e1:
+        d = e1["by_season"]["2026"]
+        mre, ere = d["model_re24"], d["empirical_re24"]
+        names = ["---", "1--", "-2-", "12-", "--3", "1-3", "-23", "123"]
+        rows = []
+        for b in range(8):
+            cells = " & ".join(f"{mre[8 * o + b]:.3f} ({ere[8 * o + b]:.3f})" for o in range(3))
+            rows.append(f"{names[b]} & {cells} " + r"\\")
+        text = (
+            r"\section{Run expectancy, 2026}\label{app:re24}"
+            + nl
+            + r"Model run expectancy (empirical in parentheses) by bases occupied and outs; 2026 "
+            + r"kernel with the league outcome mix (E1). Bases: 1 = first, 2 = second, 3 = third."
+            + nl
+            + nl
+            + r"\begin{center}\small\begin{tabular}{lccc}\toprule"
+            + nl
+            + r"Bases & 0 outs & 1 out & 2 outs\\ \midrule"
+            + nl
+            + nl.join(rows)
+            + nl
+            + r"\bottomrule\end{tabular}\end{center}"
+            + nl
+        )
+        (GEN / "appendix.tex").write_text(text, encoding="utf-8")
 
 
 def figures(e1: Any, e2: Any, e3: Any, e4b: Any, e5: Any) -> None:
@@ -273,6 +460,9 @@ def web_validation(e2: Any, e3: Any, e4a: Any, e4b: Any, e4c: Any) -> None:
                 s: {"n_pa": v["n_pa"], "models": v["models"]} for s, v in e2["by_season"].items()
             }
         }
+    e2b = load("e2b_legacy_comparison")
+    if e2b:
+        out["e2b"] = {k: e2b[k] for k in ("window", "n_pa_matched", "models")}
     if e3:
         out["e3"] = {
             k: e3[k]

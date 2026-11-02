@@ -21,29 +21,14 @@ import { evaluate, operators, scaleStarterDepth } from "../engine/markov";
 import type { SearchMessage, SearchRequest } from "../engine/worker";
 import { drawFlat, kernelFlat, matchupFlat } from "../data";
 import type { GameSnapshot, Team } from "../data";
-import { useI18n } from "../i18n";
+import { useI18n } from "../i18n-context";
+import { allowedMatrix, locksConsistent } from "./constraints";
 
 function quantile(sorted: number[], q: number): number {
   const i = (sorted.length - 1) * q;
   const lo = Math.floor(i);
   const hi = Math.ceil(i);
   return sorted[lo] + (sorted[hi] - sorted[lo]) * (i - lo);
-}
-
-/** Feasibility of lock constraints: each slot <= 1 locked hitter and vice versa. */
-export function locksConsistent(locks: Record<number, number>): boolean {
-  const players = Object.values(locks);
-  return new Set(players).size === players.length;
-}
-
-export function allowedMatrix(locks: Record<number, number>): boolean[][] {
-  const allowed = Array.from({ length: 9 }, () => Array(9).fill(true));
-  for (const [slotS, player] of Object.entries(locks)) {
-    const slot = Number(slotS);
-    for (let p = 0; p < 9; p++) allowed[slot][p] = p === player;
-    for (let s = 0; s < 9; s++) if (s !== slot) allowed[s][player] = false;
-  }
-  return allowed;
 }
 
 function Row(props: {
@@ -91,7 +76,7 @@ function Row(props: {
 }
 
 export function Simulator({ snap, team }: { snap: GameSnapshot; team: Team }) {
-  const { t, fmt, signed } = useI18n();
+  const { t, fmt, signed, int } = useI18n();
   const kernel = useMemo(() => kernelFlat(snap), [snap]);
   const [order, setOrder] = useState<number[]>(team.actual.order);
   const [locks, setLocks] = useState<Record<number, number>>({});
@@ -100,13 +85,6 @@ export function Simulator({ snap, team }: { snap: GameSnapshot; team: Team }) {
   const [announce, setAnnounce] = useState("");
   const workerRef = useRef<Worker | null>(null);
   const reqId = useRef(0);
-
-  useEffect(() => {
-    setOrder(team.actual.order);
-    setLocks({});
-    setDepth(1);
-    setSearch(null);
-  }, [team]);
 
   useEffect(() => () => workerRef.current?.terminate(), []);
 
@@ -240,7 +218,7 @@ export function Simulator({ snap, team }: { snap: GameSnapshot; team: Team }) {
                 <progress className="w-full" max={1} value={search.p} />
               </div>
             )}
-            {search && "best" in search && t("sim.found", { v: fmt(search.v, 3), n: search.n.toLocaleString() })}
+            {search && "best" in search && t("sim.found", { v: fmt(search.v, 3), n: int(search.n) })}
             {search && "err" in search && <span className="text-warn">{search.err}</span>}
           </div>
         </div>
@@ -251,7 +229,7 @@ export function Simulator({ snap, team }: { snap: GameSnapshot; team: Team }) {
             </div>
             <div className="stat-value">{fmt(value, 3)}</div>
             <div className="stat-sub">{t("kpi.runs9")} · {t("sim.exact")}</div>
-            <div className="stat-sub">{t("sim.interval", { lo: fmt(interval[0], 2), hi: fmt(interval[1], 2) })}</div>
+            <div className="stat-sub">{t("sim.interval", { n: team.uncertainty.draws_x.length, lo: fmt(interval[0], 2), hi: fmt(interval[1], 2) })}</div>
           </div>
           <dl className="grid grid-cols-2 gap-3 mt-4 text-sm">
             <div className="mini">

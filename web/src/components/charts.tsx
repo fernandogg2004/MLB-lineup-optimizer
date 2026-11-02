@@ -1,6 +1,7 @@
 import { useId, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { useI18n } from "../i18n";
+import { useI18n } from "../i18n-context";
+import { niceTicks } from "./ticks";
 
 /** Shared chart frame: title, subtitle, figure, optional data table toggle. */
 export function ChartCard(props: {
@@ -48,7 +49,7 @@ export function Histogram(props: {
   yLabel: string;
   digits?: number;
 }) {
-  const { fmt } = useI18n();
+  const { fmt, int } = useI18n();
   const [hover, setHover] = useState<number | null>(null);
   const W = 640;
   const H = 240;
@@ -68,7 +69,7 @@ export function Histogram(props: {
           <g key={v}>
             <line x1={m.l} x2={W - m.r} y1={y(v)} y2={y(v)} className="grid-line" />
             <text x={m.l - 8} y={y(v) + 4} textAnchor="end" className="tick">
-              {Intl.NumberFormat().format(v)}
+              {int(v)}
             </text>
           </g>
         ))}
@@ -117,7 +118,7 @@ export function Histogram(props: {
       </svg>
       {hover !== null && (
         <div className="tooltip" role="status">
-          {fmt(props.edges[hover], 3)}–{fmt(props.edges[hover + 1], 3)}: {props.counts[hover].toLocaleString()}
+          {fmt(props.edges[hover], 3)}–{fmt(props.edges[hover + 1], 3)}: {int(props.counts[hover])}
         </div>
       )}
     </div>
@@ -254,16 +255,4 @@ export function PairedBars(props: {
       </table>
     </div>
   );
-}
-
-export function niceTicks(lo: number, hi: number, n: number): number[] {
-  const span = hi - lo;
-  if (span <= 0) return [lo];
-  const step0 = span / n;
-  const mag = 10 ** Math.floor(Math.log10(step0));
-  const err = step0 / mag;
-  const step = (err >= 7.5 ? 10 : err >= 3.5 ? 5 : err >= 1.5 ? 2 : 1) * mag;
-  const out: number[] = [];
-  for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-12; v += step) out.push(Number(v.toFixed(10)));
-  return out;
 }

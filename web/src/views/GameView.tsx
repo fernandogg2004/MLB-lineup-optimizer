@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { GameSnapshot, Team } from "../data";
-import { useI18n } from "../i18n";
-import type { Key } from "../i18n";
+import { useI18n } from "../i18n-context";
+import type { Key } from "../strings";
 import { ChartCard, Histogram, IntervalBar, PairedBars, PmfChart } from "../components/charts";
 import { Simulator } from "./Simulator";
 
@@ -204,7 +204,7 @@ function TeamPanel({ snap, team }: { snap: GameSnapshot; team: Team }) {
         </dl>
       </ChartCard>
 
-      <Simulator snap={snap} team={team} />
+      <Simulator key={`${snap.game.game_pk}-${team.team}`} snap={snap} team={team} />
       <Technical snap={snap} team={team} />
     </div>
   );

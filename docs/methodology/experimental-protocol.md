@@ -62,3 +62,16 @@ Selection rule: the simplest model whose test log-loss is not significantly wors
 All negative or null results are reported. No test-period result is used to change
 model choices; if a defect is found during testing, the fix and its effect are documented
 and the affected experiments are re-run in full.
+
+## Amendment 1 (2026-11-02)
+
+The first full tuning run on 2024 selected the lowest values of both prior-strength scales
+(batter 0.5, pitcher 0.75). Because a boundary optimum may lie outside the grid, the grid was
+extended downward (batter 0.125–2, pitcher 0.1875–3, half-life 365–1095 days) and tuning was
+re-run, still on 2024 only. The interrupted run's test-season outputs were not inspected.
+
+Disclosure: before this, pipeline smoke tests (`--quick`) had computed E2 metrics on two
+four-week test windows (June 2025 and June 2026) with a 3-configuration grid, and E3/E4
+quantities on 120 and 20 test team-games, to debug the code. The grid extension was motivated
+solely by the 2024 boundary result; no model structure was changed after those smoke tests. `outputs/e2_tuning.json` records whether the
+final selection lies on the grid boundary.

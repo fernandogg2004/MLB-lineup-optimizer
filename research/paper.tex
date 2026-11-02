@@ -21,6 +21,8 @@
 \newtheorem{definition}{Definition}
 \newtheorem{assumption}{Assumption}
 \renewcommand{\theassumption}{A\arabic{assumption}}
+\crefname{assumption}{Assumption}{Assumptions}
+\Crefname{assumption}{Assumption}{Assumptions}
 \theoremstyle{remark}
 \newtheorem{remark}{Remark}
 
@@ -555,7 +557,7 @@ experiments are in the repository, and every number in this paper is read from t
 \section{Results}\label{sec:results}
 %======================================================================
 
-\input{generated/results.tex}
+\input{sections/results.tex}
 
 %======================================================================
 \section{Sensitivity, limitations and threats to validity}\label{sec:sensitivity}
@@ -588,7 +590,7 @@ between orders is an observed effect.
 \section{Conclusions}
 %======================================================================
 
-\input{generated/conclusions.tex}
+\input{sections/conclusions.tex}
 
 \bibliographystyle{plainnat}
 \bibliography{references}
