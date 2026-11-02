@@ -244,7 +244,7 @@ def _all_values(
         worst[c] = wm
         for rot in range(N_SLOTS):
             vals[c, rot] = _game_value(r, L, w, rot)
-    return vals, worst.max()
+    return vals, np.max(worst)
 
 
 @dataclass(frozen=True)

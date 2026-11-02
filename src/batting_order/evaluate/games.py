@@ -86,7 +86,7 @@ def run_games(
                 "pred_r9_rv_sorted": ex.value_of(heuristic_sorted(summ["rv"])),
                 "pred_r9_obp_sorted": ex.value_of(heuristic_sorted(summ["obp"])),
                 "pred_r9_random_mean": float(vals.mean()),
-                "pred_r9_worst": float(vals.min()),
+                "pred_r9_worst": float(np.min(vals)),
                 "pct_actual": float((vals < ev.expected_runs).mean()),
                 "opt_order": [int(v) for v in opt_order],
                 "truncated_mass": max(ev.truncated_mass, ex.truncated_mass),

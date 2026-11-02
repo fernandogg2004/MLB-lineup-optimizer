@@ -147,7 +147,7 @@ def _team(
             "run_distribution": _r(dist_opt, 6),
         },
         "the_book": {"order": [int(v) for v in book], "er9": ex.value_of(book)},
-        "worst": {"order": [int(v) for v in worst], "er9": float(vals.min())},
+        "worst": {"order": [int(v) for v in worst], "er9": float(np.min(vals))},
         "all_orders": {
             "count": int(vals.size),
             "mean": float(vals.mean()),
