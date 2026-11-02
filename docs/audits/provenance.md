@@ -34,5 +34,5 @@ reproduced bit-exactly; posterior-draw summaries depend on the recorded seeds (E
 ## Environment
 
 Python 3.11.9 (Windows 11), numpy 2.4.6, polars 1.44.2, numba 0.68.1, lightgbm 4.7.0,
-scikit-learn as installed by `pip install -e ".[compare]"` on 2026-11-01. A lock file is not
+scikit-learn 1.9.1. A lock file is not
 provided (finding A-8, deferred); these versions are the ones used for every published number.
