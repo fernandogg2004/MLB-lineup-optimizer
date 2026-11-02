@@ -1,0 +1,198 @@
+{
+ "experiment": "e5_reference_game",
+ "generated_at": "2026-11-02",
+ "software": {
+  "package": "2.0.0",
+  "git": "6150c5b-dirty"
+ },
+ "game": {
+  "game_pk": 849799,
+  "date": "2026-10-28",
+  "game_type": "W",
+  "series_description": "World Series",
+  "series_game_number": 5,
+  "venue": "Tropicana Field",
+  "status": "Final",
+  "away": "Milwaukee Brewers",
+  "home": "Tampa Bay Rays",
+  "away_abbr": "MIL",
+  "home_abbr": "TB",
+  "away_runs": 4,
+  "home_runs": 1,
+  "reference": "true"
+ },
+ "teams": {
+  "away": {
+   "team": "MIL",
+   "name": "Milwaukee Brewers",
+   "observed_runs": 4,
+   "actual_er9": 3.8331912341624066,
+   "optimal_er9": 3.8428542264482837,
+   "percentile": 0.979064704585538,
+   "the_book_er9": 3.8373923317251504,
+   "worst_er9": 3.7892054344287853,
+   "actual_order": [
+    "Jackson Chourio",
+    "Jake Bauers",
+    "Christian Yelich",
+    "William Contreras",
+    "Brice Turang",
+    "Sal Frelick",
+    "Cooper Pratt",
+    "Garrett Mitchell",
+    "David Hamilton"
+   ],
+   "optimal_order": [
+    "Brice Turang",
+    "Jake Bauers",
+    "William Contreras",
+    "Jackson Chourio",
+    "Cooper Pratt",
+    "Christian Yelich",
+    "Garrett Mitchell",
+    "Sal Frelick",
+    "David Hamilton"
+   ],
+   "uncertainty": {
+    "n_draws": 400,
+    "diff_mean": 0.010188648869334231,
+    "diff_q05": -0.002379507899269639,
+    "diff_q95": 0.021327342258151773,
+    "p_opt_better": 0.9125,
+    "actual_q05": 3.3413875022984514,
+    "actual_q95": 4.38270952206524,
+    "opt_q05": 3.3479668103943685,
+    "opt_q95": 4.387836225546706,
+    "regret_of_point_optimum_mean": 0.013077365804331182,
+    "p_same_optimum": 0.0025
+   }
+  },
+  "home": {
+   "team": "TB",
+   "name": "Tampa Bay Rays",
+   "observed_runs": 1,
+   "actual_er9": 3.3361033074898865,
+   "optimal_er9": 3.3598806134365784,
+   "percentile": 0.9932760141093474,
+   "the_book_er9": 3.346943238002641,
+   "worst_er9": 3.245874765286273,
+   "actual_order": [
+    "Yandy D\u00edaz",
+    "Jonathan Aranda",
+    "Junior Caminero",
+    "Liam Hicks",
+    "Jonny DeLuca",
+    "Chandler Simpson",
+    "Ben Williamson",
+    "Ryan Vilade",
+    "Taylor Walls"
+   ],
+   "optimal_order": [
+    "Liam Hicks",
+    "Jonathan Aranda",
+    "Junior Caminero",
+    "Yandy D\u00edaz",
+    "Chandler Simpson",
+    "Ryan Vilade",
+    "Jonny DeLuca",
+    "Ben Williamson",
+    "Taylor Walls"
+   ],
+   "uncertainty": {
+    "n_draws": 400,
+    "diff_mean": 0.023912176260760996,
+    "diff_q05": 0.008628186571941065,
+    "diff_q95": 0.041342535877783596,
+    "p_opt_better": 0.995,
+    "actual_q05": 2.9127591948399023,
+    "actual_q95": 3.8714935180480707,
+    "opt_q05": 2.9377925507257756,
+    "opt_q95": 3.894114124134175,
+    "regret_of_point_optimum_mean": 0.005239869375250122,
+    "p_same_optimum": 0.095
+   }
+  }
+ },
+ "sensitivity": {
+  "kernel_2021_2022": {
+   "MIL": {
+    "optimal_order": [
+     "Brice Turang",
+     "Jake Bauers",
+     "William Contreras",
+     "Jackson Chourio",
+     "Cooper Pratt",
+     "Christian Yelich",
+     "Garrett Mitchell",
+     "Sal Frelick",
+     "David Hamilton"
+    ],
+    "uplift": 0.009842827484983996,
+    "same_as_main": true
+   },
+   "TB": {
+    "optimal_order": [
+     "Liam Hicks",
+     "Jonathan Aranda",
+     "Junior Caminero",
+     "Yandy D\u00edaz",
+     "Chandler Simpson",
+     "Ryan Vilade",
+     "Jonny DeLuca",
+     "Ben Williamson",
+     "Taylor Walls"
+    ],
+    "uplift": 0.02370983222878298,
+    "same_as_main": true
+   }
+  },
+  "default_hyper": {
+   "MIL": {
+    "optimal_order": [
+     "Brice Turang",
+     "Jake Bauers",
+     "William Contreras",
+     "Jackson Chourio",
+     "Sal Frelick",
+     "Christian Yelich",
+     "Garrett Mitchell",
+     "Cooper Pratt",
+     "David Hamilton"
+    ],
+    "uplift": 0.007677454945554274,
+    "same_as_main": false
+   },
+   "TB": {
+    "optimal_order": [
+     "Liam Hicks",
+     "Jonathan Aranda",
+     "Junior Caminero",
+     "Yandy D\u00edaz",
+     "Chandler Simpson",
+     "Ryan Vilade",
+     "Jonny DeLuca",
+     "Ben Williamson",
+     "Taylor Walls"
+    ],
+    "uplift": 0.021459689542049354,
+    "same_as_main": true
+   }
+  }
+ },
+ "q_min": 0.6333486273956199,
+ "truncated_mass_max": 6.711009477849174e-14,
+ "certificate": {
+  "MIL": {
+   "best_minus_second": 8.201365499305169e-05
+  },
+  "TB": {
+   "best_minus_second": 0.000542533900862896
+  }
+ },
+ "kernel": {
+  "n_transitions": 559151,
+  "alpha": 2.0,
+  "start": "2023-10-02",
+  "cutoff": "2026-10-01"
+ }
+}

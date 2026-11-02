@@ -1,0 +1,314 @@
+{
+ "experiment": "e0_lineup_audit",
+ "generated_at": "2026-11-02",
+ "software": {
+  "package": "2.0.0",
+  "git": "fc12f7f-dirty"
+ },
+ "n": 60,
+ "share_both_match": 1.0,
+ "share_lineup_match": 1.0,
+ "share_starter_match": 1.0,
+ "rows": [
+  {
+   "game_pk": 822814,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 823103,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 824451,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 823736,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 825059,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 823831,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 824468,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 823496,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 825105,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 822863,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 822964,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 823106,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 824493,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 822963,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 823904,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 822925,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 823086,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 823139,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 822957,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 824632,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 824350,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 823715,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 824639,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 823995,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 824763,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 822704,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 822704,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 822987,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 823638,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 823393,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 824665,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 822897,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 823941,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 824740,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 823533,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 824210,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 823315,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 824136,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 824751,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 824512,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 825085,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 824212,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 822847,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 823678,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 823049,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 824123,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 823457,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 822918,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 823428,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 824777,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 822837,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 824004,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 823240,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 825014,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 824089,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 824702,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 823146,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 823411,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 825061,
+   "lineup_match": true,
+   "starter_match": true
+  },
+  {
+   "game_pk": 823624,
+   "lineup_match": true,
+   "starter_match": true
+  }
+ ]
+}

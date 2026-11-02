@@ -1,0 +1,12 @@
+\begin{table}[t]\centering\small
+\caption{Held-out log-loss (nats per PA) and difference from M2 with 95\% game-cluster bootstrap intervals; negative differences favour the row model. 2025: 186,562 PAs; 2026: 186,777 PAs.}\label{tab:e2}
+\begin{tabular}{lcccc}\toprule
+ & \multicolumn{2}{c}{2025} & \multicolumn{2}{c}{2026}\\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+Model & Log-loss & $\Delta$ vs M2 & Log-loss & $\Delta$ vs M2\\ \midrule
+M0: league, by handedness & 1.7724 & $+$0.0278 [$+$0.0267, $+$0.0289] & 1.7735 & $+$0.0265 [$+$0.0255, $+$0.0276] \\
+M1: + batter & 1.7547 & $+$0.0102 [$+$0.0095, $+$0.0109] & 1.7563 & $+$0.0093 [$+$0.0087, $+$0.0100] \\
+M2: + pitcher (selected) & 1.7446 & --- & 1.7470 & --- \\
+M2 with untuned priors & 1.7457 & $+$0.0011 [$+$0.0009, $+$0.0013] & 1.7478 & $+$0.0009 [$+$0.0007, $+$0.0010] \\
+M3: gradient boosting on M2 inputs & 1.7435 & $-$0.0011 [$-$0.0015, $-$0.0007] & 1.7467 & $-$0.0002 [$-$0.0006, $+$0.0001] \\
+\bottomrule\end{tabular}\end{table}

@@ -1,32 +1,13 @@
-# Entornos y cachés
-.venv/
-**/__pycache__/
-*.pyc
-.pytest_cache/
-.ruff_cache/
-.mypy_cache/
-
-# Git / IDE
-.git/
-.github/
-.vscode/
-.idea/
-
-# Frontend (no se construye en la imagen del pipeline)
-frontend/node_modules/
-frontend/dist/
-frontend/test-results/
-
-# Datos y artefactos pesados: se MONTAN como volumen en runtime, no se hornean
+# Docker build context for orchestration/airflow/Dockerfile.pipeline: code only.
 data/
 models/
-results/
-reports/
-mlruns/
-logs/
-notebooks/
-*.pdf
-
-# Secretos
+work/
+outputs/
+logs_rebuild/
 .env
-*.env
+.env.*
+.venv*/
+web/
+research/
+.git/
+**/__pycache__/

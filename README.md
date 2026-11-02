@@ -1,215 +1,133 @@
-# MLB Lineup Optimizer — plate-appearance model, Monte Carlo game engine and batting-order search
+# Batting Order Lab
 
-Predicts the outcome distribution of every plate appearance (PA), simulates games with a
-base-out Markov chain and searches batting orders with a genetic algorithm to maximise expected
-runs — with an honest, bootstrap-based evaluation of what the system can and cannot do.
+**How much does the batting order matter?** This project computes, exactly, the expected runs
+of any MLB batting order under a statistically estimated model, finds the best order by checking
+all 362,880 of them, and shows, in English and Spanish, how the two lineups of the
+**2026 World Series Game 5** (Milwaukee 4, Tampa Bay 1) compare with the model's optimum.
 
-## The problem
+- **Dashboard:** https://batting-order-lab.vercel.app (static site, English/Español, interactive simulator)
+- **Paper:** [`research/paper.pdf`](research/paper.pdf) (source: [`research/paper.tex`](research/paper.tex))
+- **Decisions and audits:** [`docs/`](docs/)
 
-A manager chooses one of 9! ≈ 363,000 batting orders every day. Sabermetric research suggests the
-choice is worth only a handful of runs per season, which makes it a good test of a modelling
-stack: the PA model must be **calibrated** (its probabilities feed a simulator), the simulator
-must be **unbiased** in runs, and the evaluation must separate genuine value from Monte Carlo
-noise. A secondary question is whether the same stack predicts game winners — a much harder,
-almost coin-flip problem in MLB.
+## Results at a glance
 
-## At a glance
+All numbers come from `outputs/*.json` (test seasons 2025–2026; hyperparameters tuned on 2024 only;
+protocol fixed in advance in [`docs/methodology/experimental-protocol.md`](docs/methodology/experimental-protocol.md)).
 
-| | |
+| Question | Answer (model-based) |
 |---|---|
-| **Approach** | 8-class LightGBM PA model (out, K, BB/HBP, 1B, 2B, 3B, HR, DP) with isotonic calibration → 24-state base-out Monte Carlo engine with probabilistic runner-advance tables → 3-stage genetic algorithm over batting orders |
-| **Data** | Public Statcast data via `pybaseball` and the MLB Stats API, aggregated to one row per PA (2015–2026 seasons) |
-| **Evaluation** | Strict temporal split (train ≤ 2024, calibrate on 2025, evaluate on 2026 PAs); game-level backtest with 90% bootstrap intervals; counterfactual lineup backtest |
-| **Main results** | PA model is **well calibrated but weakly discriminative** (ECE 0.002, weighted one-vs-rest AUC 0.57). Game winners: **no measurable edge** over a 50/50 baseline. Batting order: optimised orders score **+0.05 runs/game over posted orders in the model's own simulator** (reproduced), shrinking to about +0.02 on realistic lineups |
-| **Status** | Functional prototype with CLI, FastAPI + React dashboard and Airflow/Docker automation. Not used in production |
+| Are run predictions calibrated? | Yes: 9,872 team-games, mean error −0.035 runs (95% CI −0.096 to +0.027), calibration slope 0.94 (0.81–1.06) |
+| Does the plate-appearance model beat the original 51-feature model? | Yes, by 0.0024 nats/PA (95% CI 0.0003–0.0050) on its own out-of-sample window |
+| How far are MLB managers' orders from the model optimum? | +0.020 runs/game (≈3.2 runs per 162 games); the median order used beats 97.8% of all 362,880 orders |
+| How much can the order matter at all? | Best vs worst possible order of the same nine hitters: 0.094 runs/game on average |
+| Is "the" optimal order identifiable? | No: under parameter uncertainty the exact same order is optimal in only 0.5% of re-estimates |
+| Search | Exhaustive search is exact and takes ~1 s; the original Monte Carlo genetic algorithm overstated its own pick by 0.16 runs and did worse than the managers |
+| 2026 World Series Game 5 | Gain of the model's top order: Milwaukee +0.010 (90% interval −0.002 to +0.021), Tampa Bay +0.024 (+0.009 to +0.041); both orders used were above the 97th percentile |
 
-## Results
+These are counterfactual statements about the model, not observed effects: a real game shows only the
+runs scored with the order that was used.
 
-Sources: committed artifacts in [`reports/diagnostics/`](reports/diagnostics/) and
-[`reports/backtest/`](reports/backtest/) (generated 2026-06-24). The lineup backtest was
-**re-run independently** for this README; the other figures are read from the committed JSON.
+**History.** This repository previously contained a LightGBM + Monte Carlo + genetic-algorithm system
+(tag `baseline/pre-rebuild`). Its own README audit (PR #1, Oct 2026) found that the reported
++0.052 runs/game shrank to about +0.02 on realistic lineups; the exact rebuild finds +0.020.
 
-### 1. Plate-appearance model — out-of-sample 2026 season (82,574 PAs)
+## What problem does it solve, and why does it matter?
 
-| Metric | Result | Reference |
-|---|---|---|
-| Expected calibration error (overall) | **0.0021** | target ≤ 0.035 |
-| Bias in expected run value per PA | −0.0006 runs | predicted 0.1682 vs observed 0.1688 |
-| Multiclass log-loss | 1.520 | 1.538 for league base rates (computed for this README from the observed class frequencies) |
-| Weighted one-vs-rest AUC | **0.571** | per class 0.53 (2B) – 0.61 (HR) |
+A manager chooses the order in which nine hitters bat. Hitters near the top bat more often, so
+the order decides who gets the extra plate appearances and with whom on base. The question has
+been studied with Markov chains and simulation since the 1960s; the consensus is that the order
+matters, but modestly. This project answers it rigorously for real games, separating what the
+data show from what only the model can say.
 
-Calibration is the design goal and it is met. Discrimination is close to the base rates; a
-controlled ceiling test (`reports/diagnostics/ceiling_test.json`) showed that adding player
-identity does not help and that most of the remaining signal is in the PA's own contact quality,
-which is not knowable before the pitch.
+**Objective.** For a fixed pregame order π, maximize V(π) = E[runs in 9 innings | π, information
+before first pitch]. Not win probability (close to a coin flip for a single game).
 
-Source: [`reports/diagnostics/pipeline_diagnosis.json`](reports/diagnostics/pipeline_diagnosis.json).
-
-### 2. Game winner — 104 games with valid two-sided simulations (2 – 23 June 2026)
-
-| Metric | Model | Baseline |
-|---|---|---|
-| Log-loss | 0.699, 90% CI [0.665, 0.732] | 0.693 (50/50) · 0.699 (Elo) |
-| AUC | 0.538, 90% CI [0.446, 0.631] | 0.5 |
-| P(model better than 50/50), bootstrap | 0.41 | — |
-
-**No measurable edge**; the 50/50 baseline lies inside every interval. 115 further games were
-excluded because one side had not been simulated (a data-hygiene bug, since fixed in serving).
-Source: [`reports/backtest/backtest_clean.json`](reports/backtest/backtest_clean.json).
-
-### 3. Batting-order optimisation — counterfactual, 40 team-games (28 May and 2 June 2026)
-
-For each saved lineup, the expected runs of the order actually posted, the optimiser's order and
-30 random permutations are evaluated with the same simulation engine (60k games each).
-
-| Metric | Committed run | Independent re-run (2026-10-26) |
-|---|---|---|
-| Uplift, optimal vs posted order | +0.052 runs/game, 90% CI [+0.033, +0.072] | **+0.049 runs/game, 90% CI [+0.032, +0.067]** |
-| Uplift, optimal vs random order | +0.103 runs/game | +0.096 runs/game |
-| Posted order, percentile vs random orders | 81st | 77th |
-| Games where the winning order beats the runner-up beyond MC noise | 5% | 0% |
-
-Source: [`reports/diagnostics/lineup_backtest.json`](reports/diagnostics/lineup_backtest.json),
-`scripts/backtest_lineups.py`. The re-run used the same command, the same 40 saved lineups and
-Python 3.11 with `requirements_local.txt` (17 min on CPU). The Monte Carlo engine is not seeded, so
-small differences between the two runs are expected.
-
-**How to read this.** The uplift is measured *inside the model's own simulator*, not on real game
-outcomes — a 0.05 runs/game effect is far too small to observe in a few dozen real games. It is
-therefore evidence that the optimiser finds better orders **according to the model**, not
-evidence of real runs gained. In addition:
-
-- The sample is small (40 team-games from two dates) and the 90% interval is a normal
-  approximation over those games.
-- Most of the uplift comes from the 14 lineups whose simulated expected runs are implausibly high
-  (5.5–8.6 runs/game, against a league average near 4.4), all from 2 June. On the 26 lineups with
-  realistic run expectations the mean uplift is **+0.021** (committed run) and **+0.024**
-  (re-run) runs/game, about 3–4 runs per 162 games. Saved predictions from
-  2–6 June contain PA probability vectors with P(out) as low as 0.07, which points to an upstream
-  feature or serving issue on those dates.
-- Extrapolating to "+8.5 runs per season" assumes the per-game uplift transfers to real games and
-  persists across 162 games; neither is established.
+**What it does not claim.** A real game reveals only the runs scored with the order actually
+used. Every comparison between orders is a model-based counterfactual, never an observed effect.
 
 ## How it works
 
 ```
-Statcast (pybaseball) + MLB Stats API
-   │ build_silver.py            one row per plate appearance, partitioned by season
-   ▼
-data/silver/ ──► scripts/build_gold_v3.py   51 features; rolling stats use shift(1) (no same-PA info)
-   ▼
-train_v3.py      LightGBM (8 classes) + isotonic calibration; temporal split; deployment gate
-   ▼
-models/at_bat_predictor.pkl
-   ├─ predict_tonight.py   today's lineups → 9×8 probability matrix per team
-   ├─ src/simulation/      base-out Markov chain Monte Carlo → E[runs], P(win), percentiles
-   └─ src/optimizer/       GA: sabermetric seeding → evolution → high-precision refinement of top-k
+Statcast (Baseball Savant) + MLB Stats API
+        │  batting-order ingest / build        (immutable raw data, SHA-256 manifest)
+        ▼
+plate appearances with base-out state, runs, censoring, bookkeeping checks
+        │
+        ├─ transition kernel J_c(s → s', runs)   estimated per outcome class (2023+ rules)
+        └─ empirical-Bayes PA model              π(c | batter, pitcher) ∝ q_h(c)·m_b(c)·m_p(c)
+                                                   (shrinkage; only data before the game)
+        ▼
+exact evaluator: half-innings as absorbing Markov chains → leadoff-slot chain across innings
+        │  E[R_9] in ~1 ms; error ≤ 162·ε/q (proved, tested)
+        ▼
+exhaustive search over 9! orders (rotation trick, ~0.6 s)  →  certified optimum within the model
+        │
+        ├─ outputs/*.json → paper (research/)
+        └─ web/public/data/*.json → static dashboard; the browser re-runs the same exact evaluator
 ```
 
-Design decisions that matter:
+| Component | Path |
+|---|---|
+| Data download / PA transitions / StatsAPI | `src/batting_order/data/` |
+| PA model, kernel, matchup | `src/batting_order/model/` |
+| Exact evaluator, Monte Carlo check, run expectancy | `src/batting_order/engine/` |
+| Search methods (exhaustive, local search, annealing, GA, heuristics) | `src/batting_order/optimize/` |
+| Experiments E1–E5 | `src/batting_order/evaluate/` |
+| Dashboard (Vite + React + TypeScript) | `web/` |
+| Paper | `research/` |
+| Optional Airflow (disabled by default) | `orchestration/airflow/` |
 
-- **Calibration over rebalancing.** No class weights; probabilities are used as simulator inputs.
-- **Single feature contract.** `src/features/shared_features.py` is the only feature definition
-  for both training and serving; `tests/test_feature_parity.py` guards against train/serve skew.
-- **Leakage exclusions.** Contact-quality fields known only after the PA ends (`xwoba`, launch
-  speed/angle, pitch count) are excluded from model inputs.
-- **Deployment gate.** `train_v3.py` refuses to promote a model whose per-class drift or
-  run-value bias exceeds a threshold.
-- **Simulator check.** With a league-average lineup and neutral park, the 9-inning engine produces
-  4.381 runs/game vs 4.373 observed (`reports/diagnostics/FASE2_FINDINGS.md`).
+## Data
 
-## Data and provenance
+Pitch-level **Statcast** data from Baseball Savant (2021–2026, regular season and postseason) and
+official lineups, venues and names from the **MLB Stats API**. Both are © MLB Advanced Media and
+are used here for non-commercial research. Bulk data are **not** stored in this repository: they
+are downloaded on demand and verified against checksums. The site shows only names, lineups, final
+scores and model-derived numbers.
 
-- **Statcast** pitch-level data via [`pybaseball`](https://github.com/jldbc/pybaseball), aggregated
-  to plate appearances; **MLB Stats API** (`statsapi.mlb.com`) for schedules, lineups and rosters.
-- Processed Silver/Gold parquet files and model pickles are stored with **Git LFS** in this
-  repository (~360 MB in total). The data originate from MLB Advanced Media; see
-  [`docs/data-rights.md`](docs/data-rights.md) — non-commercial use only without a licence.
-- `results/<date>/` contains the model's saved daily predictions (May–June 2026), which the
-  backtests consume.
+## Methods compared
+
+Plate-appearance models: league average, + batter, + pitcher (selected, empirical Bayes),
+gradient boosting on the same inputs, and the original project's 51-feature LightGBM.
+Search methods: exhaustive (exact), "The Book" guideline, sorting heuristics, local search,
+simulated annealing, a genetic algorithm with exact fitness, and the original genetic algorithm
+with Monte Carlo fitness. Exhaustive search is used because it is both exact and fast; the
+others are kept as documented baselines.
+
+## Run it
+
+Requirements: Python 3.11–3.13, Node ≥ 22.12, a LaTeX distribution for the paper.
+
+```bash
+python -m venv .venv && . .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -e ".[compare,figures,dev]"
+
+pytest -m "not slow" && pytest -m slow                # Python tests
+batting-order ingest 2021 2022 2023 2024 2025 2026    # ~2 h, resumable
+batting-order verify 2021 2022 2023 2024 2025 2026    # compare with data_manifest/ checksums
+batting-order build  2021 2022 2023 2024 2025 2026
+batting-order experiments                             # ~3 h → outputs/*.json
+batting-order snapshot 849805 --season 2026           # dashboard data for another game
+python scripts/make_paper_assets.py --release         # figures, tables, validation.json, PDF copy
+(cd research && pdflatex paper && bibtex paper && pdflatex paper && pdflatex paper)
+
+(cd web && npm ci && npm run dev)                     # dashboard at http://localhost:5173
+(cd web && npx vitest run && npx playwright test)     # unit + end-to-end tests
+```
+
+Updating for a new season, deploying, and the optional Airflow DAG are described in
+[`docs/operations.md`](docs/operations.md) and
+[`orchestration/airflow/README.md`](orchestration/airflow/README.md).
 
 ## Limitations
 
-- **Lineup value is a simulated quantity** (see Results §3); it has not been validated against
-  real runs.
-- **Game-level prediction ≈ coin flip**, consistent with how hard pregame MLB prediction is.
-- **PA model discrimination is saturated** with the current features (screened additions changed
-  AUC by < 0.002); more signal would need new data such as pitch "stuff" or historical weather.
-- **Some saved predictions look inflated** (E[runs] up to 8.6 per game on 2–6 June 2026); the
-  cause has not been diagnosed.
-- **Monte Carlo runs are not seeded**, so re-running the backtests reproduces results only up to
-  simulation noise.
-- **Bullpen modelling in the optimiser is partial**; the GA uses the opposing starter's profile.
+- Model-based counterfactuals only; the effect of an order cannot be observed in one game.
+- Base running is league-average (no runner speed); pitching changes are modelled between
+  innings; platoon effects are league-level; in-game substitutions are out of scope.
+- Parameter uncertainty covers player abilities only, not the kernel or model form.
+- Inferred lineups in backtests (audited 60/60 against official boxscores; reference game uses
+  the official boxscore).
 
-## Reproduction
+## License
 
-Python **3.11** is required for the pinned stack (`ray==2.20.0` has no wheels for 3.12+);
-Node.js 18+ for the front end; [Git LFS](https://git-lfs.com) for data and models.
-
-```bash
-git lfs install && git clone https://github.com/fernandogg2004/mlb-lineup-optimizer.git
-cd mlb-lineup-optimizer
-python3.11 -m venv .venv && source .venv/bin/activate    # Windows: .venv\Scripts\activate
-pip install -r requirements_local.txt "setuptools<70"    # mlflow 2.13 imports pkg_resources
-pytest
-```
-
-Checked on 2026-10-26 (Python 3.11, Linux): **207 tests pass, 5 skipped**; two test modules
-(`tests/mlops/test_mlb_stats_monitor.py`, `tests/rag/test_lambda_scouting_trigger.py`) fail to
-import because `redis` and `openai` are not listed in `requirements_local.txt`.
-
-Reproduce the lineup backtest (uses the saved predictions in `results/`, no network, ~17 min on CPU):
-
-```bash
-python scripts/backtest_lineups.py --max-games 40 --n-random 30 --out /tmp/lineup_backtest.json
-```
-
-Other evaluation entry points (need the LFS data): `python backtest.py`,
-`python scripts/diagnose_pipeline.py`, `python scripts/ceiling_test.py`,
-`python scripts/feature_screen.py`.
-
-Daily use and serving:
-
-```bash
-python predict_tonight.py --team NYY --optimize     # today's game: probabilities, simulation, best order
-python -m api.main                                   # FastAPI backend on :8000
-cd frontend && npm install && npm run dev            # React dashboard
-```
-
-Retraining (rebuilds data from Statcast; network and time intensive):
-
-```bash
-python build_silver.py --years 2021 2022 2023 2024 2025 2026
-python scripts/build_gold_v3.py
-python train_v3.py
-```
-
-`ANTHROPIC_API_KEY` is needed only for the optional LLM explanation features (`src/rag/`).
-Docker/Airflow automation is described in [`SETUP.md`](SETUP.md) and `docker-compose.airflow.yml`.
-
-## Repository structure
-
-```
-build_silver.py  train_v3.py  predict_tonight.py  backtest.py  morning.py   main entry points
-scripts/          gold features, diagnostics, ceiling test, feature screen, lineup backtest
-src/features/     shared feature contract, rolling/platoon/pitcher features
-src/models/       AtBatPredictor (LightGBM + isotonic + ECE)
-src/simulation/   Monte Carlo engine, runner-advance tables, bullpen model
-src/optimizer/    genetic lineup optimiser
-src/rag/          optional LLM explanations (Claude)
-api/  app/  frontend/   FastAPI services and React dashboard
-reports/          diagnostics, backtests, drift reports (evidence for the numbers above)
-results/          saved daily predictions
-tests/            pytest suite
-```
-
-## Technologies
-
-Python, LightGBM, scikit-learn (isotonic calibration), NumPy/Numba, Polars, DEAP (genetic
-algorithm), MLflow, FastAPI, React/TypeScript, Docker, Apache Airflow, pytest, Git LFS.
-
-## Author
-
-**Fernando González González** — BSc Mathematics, Universidade de Santiago de Compostela.
-[LinkedIn](https://www.linkedin.com/in/fernando-gonzalez-gonzalez-math/) ·
-[GitHub](https://github.com/fernandogg2004)
+Code: MIT (see `LICENSE`). Data: © MLB Advanced Media, not redistributed.

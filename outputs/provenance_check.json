@@ -1,0 +1,9 @@
+{
+ "git": "33ad5e4",
+ "sample_team_games": 25,
+ "max_abs_deviation_games": 0.0003544390607448378,
+ "max_abs_deviation_reference": 0.0,
+ "bit_exact": false,
+ "tolerance": 0.0005,
+ "passed": true
+}

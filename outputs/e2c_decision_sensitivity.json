@@ -1,0 +1,16 @@
+{
+ "experiment": "e2c_decision_sensitivity",
+ "generated_at": "2026-11-02",
+ "software": {
+  "package": "2.0.0",
+  "git": "fc12f7f-dirty"
+ },
+ "n_team_games": 300,
+ "share_same_optimum": 0.03,
+ "mean_uplift_m2": 0.019743139749822315,
+ "mean_uplift_m3": 0.01963066503638233,
+ "mean_loss_using_m2_optimum_under_m3": 0.007339269279990215,
+ "max_loss_using_m2_optimum_under_m3": 0.03794248914406051,
+ "mean_abs_diff_er_actual": 0.2564819461816568,
+ "mean_corr_values_over_all_orders": 0.8411485821072101
+}

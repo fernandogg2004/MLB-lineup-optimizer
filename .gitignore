@@ -1,43 +1,54 @@
-# Secretos y config local
+# Secrets
 .env
 *.env
+!.env*.example
 secrets/
-config/local_*.yaml
 
 # Python
 __pycache__/
-*.pyc
-*.pyo
-.venv/
+*.py[cod]
+.venv*/
 venv/
 *.egg-info/
-
-# Airflow runtime (NO subir esto)
-logs/
-airflow.db
-airflow.cfg
-webserver_config.py
-airflow/
-.airflow/
-
-# MLflow local
-mlruns/
-mlartifacts/
-
-# Reportes generados
-reports/*.pdf
-
-# Test
 .pytest_cache/
+.ruff_cache/
+.mypy_cache/
 .coverage
 htmlcov/
 
-# Frontend (Node) — NO versionar dependencias ni build
-frontend/node_modules/
-frontend/dist/
-frontend/test-results/
-node_modules/
+# Bulk MLB data and local models are NOT versioned (ADR 0001).
+# Regenerate with `batting-order ingest` / `batting-order build`; verify with MANIFEST.json.
+/data/
+/models/
+/logs_rebuild/
 
-# IDE
+# Experiment working files (published results live in outputs/ and research/)
+/work/
+
+# Node / dashboard
+node_modules/
+web/dist/
+web/test-results/
+web/playwright-report/
+.vercel/
+
+# LaTeX build products
+research/*.aux
+research/*.bbl
+research/*.blg
+research/*.fdb_latexmk
+research/*.fls
+research/*.log
+research/*.out
+research/*.toc
+research/*.synctex.gz
+
+# Airflow runtime
+orchestration/airflow/logs/
+airflow.db
+
+# IDE / OS
 .vscode/
 .idea/
+.DS_Store
+Thumbs.db

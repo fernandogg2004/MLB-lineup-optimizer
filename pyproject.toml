@@ -1,0 +1,73 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "batting-order"
+version = "2.0.0"
+description = "Expected-runs batting-order optimization for MLB: empirical-Bayes plate-appearance model, exact Markov-chain run evaluator and exhaustive lineup search."
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+license = { text = "MIT" }
+authors = [{ name = "Fernando González" }]
+dependencies = [
+    "numpy>=1.26,<3",
+    "polars>=1.0,<2",
+    "numba>=0.59",
+    "requests>=2.31",
+]
+
+[project.optional-dependencies]
+# Comparator models used only in the model-selection experiment.
+compare = ["lightgbm>=4.3", "scikit-learn>=1.4"]
+# Figures for the paper.
+figures = ["matplotlib>=3.8"]
+dev = [
+    "pytest>=8",
+    "hypothesis>=6.100",
+    "ruff>=0.6",
+    "mypy>=1.10",
+]
+
+[project.scripts]
+batting-order = "batting_order.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/batting_order"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+markers = [
+    "slow: long-running numerical checks (deselect with -m 'not slow')",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "N", "SIM", "RUF", "NPY"]
+# N802/N803/N806: mathematical notation (P, Q, R, J) is intentional.
+# RUF001-003: en dashes in prose ranges are intentional.
+ignore = ["N802", "N803", "N806", "RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.per-file-ignores]
+# Numba-compiled kernels only support the legacy np.random API.
+"src/batting_order/engine/montecarlo.py" = ["NPY002"]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["batting_order.model.pa_model.Hyper"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+files = ["src/batting_order"]
+
+[[tool.mypy.overrides]]
+# Experiment script: polars scalar accessors return a wide union (int | float | date | ...),
+# so float(df[col].mean()) is flagged although the columns are numeric by construction.
+module = "batting_order.evaluate.run"
+disable_error_code = ["arg-type"]

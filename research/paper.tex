@@ -1,0 +1,657 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{booktabs,array,multirow}
+\usepackage{graphicx}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{xcolor}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
+\usepackage[capitalise,nameinlink]{cleveref}
+\usepackage{enumitem}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+\input{generated/numbers.tex}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{assumption}{Assumption}
+\renewcommand{\theassumption}{A\arabic{assumption}}
+\crefname{assumption}{Assumption}{Assumptions}
+\Crefname{assumption}{Assumption}{Assumptions}
+\crefname{proposition}{Proposition}{Propositions}
+\crefname{lemma}{Lemma}{Lemmas}
+\crefname{corollary}{Corollary}{Corollaries}
+\crefname{theorem}{Theorem}{Theorems}
+\crefname{remark}{Remark}{Remarks}
+\crefname{definition}{Definition}{Definitions}
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}
+
+\newcommand{\E}{\mathbb{E}}
+\renewcommand{\P}{\mathbb{P}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\cS}{\mathcal{S}}
+\newcommand{\cC}{\mathcal{C}}
+\newcommand{\cF}{\mathcal{F}}
+\newcommand{\cI}{\mathcal{I}}
+\newcommand{\one}{\mathbf{1}}
+\newcommand{\abs}{\mathsf{a}}
+\DeclareMathOperator*{\argmax}{arg\,max}
+
+\title{How Much Does the Batting Order Matter?\\[2pt]
+\large Exact Expected-Runs Optimization with an Empirical-Bayes Plate-Appearance Model,\\
+and the 2026 World Series}
+\author{Fernando Gonz\'alez\thanks{Code, data-processing scripts and the interactive dashboard:
+\url{https://github.com/fernandogg2004/mlb-lineup-optimizer}. Software version \texttt{\SoftwareVersion}.}}
+\date{\PaperDate}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We study the choice of a batting order for a fixed set of nine hitters, with the objective of
+maximizing the expected number of runs scored in nine offensive innings. Each hitter's
+plate-appearance outcome distribution against the opposing starting pitcher and bullpen is
+estimated, using only information available before the game, by an empirical-Bayes
+multiplicative (log5-type) model fitted to Statcast data. Base-out transitions, including
+base-running between plate appearances, are estimated from the data rather than assumed. Under
+explicit Markov assumptions the expected runs of a lineup can be computed exactly through an
+inning-level Markov chain on the leadoff slot; we prove that the computation is well defined,
+bound its truncation error, and use rotational structure to evaluate all $9!=362{,}880$ orders in
+about \EfouraExhaustiveSeconds{} seconds, so that the reported optimum is certified within the model.
+On held-out seasons (2025--2026) the plate-appearance model improves log-loss over the league
+baseline by \EtwoGainMtwoVsMzero{} nats per plate appearance, and the run predictions are
+calibrated (slope \EthreeSlope{}). Over \EfourbN{} team-games, the model-optimal order exceeds the
+order actually used by \EfourbUpliftMean{} expected runs per game (\EfourbUpliftSeason{} per
+162 games), and actual orders rank, on median, above \EfourbPctMedian{} of all possible orders.
+For Game~5 of the 2026 World Series (Milwaukee~4, Tampa Bay~1) the estimated gains are
+\RefUpliftAway{} (Milwaukee) and \RefUpliftHome{} (Tampa Bay) runs per game, with 90\% parameter-
+uncertainty intervals that are of the same order as the gains themselves. These are model-based
+counterfactuals: a historical game reveals only the outcome of the order that was used, so no
+observed result can confirm them.
+\end{abstract}
+
+\tableofcontents
+
+%======================================================================
+\section{Introduction}
+%======================================================================
+
+Batting-order construction is among the oldest quantitative questions in baseball and a classical
+application of Markov chains and simulation in operations research
+\cite{lindsey1963,freeze1974,cover1977,dEsopo1977,pankin1978,bukiet1997,sokol2003}. The
+received wisdom from that literature, popularized by \citet{tango2007}, is that the order matters,
+but only modestly: a sensible order is worth only a few runs per season less than the best one.
+
+This paper re-derives that conclusion with three ingredients that we found missing from the
+software system it replaces:
+\begin{enumerate}[leftmargin=*]
+\item \textbf{A precisely defined objective.} We maximize $\E[R_9\mid\pi,\cI]$, the expected runs
+in nine offensive innings for a fixed pregame order $\pi$ given the information $\cI$ available
+before first pitch. We do \emph{not} optimize win probability, which at the level of a single game
+is close to a coin flip and depends on the opponent's offense as well.
+\item \textbf{Exact evaluation and exhaustive search.} The predecessor system ranked orders by
+Monte Carlo estimates inside a genetic algorithm. Because selection among noisy estimates is
+biased upward (the ``optimizer's curse'' \cite{smith2006}), it could not certify that its output
+was optimal, and it overstated the gain of the selected order. We evaluate expected runs exactly
+(\cref{sec:model}) and search all orders exhaustively (\cref{sec:optimization}).
+\item \textbf{Leakage-free, falsifiable validation.} All estimates for a game on date $d$ use only
+plate appearances before $d$. We validate the plate-appearance model on held-out seasons, check
+that the implied run expectancy matches observed scoring, and check the calibration of game-level
+run predictions (\cref{sec:experiments,sec:results}).
+\end{enumerate}
+
+\paragraph{What the paper does not claim.} The value of an unplayed order cannot be observed:
+a historical game shows the runs scored under the order the manager chose, not under any other.
+Every comparison between orders in this paper is therefore a statement \emph{about the model}.
+We validate the model's ingredients on observed data and quantify parameter uncertainty, but we
+make no causal claim that a team would have scored more runs (\cref{rem:identification}).
+
+\paragraph{Contribution.} The mathematical tools are classical: absorbing Markov chains
+\cite{kemeny1960}, the base-out run-expectancy framework \cite{lindsey1963,tango2007}, and
+empirical-Bayes shrinkage \cite{efron1975,brown2008}. Our contribution is an end-to-end,
+reproducible implementation that (i) estimates the transition kernel and batter-specific outcome
+distributions without future information, (ii) evaluates lineups exactly with a proven error
+bound, (iii) certifies the optimum by exhaustive search, and (iv) reports uncertainty and
+validation honestly, including null and small effects. We do not claim mathematical novelty for
+the individual propositions; several are elementary consequences of standard theory, and we say
+so where relevant.
+
+%======================================================================
+\section{Problem formulation}\label{sec:formulation}
+%======================================================================
+
+\subsection{Players, orders and feasibility}
+
+A lineup consists of nine hitters indexed by $i\in\{1,\dots,9\}$. A batting order is a bijection
+$\pi:\{1,\dots,9\}\to\{1,\dots,9\}$ assigning hitter $\pi(t)$ to slot $t$; the set of all orders is
+the symmetric group $\mathcal{S}_9$, with $|\mathcal{S}_9|=362{,}880$. Under the Official Baseball
+Rules any order of the nine starters is legal, and with the universal designated hitter (adopted by
+MLB in 2022) the pitcher does not bat, so the feasible set is $\cF=\mathcal{S}_9$. Users of the
+dashboard may add constraints of the form ``hitter $i$ bats in slot $t$''; these define
+$\cF_A=\{\pi:\pi(t)\in A_t\ \forall t\}$ for allowed sets $A_t$.
+
+We consider a \emph{fixed pregame} order. In-game substitutions, pinch hitting and defensive
+changes are outside the model: the nine starters bat throughout.
+
+\subsection{State space and outcomes}
+
+\begin{definition}[Base-out states]
+A transient state is a pair $s=(o,b)$ with $o\in\{0,1,2\}$ outs and $b\in\{0,1\}^3$ the occupancy
+of first, second and third base. We encode $s=8o+b_1+2b_2+4b_3\in\{0,\dots,23\}$ and add an absorbing
+state $\abs$ (three outs). Let $\cS=\{0,\dots,23\}$ and $\bar\cS=\cS\cup\{\abs\}$.
+\end{definition}
+
+\begin{definition}[Outcome classes]
+The batter-specific result of a plate appearance (PA) is one of eight classes
+$\cC=\{\mathrm{K},\mathrm{BB},\mathrm{1B},\mathrm{2B},\mathrm{3B},\mathrm{HR},\mathrm{GB},\mathrm{AIR}\}$:
+strikeout; walk, intentional walk, hit-by-pitch or catcher's interference; single; double; triple;
+home run; a ground ball not scored as a hit (including double plays, fielder's choices and
+reaching on an error); and a fly ball, line drive or pop-up not scored as a hit (including
+sacrifice flies).
+\end{definition}
+
+Splitting non-hit balls in play by batted-ball type lets the model distinguish hitters who ground
+into double plays from those who hit sacrifice flies, without modelling either event per hitter.
+
+\begin{definition}[Transition kernel]\label{def:kernel}
+For $c\in\cC$, $s\in\cS$, $s'\in\bar\cS$ and $r\in\{0,\dots,4\}$, $J_c(s,s',r)$ is the probability
+that, from state $s$, a PA with outcome $c$ (together with all base-running events up to the
+decisive pitch of the next PA) leads to $s'$ with $r$ runs scored. We write
+$P_c(s,s')=\sum_r J_c(s,s',r)$ and $\rho_c(s)=\sum_{s',r}r\,J_c(s,s',r)$.
+\end{definition}
+
+Defining a transition from one decisive pitch to the next (\cref{sec:data}) means stolen bases,
+pick-offs and wild pitches are part of the kernel, and an inning that ends on a caught stealing
+correctly leaves the batter at the plate to lead off the next inning.
+
+\subsection{Stochastic model}
+
+Fix an order $\pi$. Pitching regimes $g\in\{1,\dots,G\}$ index who pitches (here $G=2$: the
+opposing starter and the opposing bullpen). Let $x_g(i)\in\Delta(\cC)$ be the outcome distribution
+of hitter $i$ under regime $g$, and $w_k\in\Delta(\{1,\dots,G\})$ the regime distribution of inning
+$k\in\{1,\dots,9\}$.
+
+\begin{assumption}[Markov plate appearances]\label{as:markov}
+Within a half-inning pitched under regime $g$, given the current state $S_n=s$ and the batting
+slot $T_n=t$, the outcome $C_n\sim x_g(\pi(t))$ and the next state and runs
+$(S_{n+1},\,\Delta R_n)\sim J_{C_n}(s,\cdot,\cdot)$ are independent of everything else that
+happened before; then $T_{n+1}=T_n+1 \pmod 9$.
+\end{assumption}
+
+\begin{assumption}[Batter-independent kernel]\label{as:kernel}
+$J_c$ does not depend on the identity of the batter or runners; base running is league-average.
+\end{assumption}
+
+\begin{assumption}[Pitching changes between innings]\label{as:regime}
+The regime $G_k$ of inning $k$ is drawn from $w_k$ independently of the game state and of
+other innings, and does not change within an inning.
+\end{assumption}
+
+\begin{assumption}[Outs]\label{as:outs}
+Outs never decrease within an inning, and there is $q>0$ such that every PA increases the number
+of outs with probability at least $q$ whatever the state, hitter and regime:
+$\min_{g,i,s}\sum_{c}x_g(i)_c\sum_{s':\,o(s')>o(s)}P_c(s,s')\ge q$, with $o(\abs)=3$.
+\end{assumption}
+
+\begin{assumption}[Bookkeeping]\label{as:bookkeeping}
+Every transition conserves participants: if $s'\ne\abs$, $|b(s)|+1=|b(s')|+r+o(s')-o(s)$; if
+$s'=\abs$, $r+3-o(s)\le|b(s)|+1$.
+\end{assumption}
+
+\Cref{as:outs,as:bookkeeping} are checked on the estimated kernel: no observed transition decreases
+the outs, and every transition violating the identity is a data error and is removed
+(\cref{sec:data}). Each inning starts in state $s=0$ (no outs, bases empty); the extra-inning
+runner rule is irrelevant for a nine-inning objective.
+
+Let $R_9=\sum_{k=1}^9 R^{(k)}$ be the runs scored in the first nine innings, where $R^{(k)}$ is the
+total of $\Delta R_n$ in inning $k$.
+
+\begin{definition}[Objective]
+For an information set $\cI$ (all data before the game date), the expected-runs objective is
+\[
+V(\pi)=\E\bigl[R_9\mid \pi,\cI\bigr],\qquad \pi^\star\in\argmax_{\pi\in\cF}V(\pi),
+\]
+where the expectation is with respect to the model of \cref{as:markov,as:kernel,as:regime} with
+parameters $\theta=(J,x,w)$ replaced by their estimates $\hat\theta$ from $\cI$
+(\cref{sec:estimation}); $V=V_{\hat\theta}$ is a plug-in value, not a posterior-predictive
+expectation. Independence of the regimes across innings (\cref{as:regime}) is a simplification
+(a starter who has left does not return), and $w_k$ is interpretable as the probability that the
+starter pitches inning $k$ only under it. Expected runs per inning
+($V/9$) and per plate appearance are derived quantities; win probability is not modelled.
+\end{definition}
+
+\begin{remark}[Identification]\label{rem:identification}
+For a historical game we observe one realization of $R$ under the order $\pi_{\mathrm{used}}$.
+$V(\pi)$ for $\pi\ne\pi_{\mathrm{used}}$ is a counterfactual expectation that is identified only
+through the structural assumptions above. Assumptions A1--A3 are what make the order affect runs
+only through the sequence in which hitters come to the plate; they cannot be tested on games
+played under a single order. Moreover, the predicted gain of reordering (hundredths of a run) is
+two orders of magnitude smaller than the standard deviation of a team's runs in one game
+(about 3), so no feasible observational study could detect it reliably.
+\end{remark}
+
+%======================================================================
+\section{Statistical estimation}\label{sec:estimation}
+%======================================================================
+
+\subsection{Data}\label{sec:data}
+
+We use pitch-level Statcast data (Baseball Savant \cite{savant}) for 2021--2026, regular season and postseason,
+downloaded in two-day windows and stored unmodified, with SHA-256 manifests. For each PA the
+decisive pitch is the pitch with a non-empty \texttt{events} field; its fields
+\texttt{outs\_when\_up}, \texttt{on\_1b/2b/3b} and \texttt{bat\_score} give the state and score
+before the decisive pitch. The transition of PA $n$ is from its decisive state to the decisive
+state of PA $n+1$ in the same half-inning, or to $\abs$ for the last PA; its runs are the change in
+the batting team's score (for the last PA, up to the score at the end of the half-inning).
+Plate appearances interrupted by the end of an inning (\texttt{truncated\_pa}) are not PAs. The
+final transition of a game's last half-inning is censored, and excluded from estimation, unless
+the game ended normally after three outs (a top half of the ninth or later with the home team ahead,
+or a bottom half with the visitors ahead); this covers walk-offs in any inning, called games and
+seven-inning games. Censoring is outcome-dependent (walk-off transitions score runs by
+construction), but it affects about one transition in a thousand.
+
+Starting lineups are inferred as the first nine distinct batters of each team; the inference is
+marked reliable when the tenth PA returns to the leadoff hitter. In a random audit of \EzeroN{}
+reliable 2026 team-games (E0) the inferred lineup and opposing starter matched the official boxscore
+in \EzeroMatch{} of them. For the
+reference game we use the official boxscore (slot codes $100,\dots,900$).
+\Cref{tab:data} summarizes the data.
+
+\input{generated/table_data.tex}
+
+\subsection{Transition kernel}
+
+For a game on date $d$, let $m(d)$ be the first day of its month. The kernel is refitted monthly:
+$N_c(s,s',r)$ counts valid transitions in the window
+$[\max(m(d)-1095\text{ days},\ \text{2023-01-01}),\,m(d))$ (if that window would span less than
+180 days, the previous 365 days are used instead). Refitting monthly only discards information and
+cannot introduce look-ahead. The 2023 lower limit reflects the 2023 rule
+changes (larger bases, pick-off limits, defensive-shift restrictions), which changed base-running
+and batted-ball outcomes. The estimate is the Dirichlet posterior mean
+\[
+\hat J_c(s,\cdot,\cdot)=\frac{N_c(s,\cdot,\cdot)+\alpha J^0_c(s,\cdot,\cdot)}{N_c(s)+\alpha},
+\qquad \alpha=2,
+\]
+centred on the conventional deterministic advancement $J^0$ (runners advance one base on a
+single, a ground ball with a runner on first and fewer than two outs is a double play, other outs
+do not advance runners). The prior only matters in sparse cells.
+
+\subsection{Plate-appearance model}
+
+Let $h=(\text{batter side},\text{pitcher hand})$ denote the handedness matchup and
+$\ell_h\in\Delta(\cC)$ the league outcome distribution for $h$. For hitter $b$ facing pitcher $p$
+we model
+\begin{equation}\label{eq:log5}
+\varphi(c\mid b,p)=\frac{\ell_h(c)\,m_b(c)\,m_p(c)}{\sum_{c'}\ell_h(c')\,m_b(c')\,m_p(c')},
+\end{equation}
+a multinomial generalization of the odds-ratio (``log5'') method introduced by
+\citet{james1981} and discussed by \citet{tango2007}, with batter
+and pitcher multipliers $m_b,m_p\in(0,\infty)^{\cC}$. Platoon effects enter only through the
+league distribution $\ell_h$; individual platoon splits are not estimated, because they stabilize
+only after very large samples \cite{tango2007}.
+
+\paragraph{Empirical-Bayes multipliers.} Each PA in the 1{,}095 days before the cutoff receives a weight
+$\omega=2^{-\text{age}/H}$, where the age is in days and $H$ is a half-life. For hitter $b$ let
+$n_b(c)=\sum\omega\,\one\{C=c\}$ and $e_b(c)=\sum\omega\,\ell_{h(\mathrm{PA})}(c)$ over his PAs (the
+expected count under league rates). Treating $n_b(c)$ as Poisson with mean $m_b(c)e_b(c)$ and
+placing a $\mathrm{Gamma}(a_c,a_c)$ prior (mean one) on $m_b(c)$ gives the posterior
+\begin{equation}\label{eq:posterior}
+m_b(c)\mid\text{data}\sim\mathrm{Gamma}\bigl(n_b(c)+a_c,\ e_b(c)+a_c\bigr),\qquad
+\hat m_b(c)=\frac{n_b(c)+a_c}{e_b(c)+a_c}.
+\end{equation}
+Multipliers of hitters with little history therefore shrink to one, in the spirit of
+\citet{efron1975} and \citet{brown2008}. Pitchers are treated identically with strengths $s_c$.
+A team's bullpen is one pseudo-pitcher built from all PAs of pitchers other than that game's
+starter. The prior strengths are $a_c=\lambda_B\,\kappa_c$ and $s_c=\lambda_P\,\kappa_c$, with fixed
+relative strengths $\kappa=(12,15,40,25,6,12,60,60)$ ordered by how fast each rate stabilizes.
+The scales $(\lambda_B,\lambda_P)$ and $H$ are tuned on 2024 only (\cref{sec:experiments}).
+
+\begin{remark}
+With fractional weights, the Poisson model in \eqref{eq:posterior} is a working likelihood, not
+a literal sampling model: decayed counts are not counts. We use \eqref{eq:posterior} as a shrinkage
+rule whose prior strength is tuned out of sample, and the Gamma posterior as an approximate
+description of parameter uncertainty (\cref{sec:sensitivity}).
+\end{remark}
+
+\paragraph{Starter workload.} For each starting pitcher, $w_k(\text{starter})$ is the decayed average,
+over his previous starts, of the share of inning-$k$ plate appearances he faced, shrunk toward the
+league curve with a prior of 8 starts. The bullpen pitches the rest. The bullpen distribution for
+hitter $b$ mixes \eqref{eq:log5} over pitcher hands in proportion to the bullpen's historical share
+of right-handed PAs.
+
+\subsection{Leakage control}
+
+Every quantity above, for a game on date $d$, uses only PAs with $\texttt{game\_date}<d$
+(same-day earlier games are excluded). This is enforced in code and tested: altering every PA on
+or after $d$ leaves the fitted model bit-for-bit unchanged. Statcast columns that encode the future
+(e.g.\ \texttt{pitcher\_days\_until\_next\_game}) are never used.
+
+%======================================================================
+\section{Exact evaluation of a batting order}\label{sec:model}
+%======================================================================
+
+\subsection{Half-innings as absorbing chains}
+
+Fix a regime $g$ and order $\pi$. Within a half-inning the pair $(S_n,T_n)$ is a Markov chain on
+$\bar\cS\times\{1,\dots,9\}$ by \cref{as:markov}. Define the one-PA operator of hitter $i$,
+\[
+M_g(i)=\sum_{c\in\cC}x_g(i)_c\,P_c\in\R^{24\times 25},\qquad \rho_g(i)=\sum_c x_g(i)_c\,\rho_c\in\R^{24}.
+\]
+
+\begin{proposition}[Finite innings]\label{prop:finite}
+Under \cref{as:markov,as:outs}, the number $N$ of PAs in a half-inning satisfies
+$\P(N>n)\le\P(\mathrm{Bin}(n,q)\le 2)$ for every $n$. In particular $N<\infty$ almost surely,
+$\E[N]\le 3/q$, and all moments of $N$ are finite.
+\end{proposition}
+
+\begin{proof}
+Index PAs from $0$ and let $U_n=\one\{o(S_{n+1})>o(S_n)\}$ for the PA with index $n$. By
+\cref{as:outs}, $\P(U_n=1\mid\mathcal{F}_n)\ge q$ on $\{N>n\}$, where $\mathcal{F}_n$ is the history
+before PA $n$. Outs never decrease and the inning ends once they reach three, so
+$N\le\min\{n:U_0+\dots+U_{n-1}\ge3\}$. A standard coupling (draw
+$V_n\sim\mathrm{Unif}(0,1)$ independently and realize $U_n=\one\{V_n<p_n\}$ with
+$p_n=\P(U_n=1\mid\mathcal{F}_n)\ge q$; set $B_n=\one\{V_n<q\}\le U_n$) shows that $N$ is
+stochastically dominated by the time $T_3$ of the third success in i.i.d.\ Bernoulli$(q)$ trials
+$B_n$. Hence $\P(N>n)\le\P(T_3>n)=\P(\mathrm{Bin}(n,q)\le2)$ and $\E[N]\le\E[T_3]=3/q$. Finite
+moments follow from the geometric tail of $T_3$.
+\end{proof}
+
+\begin{lemma}[Runs are bounded by plate appearances]\label{lem:runs}
+Under \cref{as:bookkeeping}, every half-inning satisfies $R^{(k)}+\mathrm{LOB}+3=N$, where LOB is
+the number of runners left on base. Hence $R^{(k)}\le N-3$ and $\E[R^{(k)}]\le 3/q-3$.
+\end{lemma}
+
+\begin{proof}
+Summing the identity of \cref{as:bookkeeping} over the non-absorbing transitions of the inning and
+adding the inequality of the absorbing one gives $R^{(k)}+3\le N$. Defining
+$\mathrm{LOB}:=|b(S_{N-1})|+1-r_N-(3-o(S_{N-1}))\ge0$ (the participants of the last transition
+that neither scored nor were put out) turns this into the identity $R^{(k)}+\mathrm{LOB}+3=N$.
+The bound on the expectation follows from \cref{prop:finite}.
+\end{proof}
+
+\begin{proposition}[Inning tables]\label{prop:tables}
+For a leadoff slot $j$ and regime $g$, let $r_g(j)=\E[R^{(k)}\mid T_1=j,G_k=g]$ and
+$L_g(j,j')=\P(\text{slot }j'\text{ leads off the next inning}\mid T_1=j,G_k=g)$. Then, with
+$v_0=\mathbf{1}_{\{0\}}^\top$ (all mass on state 0) and $v_{n+1}=v_n M_g(\pi(j+n))_{\cdot,\cS}$,
+where slot indices are taken in $\{1,\dots,9\}$ cyclically, $t\mapsto1+((t-1)\bmod 9)$,
+\[
+r_g(j)=\sum_{n\ge0}v_n\,\rho_g(\pi(j+n)),\qquad
+L_g(j,j')=\sum_{n\ge0:\ j+n+1\equiv j'}v_n M_g(\pi(j+n))_{\cdot,\abs},
+\]
+both series converging geometrically, and $L_g(j,\cdot)$ is a probability vector.
+\end{proposition}
+
+\begin{proof}
+$v_n(s)$ is the probability that the inning is still in progress at PA $n$ in state $s$ (the slot is
+deterministic given $n$). The expected runs of PA $n$ are $v_n\rho_g(\pi(j+n))$, and the inning
+ends at PA $n$ with probability $v_nM_g(\cdot)_{\cdot,\abs}$, in which case the next slot,
+$j+n+1$, leads off the next inning. Summability and $\sum_{j'}L_g(j,j')=\P(N<\infty)=1$ follow from
+\cref{prop:finite}; interchanging sum and expectation is justified by monotone convergence since
+runs are non-negative and $\E[R^{(k)}]<\infty$ (\cref{lem:runs}).
+\end{proof}
+
+\begin{theorem}[Exact game value]\label{thm:value}
+Under \cref{as:markov,as:kernel,as:regime,as:outs,as:bookkeeping}, let
+$r_k=\sum_g w_{k,g}r_g$ and $L_k=\sum_g w_{k,g}L_g$. The leadoff slots $(J_k)_{k\ge1}$ of successive
+innings form a (time-inhomogeneous) Markov chain with $J_1=1$ and transition matrices $L_k$, and
+\begin{equation}\label{eq:value}
+V(\pi)=\sum_{k=1}^{9}\mu_k^\top r_k,\qquad \mu_1=e_1,\quad \mu_{k+1}^\top=\mu_k^\top L_k .
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+Every inning starts in state 0, so the only information an inning passes to the next is the
+slot of the next batter. By \cref{as:markov,as:regime}, conditionally on $J_k=j$ the inning-$k$
+regime is independent of the past and, given the regime, the inning evolves as in
+\cref{prop:tables}; hence $\P(J_{k+1}=j'\mid J_1,\dots,J_k=j)=\sum_gw_{k,g}L_g(j,j')$ and
+$\E[R^{(k)}\mid J_1,\dots,J_k=j]=r_k(j)$. Taking expectations and summing over $k$ gives
+\eqref{eq:value}.
+\end{proof}
+
+\Cref{thm:value} is the batting-order analogue of the chain used by \citet{bukiet1997}; there,
+the full distribution of runs is propagated, while for the expected-value objective the
+nine-dimensional leadoff chain is sufficient. The run distribution, needed only for presentation,
+is obtained by propagating the joint law of (state, runs) within innings and of
+(leadoff, cumulative runs) across innings.
+
+\subsection{Truncation error}
+
+In practice each series in \cref{prop:tables} is summed until the unabsorbed mass
+$\|v_n\|_1$ falls below a tolerance $\varepsilon$ (we use $10^{-13}$).
+
+\begin{proposition}[Truncation error]\label{prop:trunc}
+If every half-inning is truncated once its unabsorbed mass is at most $\varepsilon$, the computed
+value $\hat V(\pi)$ satisfies $|V(\pi)-\hat V(\pi)|\le 162\,\varepsilon/q$.
+\end{proposition}
+
+\begin{proof}
+Fix an inning and let $n$ be the truncation step, $\P(N>n)=\|v_n\|_1\le\varepsilon$. Runs after step
+$n$ are at most the runners on base at step $n$ (at most 3) plus the remaining PAs (each remaining
+participant scores at most once, \cref{lem:runs}). Given $\mathcal{F}_n$ on $\{N>n\}$, at most three
+more out increments are needed, so the expected number of remaining PAs is at most $3/q$ by the
+argument of \cref{prop:finite}. Hence $0\le r_g(j)-\hat r_g(j)\le\varepsilon(3+3/q)\le6\varepsilon/q$.
+The computed $\hat L_g(j,\cdot)$ is sub-stochastic with missing mass at most $\varepsilon$; writing
+$\delta_k=\mu_k-\hat\mu_k$, $\delta_{k+1}^\top=\delta_k^\top L_k+\hat\mu_k^\top(L_k-\hat L_k)$, so
+$\|\delta_{k+1}\|_1\le\|\delta_k\|_1+\varepsilon$ and $\|\delta_k\|_1\le(k-1)\varepsilon$. Since
+$\|\hat r_k\|_\infty\le\|r_k\|_\infty\le3/q$ by \cref{lem:runs},
+\[
+|V-\hat V|\le\sum_{k=1}^9\Bigl(|\mu_k^\top(r_k-\hat r_k)|+|\delta_k^\top\hat r_k|\Bigr)
+\le 9\cdot\frac{6\varepsilon}{q}+\frac{3}{q}\sum_{k=1}^9(k-1)\varepsilon=\frac{162\,\varepsilon}{q}.\qedhere
+\]
+\end{proof}
+
+For the reference game the estimated floor is $q=\RefQmin$ and the largest truncated mass is
+below $\varepsilon$, so the bound is $\RefTruncBound$ runs, many orders of magnitude below the differences we report. The bound is
+tested numerically against coarse tolerances in the test suite.
+
+\subsection{Run expectancy and run values}
+
+\begin{proposition}\label{prop:re}
+For a single outcome distribution $x$ (every hitter identical), let
+$Q=\sum_cx_cP_c|_{\cS\times\cS}$ and $\rho=\sum_cx_c\rho_c$. Under \cref{as:outs}, $I-Q$ is
+invertible, the run-expectancy vector is $\mathrm{RE}=(I-Q)^{-1}\rho$, and the expected number of
+visits to each state starting from $s=0$ is $\nu^\top=e_0^\top(I-Q)^{-1}$.
+\end{proposition}
+
+\begin{proof}
+The argument of \cref{prop:finite} applies from any initial state, because the lower bound $q$
+of \cref{as:outs} is uniform in $s$; hence every row of $Q^n$ tends to zero, the spectral radius of
+$Q$ is below one and
+$(I-Q)^{-1}=\sum_{n\ge0}Q^n$ (the fundamental matrix of the absorbing chain \cite{kemeny1960}).
+The identities follow by summing over PAs.
+\end{proof}
+
+The run value of class $c$ is the visit-weighted mean change in run expectancy,
+$\mathrm{RV}(c)=\sum_s\nu(s)[\rho_c(s)+P_c(s,\cdot)\mathrm{RE}-\mathrm{RE}(s)]/\sum_s\nu(s)$ (with
+$\mathrm{RE}(\abs)=0$), i.e.\ linear weights \cite{tango2007}. We use these only to define the
+heuristic baselines and to describe hitters.
+
+%======================================================================
+\section{Optimization}\label{sec:optimization}
+%======================================================================
+
+\subsection{Existence and exhaustive search}
+
+\begin{proposition}\label{prop:exist}
+$V$ attains its maximum on any non-empty $\cF_A\subseteq\mathcal{S}_9$.
+\end{proposition}
+
+\begin{proof}
+$\cF_A$ is finite and $V$ is finite on it (\cref{lem:runs}).
+\end{proof}
+
+The question is computational. A direct evaluation of one order costs $O(9\,G\,\bar n\,|\cS|^2)$
+operations, where $\bar n$ is the number of PAs summed per half-inning (about 30--40 at
+$\varepsilon=10^{-13}$). Exhaustive search exploits a symmetry.
+
+\begin{lemma}[Rotations]\label{lem:rot}
+Let $\sigma$ be the cyclic shift of slots, $(\pi\circ\sigma^m)(t)=\pi(t+m)$. The inning tables of
+$\pi\circ\sigma^m$ are those of $\pi$ with indices shifted by $m$:
+$r_g^{\pi\sigma^m}(j)=r_g^\pi(j+m)$ and $L_g^{\pi\sigma^m}(j,j')=L_g^\pi(j+m,j'+m)$.
+\end{lemma}
+
+\begin{proof}
+A half-inning led off by slot $j$ of $\pi\circ\sigma^m$ sees hitters $\pi(j+m),\pi(j+m+1),\dots$,
+i.e.\ the same sequence as the inning led off by slot $j+m$ of $\pi$.
+\end{proof}
+
+Hence the 9! orders split into $8!=40{,}320$ cyclic classes. For each class (fix hitter 1 in
+slot 1) we compute the tables once ($9G$ half-innings) and obtain the value of all nine rotations
+from \eqref{eq:value} in $O(9\cdot9\cdot81\,G)$ further operations (nine rotations, nine innings). The complete search costs about
+$8!\cdot9G\bar n|\cS|^2\approx10^{10}$ floating-point operations, i.e.\ \EfouraExhaustiveSeconds{}
+seconds per instance on one laptop CPU with a compiled (Numba) implementation (measured while
+another experiment ran concurrently), and about ten seconds in a
+browser.
+
+\begin{corollary}[Certified optimum]\label{cor:cert}
+Let $\hat\pi$ maximize the computed $\hat V$ and let $\Delta=\hat V(\hat\pi)-\max_{\pi\ne\hat\pi}\hat V(\pi)$.
+If $\Delta>324\varepsilon/q$, then $\hat\pi$ is the unique maximizer of $V$; in any case
+$V(\hat\pi)\ge\max_\pi V(\pi)-324\varepsilon/q$.
+\end{corollary}
+
+\begin{proof}
+Apply \cref{prop:trunc} to $\hat\pi$ and to a maximizer of $V$.
+\end{proof}
+
+For the reference game the computed margins are $\Delta=\RefCertAway$ (Milwaukee) and
+$\RefCertHome$ (Tampa Bay), many orders of magnitude above $324\varepsilon/q$ and above
+floating-point rounding (of order $10^{-14}$ in these sums).
+
+\subsection{Alternatives}
+
+We compare exhaustive search with (i) three heuristics without search: the guideline of
+\citet{tango2007} (best three hitters in slots 1, 2 and 4, next two in 3 and 5, the rest in
+decreasing run value), sorting by run value, and sorting by on-base probability; (ii) best-improvement
+2-swap local search from the actual order, and from the actual order plus nine random starts; (iii) simulated annealing
+with swap moves; and (iv) a genetic algorithm with the operators and parameters of the predecessor
+system (ordered crossover, swap mutation, tournament selection, elitism), run both with the exact
+objective and, as in the original, with a 4{,}000-game Monte Carlo objective.
+
+None of the heuristic or stochastic methods has an optimality guarantee. For the Monte Carlo
+variant, the reported value of the chosen order is biased upward. For any fixed set of orders with
+$\hat V(\pi)=V(\pi)+\eta_\pi$ and $\E\eta_\pi=0$, $\E[\max_\pi\hat V(\pi)]\ge\max_\pi V(\pi)$ by
+Jensen's inequality; for an order $\hat\pi$ selected on such estimates, the post-decision surprise
+$\E[\hat V(\hat\pi)-V(\hat\pi)]$ is positive \cite{smith2006}, and this is what E4a measures. Exact
+evaluation removes the Monte Carlo component of this bias. It does not remove the selection effect
+of estimation error in the inputs: $\hat\pi$ maximizes the plug-in value
+$V_{\hat\theta}$, whose maximum overstates the expected gain under parameter uncertainty
+(\cref{sec:uncertainty}).
+
+%======================================================================
+\section{Experimental methodology}\label{sec:experiments}
+%======================================================================
+
+The protocol (\texttt{docs/methodology/experimental-protocol.md}) was fixed before any 2025--2026
+metric was computed. Hyperparameters were tuned on 2024 only; 2025 and 2026, including the
+reference game, are test seasons.
+
+\paragraph{E1: kernel validation.} For each season 2023--2026 we compare model run expectancy
+(\cref{prop:re}, with that season's kernel and league outcome mix) with empirical run expectancy:
+the mean runs scored from each state to the end of the half-inning, excluding walk-off
+half-innings.
+
+\paragraph{E2: plate-appearance models.} Rolling origin with 14-day blocks: the model is refitted
+at the start of each block on data before it and predicts every PA in the block. Candidates:
+M0 (league distribution by handedness), M1 (+ batter multipliers), M2 (+ pitcher multipliers;
+the selected model), M2 with untuned priors, and M3, a gradient-boosted multinomial classifier
+(LightGBM \cite{ke2017}) on the M2 inputs, trained on rolling 2023--2024 snapshots. The metrics are
+log-loss and Brier score (strictly proper \cite{gneiting2007}) and class-wise calibration, with
+95\% confidence intervals for differences from a game-level cluster bootstrap \cite{efron1993}.
+
+\paragraph{E3: game-level calibration.} For every 2025--2026 team-game with a reliable lineup we
+compare the predicted $\E[R_{1..8}]$ with the observed runs in innings 1--8 (the home team does not
+always bat in the ninth). We report bias, the calibration slope of observed on predicted, mean
+squared error relative to a constant (previous-season mean) and to the team's mean over its
+previous 60 games, and randomized PIT values \cite{czado2009} of the observed runs under the
+exact predicted distribution for a random subset.
+
+\paragraph{E4: optimization.} (a) Search methods on 200 random 2026 regular-season team-games:
+gap to the exhaustive optimum, share of instances solved exactly, evaluations, runtime; the
+Monte Carlo genetic algorithm on the first 30 of them, where the order used is also
+evaluated so that the two are compared on the same instances. (b) For all 2025--2026 team-games: the model gain of
+the optimum over the order used, and the percentile of the order used among all 9! orders.
+(c) Parameter uncertainty on 80 random 2026 team-games: 40 joint posterior draws
+\eqref{eq:posterior} of all batter, starter and bullpen multipliers per game; for each draw we
+re-evaluate the point-estimate optimum and the order used, and re-optimize.
+
+\paragraph{E5: reference game.} 2026 World Series Game 5 (gamePk 849799), both teams, with 400
+posterior draws and sensitivity to the kernel era and to untuned priors.
+
+All computations are deterministic given seeds; the Statcast extraction, model, evaluator and
+experiments are in the repository, and every number in this paper is read from the
+\texttt{outputs/} files produced by \texttt{batting-order experiments}.
+
+%======================================================================
+\section{Results}\label{sec:results}
+%======================================================================
+
+\input{sections/results.tex}
+
+%======================================================================
+\section{Sensitivity, limitations and threats to validity}\label{sec:sensitivity}
+%======================================================================
+
+\paragraph{Parameter uncertainty.} The Gamma posteriors describe sampling uncertainty in player
+multipliers under a working Poisson likelihood; they do not include uncertainty in the kernel,
+the starter-workload curve, or model misspecification, and draws are independent across classes
+and players. The weighted working likelihood, on the other hand, overstates the sampling
+variance of decayed counts, and kernel uncertainty is shared by all orders and partly cancels in
+differences. The reported intervals are therefore likely, but not guaranteed, to understate total
+uncertainty.
+
+\paragraph{Misspecification.} \Cref{as:kernel} ignores runner speed and individual double-play
+tendencies beyond ground-ball rate; fast runners make the leadoff slot more valuable than the
+model suggests. \Cref{as:regime} places pitching changes between innings, whereas real changes
+often happen mid-inning and respond to the score (and, through the times-through-the-order effect,
+to the lineup). Platoon effects are league-level. In-game substitutions are ignored, which matters
+most for slots 7--9 in the late innings.
+
+\paragraph{Objective.} Maximizing expected runs is not the same as maximizing win probability;
+in close late-game situations a manager may value the variance of runs differently. We do not
+model this.
+
+\paragraph{Data.} Statcast occasionally revises recent games; decisive-pitch states may contain
+scorer errors (removed when they violate bookkeeping: \DataErrMin--\DataErrMax{} transitions per season outside
+the censored ones, \cref{tab:data}). Lineups for the
+backtests are inferred (\EzeroMatch{} of \EzeroN{} matched the official boxscore in the E0 audit),
+with no guarantee for every game.
+
+\paragraph{Counterfactuals.} As stated in \cref{rem:identification}, none of the comparisons
+between orders is an observed effect.
+
+%======================================================================
+\section{Conclusions}
+%======================================================================
+
+\input{sections/conclusions.tex}
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\appendix
+\section{Reproducibility}\label{app:repro}
+
+\begin{verbatim}
+pip install -e ".[ingest,compare,figures,dev]"
+batting-order ingest 2021 2022 2023 2024 2025 2026   # Baseball Savant, resumable
+batting-order build  2021 2022 2023 2024 2025 2026
+batting-order experiments                             # writes outputs/*.json
+python scripts/make_paper_assets.py                   # figures + generated/*.tex
+cd research && latexmk -pdf paper.tex
+\end{verbatim}
+Raw files are verified against \texttt{data/raw/statcast/season=*/MANIFEST.json}.
+The numerical claims of \cref{sec:model} are covered by tests: closed-form checks (an out/home-run
+model where runs per inning are negative binomial with mean $3(1-q)/q$), agreement with an
+independently written Monte Carlo simulator, agreement of the exact distribution's mean with
+\eqref{eq:value}, the truncation bound of \cref{prop:trunc}, and parity of the browser
+implementation with the reference implementation to $10^{-10}$.
+
+\input{generated/appendix.tex}
+
+\end{document}
