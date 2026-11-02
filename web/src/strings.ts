@@ -1,6 +1,7 @@
 export type Lang = "en" | "es";
 
 const en = {
+  "method.search_matched": "† Run on {n} of these games only. On the same {n} games: genetic algorithm {ga}, order actually used {used}.",
   "game.scoreboard": "Final score",
   "hero.verdict_mixed": "Under the model, the order used by {a} beat {pa} of all possible orders and the order used by {b} beat {pb}.",
   "a11y.skip": "Skip to content",
@@ -218,6 +219,7 @@ const en = {
 type Dict = Record<keyof typeof en, string>;
 
 const es: Dict = {
+  "method.search_matched": "† Ejecutado solo en {n} de estos partidos. En esos mismos {n} partidos: algoritmo genético {ga}, orden realmente usado {used}.",
   "game.scoreboard": "Marcador final",
   "hero.verdict_mixed": "Según el modelo, el orden usado por {a} superó al {pa} de los órdenes posibles y el usado por {b}, al {pb}.",
   "a11y.skip": "Saltar al contenido",

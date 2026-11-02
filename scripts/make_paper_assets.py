@@ -269,6 +269,9 @@ def main() -> None:
             f"{s} & {q['games']:,} & {q['pa']:,} & {q['lineups_reliable']:,}/{q['lineups']:,}"
             f" & {q['censored']} & {q.get('non_conserved_uncensored', 0)} \\\\"
         )
+    errs = [q.get("non_conserved_uncensored", 0) for q in quality.values()]
+    if errs:
+        m["DataErrMin"], m["DataErrMax"] = str(min(errs)), str(max(errs))
     (GEN / "table_data.tex").write_text(
         "\\begin{table}[t]\\centering\\small\n\\caption{Statcast data after processing "
         "(regular season and postseason). Non-conserving: bookkeeping violations outside "
@@ -348,7 +351,7 @@ def tables(e1: Any, e2: Any, e4a: Any, m: dict[str, str]) -> None:
         }
         body = "\n".join(
             f"{labels.get(k, k)} & {v['mean_gap']:.4f} & {v['max_gap']:.4f} & "
-            f"{pct(v['share_optimal'])} & {v['mean_evaluations']:,.0f} " + r"\\"
+            f"{pct(v['share_optimal'], 1)} & {v['mean_evaluations']:,.0f} " + r"\\"
             for k, v in sorted(e4a["methods"].items(), key=lambda kv: kv[1]["mean_gap"])
         )
         n, nn = e4a["methods"]["exhaustive"]["n"], e4a["noisy_ga"]["n"]
@@ -400,7 +403,7 @@ def _fill_missing(m: dict[str, str]) -> None:
     used: set[str] = set()
     for tex in [ROOT / "research" / "paper.tex", *(ROOT / "research" / "sections").glob("*.tex")]:
         text = tex.read_text("utf-8")
-        used |= set(re.findall(r"\\((?:Ezero|Eone|Etwo|Ethree|Efour|Ref)[A-Za-z]+)", text))
+        used |= set(re.findall(r"\\((?:Ezero|Eone|Etwo|Ethree|Efour|Ref|DataErr)[A-Za-z]+)", text))
     for name in sorted(used - m.keys()):
         m[name] = r"\textbf{??}"
         MISSING.append(name)

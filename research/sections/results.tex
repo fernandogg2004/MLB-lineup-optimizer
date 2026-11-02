@@ -1,7 +1,7 @@
 \subsection{Data and kernel (E1)}
 
 \Cref{tab:data} summarizes the processed data. Outside the censored end-of-game transitions,
-bookkeeping violations (scorer errors) number between 0 and 10 per season. The kernel reproduces observed run
+bookkeeping violations (scorer errors) number between \DataErrMin{} and \DataErrMax{} per season. The kernel reproduces observed run
 expectancy at the start of an inning (state 0) within \EoneStateZeroMaxDiff{} runs in every season
 2023--2026 (e.g.\ $\mathrm{RE}(0)=\EoneREzero$ in 2026), and the visit-weighted mean absolute
 difference over all 24 states is at most \EoneWeightedDiff{} (\cref{fig:re24}). The largest

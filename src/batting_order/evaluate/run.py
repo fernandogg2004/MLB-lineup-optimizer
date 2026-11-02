@@ -954,7 +954,7 @@ def e5(pa: pl.DataFrame, quick: bool) -> None:
         pa,
         StatsApi(DATA / "raw" / "statsapi"),
         ROOT,
-        hyper=tuned_hyper(),
+        hyper=None,  # the builder loads the tuned values and records their source
         n_draws=20 if quick else 400,
         seed=2026,
     )

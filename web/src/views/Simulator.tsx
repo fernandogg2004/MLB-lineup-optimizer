@@ -274,6 +274,7 @@ export function Simulator({ snap, team }: { snap: GameSnapshot; team: Team }) {
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
+            onDragStart={cancelSearch}
             onDragEnd={onDragEnd}
             accessibility={{ announcements, screenReaderInstructions: instructions }}
           >

@@ -103,3 +103,21 @@ Reports: `agent-A-architecture-round1.md`, `agent-B-engineering-round1.md`,
 
 An independent Codex review of the math core was attempted (2026-11-02) but could not run: its
 sandbox blocked every shell command, so it produced no evidence. It is not counted as a review.
+
+## Round 2 — independent verification of release-blocking fixes (2026-11-02)
+
+A fresh independent agent re-verified the release-blocking findings against the code, outputs,
+PDF and the live site (commit `79d392d`), without relying on this register.
+
+| Item | Verdict | Follow-up |
+|---|---|---|
+| B-1/D-1 | Partly: paper and takeaway fixed; website table still ranked the 30-game GA row among 200-game rows without a note | **Fixed**: † marker and matched footnote (GA vs order used on the same 30 games) on the Method page |
+| D-2 | Partly: Table 1 correct (0–1), but text still said "0–10" (hard-coded, stale after B-5) | **Fixed**: range generated from `quality_*.json` (`\DataErrMin`/`\DataErrMax`) |
+| B-2 | Fixed (live site and replicated browser arithmetic match the paper's intervals) | — |
+| C-2 | Fixed; new Low: drag start did not cancel a running search | **Fixed**: `onDragStart` cancels |
+| A-1/A-2 | Fixed (non-editable install resolves the checkout; all snapshots use tuned values); new Low: reference snapshot labelled `hyper_source: explicit` | **Fixed**: E5 lets the builder load and label the tuned values (E5 re-run) |
+| A-3 | Fixed (no placeholders/unknown in the PDF; version matches provenance check) | — |
+| Numbers | Abstract, conclusions, E3/E4b/E4c/E5 values match `outputs/*.json` | — |
+| N1 (Low) | Output files carry mixed git stamps; `e4c` says `unknown` | **Limitation**: explained per file in `docs/audits/provenance.md`; verified by `check_provenance.py` |
+| N2 (Low) | 0.945 printed as 94 % (paper) vs 95 % (site) | **Fixed**: one decimal in both |
+| N3 (Low) | Conclusion "no evidence … materially worse" too strong for Tampa Bay (interval excludes 0) | **Fixed**: reworded with the posterior probability and the size of the gain |

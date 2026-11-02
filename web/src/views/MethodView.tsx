@@ -10,7 +10,7 @@ interface Validation {
   e2?: { by_season: Record<string, { n_pa: number; models: Record<string, { log_loss: number; diff_vs_M2: Diff }> }> };
   e2b?: { window: string[]; n_pa_matched: number; models: Record<string, { log_loss: number; diff_vs_M2: Diff }> };
   e3?: { by_decile: { decile: number; pred: number; obs: number; obs_se: number }[]; calibration_slope: number; bias_obs_minus_pred: number; n_team_games: number };
-  e4a?: { methods: Record<string, { n: number; mean_gap: number; share_optimal: number; mean_evaluations: number }>; noisy_ga?: { mean_winners_curse: number } };
+  e4a?: { methods: Record<string, { n: number; mean_gap: number; share_optimal: number; mean_evaluations: number }>; noisy_ga?: { n: number; mean_winners_curse: number; mean_gap_to_opt: number; actual_mean_gap_same_instances?: number } };
   e4b?: { n_team_games?: number; uplift_opt_vs_actual: { mean: number; per_162_games: number }; actual_percentile: { median: number } };
   e4c?: { n_team_games: number; draws_per_game: number; mean_p_opt_better: number; share_interval_excludes_0: number; mean_p_same_optimum: number };
 }
@@ -137,14 +137,26 @@ export function MethodView() {
                       .sort((a, b) => a[1].mean_gap - b[1].mean_gap)
                       .map(([k, r]) => (
                         <tr key={k}>
-                          <th scope="row" className="text-left font-normal">{t(`search.${k}` as Key)}</th>
+                          <th scope="row" className="text-left font-normal">
+                            {t(`search.${k}` as Key)}
+                            {k === "genetic_mc4000_original" && <sup aria-hidden>†</sup>}
+                          </th>
                           <td className="num">{fmt(r.mean_gap, 4)}</td>
-                          <td className="num">{pct(r.share_optimal)}</td>
+                          <td className="num">{pct(r.share_optimal, 1)}</td>
                           <td className="num">{int(r.mean_evaluations)}</td>
                         </tr>
                       ))}
                   </tbody>
                 </table>
+                {v.e4a.noisy_ga?.actual_mean_gap_same_instances !== undefined && (
+                  <p className="text-xs text-muted mt-2">
+                    {t("method.search_matched", {
+                      n: int(v.e4a.noisy_ga.n),
+                      ga: fmt(v.e4a.noisy_ga.mean_gap_to_opt, 4),
+                      used: fmt(v.e4a.noisy_ga.actual_mean_gap_same_instances, 4),
+                    })}
+                  </p>
+                )}
                 <Takeaway>{t("method.search_take", { curse: fmt(v.e4a.noisy_ga?.mean_winners_curse ?? 0, 2) })}</Takeaway>
               </ChartCard>
             )}
