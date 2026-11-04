@@ -44,6 +44,15 @@ unverified (see "Open" below).
 | C-33 | Low | Photo credits have no display path | **Fixed.** Shown on Statistics when a photo exists |
 | C-34 | Low | Two shortstops in one lineup | **Fixed.** Confirmed in the box score: `position` is where a player ended the game. Home now uses the starting position, and future snapshots will too. Published snapshots are unchanged, so Statistics can still show the end-of-game position for that player |
 
+## Later changes requested by the owner
+
+After reviewing the preview, the owner removed the sentence above the name, the kicker, the fielding position,
+the orbiting words and the caption above the rings. So C-01 is now only partly addressed (the site name remains
+in the top bar and menu), C-02's ring caption is gone except for unusual cases (a small sample or last season's
+numbers), and C-10's spelled-out positions no longer apply. Ring explanations on hover, focus and tap now state
+what each statistic measures, which covers part of C-10. This is the owner's decision, recorded here so the
+audit stays accurate.
+
 ## Open
 
 - Real iPhone Safari, Android and trackpad: only emulated so far.

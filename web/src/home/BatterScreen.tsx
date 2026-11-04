@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import BatterFigure from "../components/ui/batter-figure";
+import type { FigureVariant } from "../components/ui/batter-poses";
 import OrbitRingStats, { type Orbit } from "../components/ui/orbit-ring-stats";
 import type { HomeData, HomeTeam, Rate } from "../data";
 import { useI18n } from "../i18n-context";
@@ -11,7 +12,6 @@ import { Pie } from "./Pie";
 import { kitFor } from "./teams";
 
 const RATES: Rate[] = ["avg", "obp", "slg", "ops"];
-const POSITIONS = new Set(["C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "DH", "P", "PH"]);
 
 export interface PlayerPhoto {
   id: number;
@@ -30,8 +30,9 @@ export function BatterScreen(props: {
   vsBullpen: boolean;
   setVsBullpen: (b: boolean) => void;
   photo?: PlayerPhoto;
+  figure: FigureVariant;
 }) {
-  const { data, team, slot, theme, active, vsBullpen, setVsBullpen, photo } = props;
+  const { data, team, slot, theme, active, vsBullpen, setVsBullpen, photo, figure } = props;
   const { t, lang } = useI18n();
   const narrow = useNarrow();
   const hitterIndex = team.optimal.order[slot];
@@ -48,34 +49,31 @@ export function BatterScreen(props: {
         const value = b.rates[k];
         const pct = b.pct[k];
         if (value === null || pct === null) {
-          return { label: k.toUpperCase(), value: 0, max: 100, display: "—", orbit: name, note: t("home.nodata"), hint: name, valueText: `${name}: ${t("home.nodata")}` };
+          return { label: k.toUpperCase(), value: 0, max: 100, display: "—", note: t("home.nodata"), hint: name, valueText: `${name}: ${t("home.nodata")}` };
         }
         const pctile = t("home.pctile", { ord: lang === "es" ? String(pct) : ordinal(pct, "en") });
-        const hint = t("home.better", { name, pct: percentText(pct, lang) });
+        const hint = t("home.hint", { name, def: t(`stat.${k}_def` as Key), pct: percentText(pct, lang) });
         return {
           label: k.toUpperCase(),
           value: pct,
           max: 100,
           display: value,
-          orbit: name,
           note: pctile,
           hint,
-          valueText: `${value}, ${pctile}. ${hint}.`,
+          valueText: `${value}, ${pctile}. ${hint}`,
         };
       }),
     [b, t, lang],
   );
 
   const slotName = ordinal(slot + 1, lang);
-  const seasonCaption = data.hitting.previous_season
-    ? t("home.season_prev", { season: data.hitting.season })
-    : t("home.season");
+  const prior = data.hitting.previous_season;
+  const seasonLabel = prior ? t("home.season_prev", { season: data.hitting.season }) : t("home.season");
+  const starterNamed = t("home.starter_named", { name: team.opponent_starter.name });
   return (
     <section className={`screen batter ${slot % 2 ? "flip" : ""}`} data-screen={slot} aria-label={`${slotName}: ${h.name}`}>
       <div className="pic">
         <div className="layer pic-text" data-depth="0.28">
-        {slot === 0 && <p className="intro">{t("home.intro")}</p>}
-        <p className="kicker">{t("home.kicker", { team: team.name, n: slot + 1 })}</p>
         <h2 className="who">
           <span>
             {slotName}
@@ -83,44 +81,42 @@ export function BatterScreen(props: {
           </span>{" "}
           {h.name}
         </h2>
-        <p className="pos">
-          {POSITIONS.has(h.pos) ? t(`pos.${h.pos}` as Key) : h.pos} · {hitterIndex === slot ? t("home.same") : t("home.was", { slot: ordinal(hitterIndex + 1, lang) })}
-        </p>
+        <p className="pos">{hitterIndex === slot ? t("home.same") : t("home.was", { slot: ordinal(hitterIndex + 1, lang) })}</p>
         </div>
         <div className="layer figure" data-depth="0.46">
           {photo ? (
             <img src={`${import.meta.env.BASE_URL}players/${photo.file}`} alt={h.name} loading="lazy" />
           ) : (
-            <BatterFigure facing={facing} shirt={kit.shirt} accent={kit.accent} title={t("home.figure", { name: h.name })} />
+            <BatterFigure facing={facing} shirt={kit.shirt} accent={kit.accent} variant={figure} title={t("home.figure", { name: h.name })} />
           )}
         </div>
       </div>
       <div className="data">
         <div className="layer rings" data-depth="0.2">
-          <p className="caption">
-            {seasonCaption}
-            {b.small_sample && ` · ${t("home.small")}`}
-          </p>
-          <OrbitRingStats rings={rings} active={active} label={seasonCaption} theme={theme === "day" ? "paper" : "night"} />
+          {/* Only the unusual cases are labelled: a small sample, or last season's numbers. */}
+          {(prior || b.small_sample) && (
+            <p className="caption">{[prior && seasonLabel, b.small_sample && t("home.small")].filter(Boolean).join(" · ")}</p>
+          )}
+          <OrbitRingStats rings={rings} active={active} label={seasonLabel} orbiting={false} theme={theme === "day" ? "paper" : "night"} />
         </div>
         <div className="layer outcome" data-depth="0.08">
-          <div className="pie-wrap">
-            <p className="caption">{t("home.each")}</p>
-            <Pie
-              probs={vsBullpen ? h.probs_bullpen : h.probs_starter}
-              caption={t("home.each")}
-              against={vsBullpen ? t("home.bullpen") : t("home.starter", { name: team.opponent_starter.name })}
-            />
+          <div className="outcome-head">
+            <p className="outcome-title">{t("home.each")}</p>
+            <fieldset className="vs">
+              <legend className="sr-only">{t("home.against")}</legend>
+              <label title={starterNamed}>
+                <input type="radio" name={`vs-${slot}`} aria-label={starterNamed} checked={!vsBullpen} onChange={() => setVsBullpen(false)} />
+                <span>{t("home.starter")}</span>
+              </label>
+              <label>
+                <input type="radio" name={`vs-${slot}`} checked={vsBullpen} onChange={() => setVsBullpen(true)} />
+                <span>{t("home.bullpen")}</span>
+              </label>
+            </fieldset>
           </div>
-          <fieldset className="vs">
-            <legend>{t("home.against")}</legend>
-            <label>
-              <input type="radio" name={`vs-${slot}`} checked={!vsBullpen} onChange={() => setVsBullpen(false)} /> {t("home.starter", { name: team.opponent_starter.name })}
-            </label>
-            <label>
-              <input type="radio" name={`vs-${slot}`} checked={vsBullpen} onChange={() => setVsBullpen(true)} /> {t("home.bullpen")}
-            </label>
-          </fieldset>
+          <div className="pie-wrap">
+            <Pie probs={vsBullpen ? h.probs_bullpen : h.probs_starter} caption={t("home.each")} against={vsBullpen ? t("home.bullpen") : starterNamed} />
+          </div>
         </div>
       </div>
     </section>

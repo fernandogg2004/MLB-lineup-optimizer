@@ -5,6 +5,7 @@ import { SUMMARY_SCREEN } from "../route";
 import type { Theme } from "../theme";
 import { BatterScreen, type PlayerPhoto } from "./BatterScreen";
 import { ordinal } from "./derive";
+import { lineupFigures } from "./figures";
 import { prefersReducedMotion, useFlow } from "./format";
 import { setStadiumDepth } from "./stadium";
 import { SummaryScreen } from "./SummaryScreen";
@@ -12,6 +13,8 @@ import "./home.css";
 
 const MOVE_MS = 850;
 const GESTURE_GAP_MS = 240;
+/** How long after landing a steady, undiminished stream counts as asking for the next screen. */
+const SETTLE_MS = 250;
 
 function Screens(props: {
   data: HomeData;
@@ -32,7 +35,7 @@ function Screens(props: {
   const [progress, setProgress] = useState(target.screen);
   const [nearSummary, setNearSummary] = useState(false);
   const [vsBullpen, setVsBullpen] = useState(false);
-  const anim = useRef({ running: false, lastWheel: -Infinity, armed: true, raf: 0 });
+  const anim = useRef({ running: false, lastWheel: -Infinity, armed: true, raf: 0, pending: 0, landedAt: -Infinity, recent: [] as { size: number; at: number }[], steady: 0 });
   const menuRef = useRef(menuOpen);
   useEffect(() => {
     menuRef.current = menuOpen;
@@ -144,7 +147,8 @@ function Screens(props: {
       const el = scroller.current;
       if (!el) return;
       const a = anim.current;
-      const i = Math.max(0, Math.min(SUMMARY_SCREEN, target));
+      const start = (wanted: number) => {
+      const i = Math.max(0, Math.min(SUMMARY_SCREEN, wanted));
       if (flow) {
         el.querySelector(`.screen[data-screen="${i}"]`)?.scrollIntoView();
         return;
@@ -169,9 +173,16 @@ function Screens(props: {
         else {
           el.style.removeProperty("scroll-snap-type");
           a.running = false;
+          a.landedAt = now;
+          // A gesture made during the move is honoured as soon as it lands.
+          const next = a.pending;
+          a.pending = 0;
+          if (next) start(i + next);
         }
       };
       a.raf = requestAnimationFrame(step);
+      };
+      start(target);
     },
     [flow],
   );
@@ -184,13 +195,41 @@ function Screens(props: {
     const onWheel = (e: WheelEvent) => {
       if (e.ctrlKey) return; // browser zoom
       e.preventDefault();
-      // A pause ends the gesture, so trackpad inertia cannot advance a second screen. The event's own
+      // One gesture moves one screen. A trackpad keeps sending events while it coasts after a flick,
+      // so a new gesture is recognised by a pause, or by the stream picking up again. The event's own
       // timestamp is used because a busy page delivers events late, which would look like pauses.
-      if (e.timeStamp - a.lastWheel > GESTURE_GAP_MS) a.armed = true;
+      const size = Math.abs(e.deltaY);
+      const paused = e.timeStamp - a.lastWheel > GESTURE_GAP_MS;
       a.lastWheel = e.timeStamp;
-      if (a.running || !a.armed || Math.abs(e.deltaY) < 4) return;
+      const sample = { size, at: e.timeStamp };
+      a.recent = paused ? [sample] : [...a.recent, sample].slice(-8);
+      if (paused) {
+        a.armed = true;
+        a.steady = 0;
+      } else if (!a.armed && a.recent.length === 8) {
+        // Size and speed must agree. A browser merges events during a slow frame, which makes single
+        // events bigger without speeding up; uneven delivery changes speed without bigger events.
+        const window = (from: number, to: number) => {
+          const part = a.recent.slice(from, to + 1);
+          const total = part.reduce((sum, r) => sum + r.size, 0);
+          return { size: total / part.length, speed: total / Math.max(1, part[part.length - 1].at - part[0].at) };
+        };
+        const older = window(0, 3);
+        const newer = window(4, 7);
+        const pickedUp = newer.size > older.size * 1.3 && newer.speed > older.speed * 1.3 && newer.size >= 8;
+        // Coasting fades away; a steady stream long after landing is a wheel still being turned.
+        const settled = !a.running && e.timeStamp - a.landedAt > SETTLE_MS;
+        const holding = newer.size >= older.size && newer.speed >= older.speed && newer.size >= 30;
+        a.steady = settled && holding ? a.steady + 1 : 0;
+        if (pickedUp || a.steady >= 4) a.armed = true;
+      }
+      if (!a.armed || size < 4) return;
       a.armed = false;
-      jump(current() + Math.sign(e.deltaY));
+      a.recent = [];
+      a.steady = 0;
+      const dir = Math.sign(e.deltaY);
+      if (a.running) a.pending = dir;
+      else jump(current() + dir);
     };
     const onKey = (e: KeyboardEvent) => {
       if (menuRef.current || e.ctrlKey || e.altKey || e.metaKey) return;
@@ -199,18 +238,21 @@ function Screens(props: {
       if (e.key === " " && target.closest?.("a, button")) return;
       if (e.key === "Home" || e.key === "End") {
         e.preventDefault();
+        a.pending = 0;
         jump(e.key === "Home" ? 0 : SUMMARY_SCREEN);
         return;
       }
       const dir = ({ ArrowDown: 1, PageDown: 1, " ": e.shiftKey ? -1 : 1, ArrowUp: -1, PageUp: -1 } as Record<string, number>)[e.key];
       if (!dir) return;
       e.preventDefault();
-      if (!a.running) jump(current() + dir);
+      if (a.running) a.pending = dir;
+      else jump(current() + dir);
     };
     // A finger takes over from any move in progress.
     const onTouch = () => {
       cancelAnimationFrame(a.raf);
       a.running = false;
+      a.pending = 0;
       el.style.removeProperty("scroll-snap-type");
     };
     el.addEventListener("wheel", onWheel, { passive: false });
@@ -231,8 +273,7 @@ function Screens(props: {
   const hitters = team.optimal.order.map((i) => team.hitters[i]);
   const announced =
     flow || locked === null ? "" : locked === SUMMARY_SCREEN ? t("sum.head") : `${ordinal(locked + 1, lang)}. ${hitters[locked].name}`;
-  // Odd screens have the picture on the right, so the rail moves to the opposite edge.
-  const railLeft = progress < SUMMARY_SCREEN ? progress % 2 === 1 : true;
+  const figures = lineupFigures(hitters.map((h) => h.id));
 
   return (
     <>
@@ -248,12 +289,13 @@ function Screens(props: {
             vsBullpen={vsBullpen}
             setVsBullpen={setVsBullpen}
             photo={photos.find((p) => p.id === team.hitters[hitter].id)}
+            figure={figures[slot]}
           />
         ))}
         <SummaryScreen data={data} team={team} on={flow || locked === SUMMARY_SCREEN} spinning={nearSummary} />
       </div>
       {!flow && (
-        <nav className={`rail ${railLeft ? "left" : ""}`} aria-label={t("home.rail")}>
+        <nav className="rail" aria-label={t("home.rail")}>
           {hitters.map((h, s) => (
             <button key={s} aria-current={progress === s ? "step" : undefined} aria-label={`${ordinal(s + 1, lang)}, ${h.name}`} title={h.name} onClick={() => jump(s)}>
               <span />

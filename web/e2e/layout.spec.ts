@@ -31,7 +31,7 @@ async function audit(page: Page, screen: number): Promise<Finding[]> {
     const scr = document.querySelector(`.screen[data-screen="${screen}"]`);
     if (!scr) return ["screen missing"];
     const bad: string[] = [];
-    const sel = ".pie-label,.vs,.vs input,.ors__dial,.ors__label,.ors__note,.who,.kicker,.pos,.figure,.sum-list li,.sum-context,.sum-foot,.sum-link,h2,.caption,.pie";
+    const sel = ".pie-label,.vs,.vs input,.ors__dial,.ors__label,.ors__note,.who,.pos,.figure,.outcome,.outcome-title,.sum-list li,.sum-context,.sum-foot,.sum-link,h2,.caption,.pie";
     const items = [...scr.querySelectorAll(sel)].map((e) => ({ c: e.getAttribute("class") ?? e.tagName, r: e.getBoundingClientRect() }));
     const top = 40;
     for (const o of items) {
@@ -42,7 +42,7 @@ async function audit(page: Page, screen: number): Promise<Finding[]> {
     }
     const hit = (a: DOMRect, b: DOMRect) => a.left < b.right - 0.5 && b.left < a.right - 0.5 && a.top < b.bottom - 0.5 && b.top < a.bottom - 0.5;
     const labels = items.filter((o) => o.c.startsWith("pie-label"));
-    const others = items.filter((o) => ["vs", "ors__note", "caption", "kicker", "pos", "who"].includes(o.c));
+    const others = items.filter((o) => ["vs", "ors__note", "caption", "pos", "who", "outcome-title"].includes(o.c));
     labels.forEach((a, i) => {
       labels.forEach((b, j) => {
         if (i < j && hit(a.r, b.r)) bad.push("labels overlap");

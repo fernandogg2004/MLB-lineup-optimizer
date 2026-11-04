@@ -202,7 +202,7 @@
   top: 100%;
   left: 50%;
   width: max-content;
-  max-width: 190px;
+  max-width: 215px;
   margin: 2px 0 0;
   padding: 5px 9px;
   transform: translateX(-50%);
@@ -277,4 +277,20 @@
   .ors[data-on] .ors__arc::before {
     animation: none;
   }
+}
+
+/* Without the orbiting words, the ring fills its space. */
+.ors--plain {
+  --ors-size: clamp(92px, min(10.5vw, 18vh), 160px);
+}
+.ors--plain .ors__track,
+.ors--plain .ors__arc,
+.ors--plain .ors__head {
+  inset: 2%;
+}
+.ors--plain .ors__face {
+  inset: 12%;
+}
+.ors--plain .ors__num {
+  font-size: calc(var(--ors-size) * 0.2);
 }

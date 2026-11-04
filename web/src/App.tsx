@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Menu } from "./components/Menu";
+import { MenuIcon } from "./components/MenuIcon";
 import { fetchJson } from "./data";
 import type { GameIndex, IndexEntry } from "./data";
 import { useNarrow } from "./home/format";
@@ -149,9 +150,7 @@ function Shell() {
         </a>
         <header className="bar">
           <button ref={burger} className="burger" aria-label={t("menu.open")} aria-expanded={menuOpen} onClick={() => setMenuOpen(true)}>
-            <span />
-            <span />
-            <span />
+            <MenuIcon />
           </button>
           <span className="brand">{t("app.name")}</span>
           {showPickers && entry && (

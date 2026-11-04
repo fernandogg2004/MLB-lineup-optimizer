@@ -43,6 +43,8 @@ type Props = {
   label?: string;
   theme?: "paper" | "night";
   motion?: "full" | "reduced";
+  /** Show the words circling each ring. */
+  orbiting?: boolean;
   /** Parent-controlled reveal. Omit to start when scrolled into view. */
   active?: boolean;
   className?: string;
@@ -84,6 +86,7 @@ export function OrbitRingStats({
   label = "Key figures",
   theme = "night",
   motion = "full",
+  orbiting = true,
   active,
   className = "",
 }: Props) {
@@ -123,7 +126,7 @@ export function OrbitRingStats({
       motion === "reduced" ||
       matchMedia("(prefers-reduced-motion: reduce)").matches;
     const el = root.current;
-    if (reduce || !el || (controlled && !on)) return;
+    if (!orbiting || reduce || !el || (controlled && !on)) return;
     while (angles.current.length < count) angles.current.push(angles.current.length * 47);
     const ang = angles.current;
     const vel = Array.from({ length: count }, () => FAST);
@@ -157,12 +160,12 @@ export function OrbitRingStats({
       cancelAnimationFrame(raf.current);
       raf.current = 0;
     };
-  }, [count, motion, controlled, on]);
+  }, [orbiting, count, motion, controlled, on]);
 
   return (
     <section
       ref={root}
-      className={`ors ors--${theme} ${className}`}
+      className={`ors ors--${theme} ${orbiting ? "" : "ors--plain"} ${className}`}
       data-motion={motion}
       data-on={on || undefined}
       aria-label={label}
@@ -209,7 +212,7 @@ export function OrbitRingStats({
                 tabIndex={g.hint ? 0 : undefined}
                 style={{ "--ors-v": on ? p : 0, "--i": i } as CSSProperties}
               >
-                <svg
+                {orbiting && <svg
                   className="ors__orbit"
                   viewBox="0 0 200 200"
                   aria-hidden="true"
@@ -227,7 +230,7 @@ export function OrbitRingStats({
                       {lap}
                     </textPath>
                   </text>
-                </svg>
+                </svg>}
                 <span className="ors__track" aria-hidden="true" />
                 <span className="ors__arc" aria-hidden="true" />
                 <span className="ors__head" aria-hidden="true" />

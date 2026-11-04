@@ -19,6 +19,8 @@ import {
   splitTemplate,
   wholePercent,
 } from "./derive";
+import { POSES } from "../components/ui/batter-poses";
+import { figureFor, lineupFigures } from "./figures";
 import { contrast, DEFAULT_KIT, kitFor, TEAM_KITS } from "./teams";
 
 const HOME_DIR = join(process.cwd(), "public", "data", "home");
@@ -157,6 +159,26 @@ describe("team colours", () => {
     expect(kitFor("XXX")).toEqual(DEFAULT_KIT);
     expect(kitFor("MIL").shirt).toBe("#12284b");
     expect(kitFor("TB").shirt).toBe("#8fbce6");
+  });
+});
+
+describe("batter figures", () => {
+  it("a player keeps the same gear between games", () => {
+    expect(figureFor(665489)).toEqual(figureFor(665489));
+  });
+
+  it("no lineup repeats a pose on consecutive screens, and each uses several", () => {
+    for (const g of games) {
+      for (const t of Object.values(g.teams)) {
+        const ids = t.optimal.order.map((i) => t.hitters[i].id);
+        const figs = lineupFigures(ids);
+        figs.forEach((f, i) => {
+          expect(f.pose).toBeLessThan(POSES.length);
+          if (i > 0) expect(f.pose).not.toBe(figs[i - 1].pose);
+        });
+        expect(new Set(figs.map((f) => f.pose)).size).toBeGreaterThanOrEqual(3);
+      }
+    }
   });
 });
 

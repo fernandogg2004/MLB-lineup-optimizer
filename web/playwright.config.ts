@@ -4,6 +4,8 @@ export default defineConfig({
   testDir: "e2e",
   testMatch: /.*\.spec\.ts/,
   timeout: 60_000,
+  // One browser at a time: the scroll lock depends on input timing, which a starved machine distorts.
+  workers: 1,
   use: { baseURL: process.env.E2E_BASE_URL ?? "http://localhost:4173" },
   webServer: process.env.E2E_BASE_URL
     ? undefined

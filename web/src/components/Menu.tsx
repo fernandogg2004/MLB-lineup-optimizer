@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useI18n } from "../i18n-context";
 import type { Theme } from "../theme";
+import { MenuIcon } from "./MenuIcon";
 
-/** Slide-in panel: near-black with white text in both appearance modes. */
+/** Slide-in panel: near-black at night, white by day. */
 export function Menu(props: {
   open: boolean;
   close: () => void;
@@ -40,9 +41,7 @@ export function Menu(props: {
       <button className="menu-scrim" aria-label={t("menu.close")} tabIndex={-1} onClick={close} />
       <nav ref={panel} className="menu-panel" aria-label={t("a11y.nav")}>
         <button className="burger menu-close" aria-label={t("menu.close")} onClick={close}>
-          <span />
-          <span />
-          <span />
+          <MenuIcon />
         </button>
         <p className="menu-name">{t("app.name")}</p>
         <div className="menu-items" onPointerLeave={() => setHover(null)}>

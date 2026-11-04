@@ -33,7 +33,9 @@ needs and adds the hitting lines. Game snapshots and `outputs/` are untouched, s
 `docs/audits/provenance.md` stays valid. A test asserts the copied fields equal the snapshot.
 
 **Illustrated batters, not photographs.** MLB and agency photos are copyrighted and the project does not
-use unlicensed assets. The figure is original and faceless. Licensed photos can be added through
+use unlicensed assets. The figure is original and faceless. It has six poses plus varied bats and
+accessories, chosen from the player id so each player keeps his look. These are decorative: the project has
+no reliable source for what a player really wears, and the Statistics page says so. Licensed photos can be added through
 `web/public/players/manifest.json`, and a test fails if an image has no licence entry.
 
 **The batter always faces the statistics.** The owner's choice. Direction follows the layout, so the
@@ -42,9 +44,11 @@ figure does not show the hitter's real batting side.
 **The lock is explicit on wheel and keyboard, native on touch.** Browser snapping alone does not hold:
 in testing, one large wheel delta skipped three screens and a small one bounced back. One gesture moves
 one screen; a pause of 240 ms between wheel events, read from their timestamps, ends a gesture, so a
-busy page cannot split one into several. Viewports under 600 px tall (landscape phones) use normal
+busy page cannot split one into several. A trackpad keeps sending events while it coasts after a flick, so
+wheel input that picks up again also counts as a new gesture, and a gesture made during a move runs when it
+lands. Viewports under 600 px tall (landscape phones) use normal
 scrolling, because snapping there would make content unreachable. Rings sit four in a row on phones
-under 760 px tall, where a 2 x 2 grid does not fit, and hide their orbiting words below 600 px wide.
+under 800 px tall, where a 2 x 2 grid does not fit.
 
 **Motion runs on the compositor.** Only `transform` and `opacity` animate, so nothing repaints while
 scrolling. An early design swung the bat; that repainted the whole figure each frame and dropped a
@@ -61,6 +65,13 @@ score sits on its own line, apart from the note about estimates.
 
 **One bundled font.** Inter (SIL Open Font License) ships with the site, because system fonts have different
 widths and made some screens overflow on Linux. Layout tests now match what visitors see.
+
+**Owner's refinements after the preview.** Home was simplified at the owner's request: no sentence or kicker
+above the name, no fielding position, no orbiting words and no caption above the rings, whose explanation now
+appears on hover, focus or tap. This reverses the review's fixes for C-01 and part of C-02 and C-10: the page
+no longer says in words what it is, apart from the site name, and the rings are not labelled as past results
+except in their explanation. The forecast card follows the owner's reference image. The rail stays on the
+right, and the menu is white in Day.
 
 ## Consequences
 

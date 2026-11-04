@@ -40,8 +40,7 @@ test.describe("front page", () => {
     await page.goto("/?lang=en");
     const first = page.locator('.screen[data-screen="0"]');
     await expect(first.getByRole("heading", { level: 2 })).toHaveText("1st. Brice Turang");
-    await expect(first.getByText("Second base · Batted 5th in the real lineup")).toBeVisible();
-    await expect(first.getByText("The model's best order for Milwaukee Brewers · 1 of 9")).toBeVisible();
+    await expect(first.locator(".pos")).toHaveText("Batted 5th in the real lineup");
     for (const [stat, value, note] of [["AVG", ".268", "78th percentile"], ["OBP", ".366", "93rd percentile"], ["SLG", ".450", "77th percentile"], ["OPS", ".816", "84th percentile"]]) {
       const ring = first.getByRole("meter", { name: stat });
       await expect(ring).toHaveAttribute("aria-valuetext", new RegExp(`^${value.replace(".", "\\.")}, ${note}`));
@@ -53,13 +52,41 @@ test.describe("front page", () => {
     await expect(page).not.toHaveURL(/#\/g\//);
   });
 
-  test("says what the page is, and separates past results from the forecast", async ({ page }) => {
+  test("shows only what the owner asked for around the name and rings", async ({ page }) => {
     await page.goto("/?lang=en");
     const first = page.locator('.screen[data-screen="0"]');
-    await expect(first.getByText("If this team batted in a different order, how many more runs would a statistical model expect?")).toBeVisible();
-    await expect(first.getByText(/^Regular season, before this game/)).toBeVisible();
-    await expect(first.getByText("The model's forecast for each trip to the plate", { exact: true })).toBeVisible();
-    await expect(first.getByLabel("Starting pitcher: Drew Rasmussen")).toBeChecked();
+    await expect(first.locator(".kicker, .intro, .ors__orbit")).toHaveCount(0);
+    await expect(first.locator(".rings .caption")).toHaveCount(0);
+    await expect(first.locator(".outcome-title")).toHaveText("Expected outcome for each trip to the plate:");
+    await expect(first.getByRole("radio", { name: "Starting pitcher: Drew Rasmussen" })).toBeChecked();
+  });
+
+  test("the rail stays on the right on every screen", async ({ page, isMobile }) => {
+    test.skip(isMobile, "the rail is a row on phones");
+    await page.goto("/?lang=en");
+    await ready(page);
+    const width = page.viewportSize()?.width ?? 0;
+    for (const i of [0, 1, 2, 9]) {
+      await toScreen(page, i);
+      const box = (await page.locator(".rail").boundingBox())!;
+      expect(box.x + box.width).toBeGreaterThan(width - 40);
+    }
+  });
+
+  test("the menu icon's three lines are identical", async ({ page }) => {
+    await page.goto("/?lang=en");
+    const widths = await page.locator(".bar .menu-icon line").evaluateAll((ls) => ls.map((l) => getComputedStyle(l).strokeWidth));
+    expect(widths).toEqual(["1.5px", "1.5px", "1.5px"]);
+    const gaps = await page.locator(".bar .menu-icon line").evaluateAll((ls) => ls.map((l) => Number(l.getAttribute("y1"))));
+    expect(gaps[1] - gaps[0]).toBe(gaps[2] - gaps[1]);
+  });
+
+  test("consecutive batters look different", async ({ page }) => {
+    await page.goto("/?lang=en");
+    await ready(page);
+    const drawings = await page.locator(".screen .bf > g").evaluateAll((gs) => gs.map((g) => (g.querySelector(".bf-bat")?.getAttribute("transform") ?? "") + g.querySelectorAll("polygon").length));
+    expect(drawings).toHaveLength(9);
+    for (let i = 1; i < 9; i++) expect(drawings[i], `screen ${i}`).not.toBe(drawings[i - 1]);
   });
 
   test("pie switches between the starter and the bullpen, and the choice persists", async ({ page }) => {
@@ -79,6 +106,11 @@ test.describe("front page", () => {
     const slice = page.locator('.screen[data-screen="0"] .slice').nth(4);
     await slice.hover();
     await expect(slice).toHaveClass(/on/);
+    // The circle's outline moves with the slice, so no line is left behind inside it.
+    const moved = slice.locator("xpath=..");
+    await expect(moved.locator(".pie-edge")).toHaveCount(1);
+    expect(await moved.getAttribute("transform")).not.toBe("translate(0 0)");
+    await expect(page.locator('.screen[data-screen="0"] .pie > .pie-edge')).toHaveCount(0);
     await expect(page.locator('.screen[data-screen="0"] .pie-label.on')).toContainText("Strikeout");
   });
 
@@ -87,7 +119,7 @@ test.describe("front page", () => {
     const first = page.locator('.screen[data-screen="0"]');
     await first.getByRole("meter", { name: "OBP" }).focus();
     await expect(first.locator(".ors__hint").nth(1)).toBeVisible();
-    await expect(first.locator(".ors__hint").nth(1)).toHaveText("On-base percentage: better than 93% of hitters");
+    await expect(first.locator(".ors__hint").nth(1)).toHaveText("On-base percentage: how often he reaches base. Better than 93% of hitters.");
   });
 });
 
@@ -103,11 +135,11 @@ test.describe("the lock", () => {
     await page.mouse.wheel(0, 100);
     await settled(page);
     expect(await position(page)).toBe(2);
-    // Events go out on a fixed schedule, as a device sends them, without waiting for each frame.
+    // A trackpad flick: events on a fixed schedule, fading away as it coasts, for well over a move.
     const gesture: Promise<void>[] = [];
-    for (let i = 0; i < 25; i++) {
-      gesture.push(page.mouse.wheel(0, 120));
-      await new Promise((r) => setTimeout(r, 30));
+    for (let i = 0; i < 70; i++) {
+      gesture.push(page.mouse.wheel(0, Math.max(1, Math.round(160 * 0.95 ** i))));
+      await new Promise((r) => setTimeout(r, 25));
     }
     await Promise.all(gesture);
     await settled(page);
@@ -115,6 +147,30 @@ test.describe("the lock", () => {
     await page.mouse.wheel(0, -100);
     await settled(page);
     expect(await position(page)).toBe(2);
+  });
+
+  test("a new gesture counts straight away, even during the last one's coast or move", async ({ page, isMobile }) => {
+    test.skip(isMobile, "wheel");
+    await page.goto("/?lang=en");
+    await ready(page);
+    await page.mouse.move(700, 450);
+    // A flick coasting down, then a second flick before the coast has ended.
+    const events: Promise<void>[] = [];
+    const flick = async (n: number) => {
+      for (let i = 0; i < n; i++) {
+        events.push(page.mouse.wheel(0, Math.max(1, Math.round(150 * 0.93 ** i))));
+        await new Promise((r) => setTimeout(r, 25));
+      }
+    };
+    await flick(24);
+    await flick(24);
+    await Promise.all(events);
+    await expect.poll(() => position(page), { timeout: 6000 }).toBe(2);
+    // Separate gestures while the rings are still revealing also register.
+    await page.mouse.wheel(0, 100);
+    await page.waitForTimeout(1000); // landed, rings still turning up
+    await page.mouse.wheel(0, 100);
+    await expect.poll(() => position(page), { timeout: 6000 }).toBe(4);
   });
 
   test("the end of the page holds", async ({ page, isMobile }) => {
@@ -387,13 +443,6 @@ test.describe("navigation", () => {
     expect(await position(page)).toBe(0);
   });
 
-  test("the fielding position is where the player started", async ({ page }) => {
-    await page.goto("/?lang=en#/g/849805/TB/1");
-    await ready(page);
-    const positions = await page.locator(".screen .pos").allTextContents();
-    expect(positions.filter((p) => p.startsWith("Shortstop"))).toHaveLength(1);
-  });
-
   test("the selected game and team carry over to Statistics and back", async ({ page }) => {
     await page.goto("/?lang=en#/g/849802/TB/2");
     await ready(page);
@@ -467,6 +516,15 @@ test.describe("menu", () => {
     await expect(page.locator(".menu")).not.toHaveClass(/open/);
   });
 
+  test("the menu is white by day and near-black at night", async ({ page }) => {
+    const panelColour = () => page.locator(".menu-panel").evaluate((e) => getComputedStyle(e).backgroundColor);
+    await page.goto("/?lang=en&theme=night");
+    await expect.poll(panelColour).toBe("rgba(0, 0, 0, 0.85)");
+    await page.goto("/?lang=en&theme=day");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "day");
+    await expect.poll(panelColour).toBe("rgba(255, 255, 255, 0.92)");
+  });
+
   test("the language selector does not glow and keeps the visitor's place", async ({ page }) => {
     await page.goto("/?lang=en#/g/849799/MIL/3");
     await ready(page);
@@ -479,7 +537,7 @@ test.describe("menu", () => {
     expect(await es.evaluate((e) => getComputedStyle(e).boxShadow)).toBe("none");
     await page.keyboard.press("Escape");
     expect(await position(page)).toBe(2);
-    await expect(page.locator('.screen[data-screen="2"] .kicker')).toContainText("3 de 9");
+    await expect(page.locator('.screen[data-screen="2"] .who')).toContainText("3.º");
   });
 
   test("appearance applies everywhere and survives a reload", async ({ page }) => {

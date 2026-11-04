@@ -67,24 +67,24 @@ export function Pie({ probs, caption, against }: { probs: number[]; caption: str
           const on = hot === i;
           const [dx, dy] = on ? polar(0, 0, 4, mid) : [0, 0];
           return (
-            <path
-              key={s.key}
-              className={on ? "slice on" : "slice"}
-              d={`M${cx} ${cy}L${x0} ${y0}A${r} ${r} 0 ${large} 1 ${x1} ${y1}Z`}
-              style={{ fill: `var(--pie-${s.key})`, color: `var(--pie-${s.key})` }}
-              transform={`translate(${dx} ${dy})`}
-              tabIndex={0}
-              role="img"
-              aria-label={text(s)}
-              onPointerEnter={() => setHot(i)}
-              onPointerLeave={() => setHot(-1)}
-              onClick={() => setHot(i)}
-              onFocus={() => setHot(i)}
-              onBlur={() => setHot(-1)}
-            />
+            <g key={s.key} className="slice-group" transform={`translate(${dx} ${dy})`}>
+              <path
+                className={on ? "slice on" : "slice"}
+                d={`M${cx} ${cy}L${x0} ${y0}A${r} ${r} 0 ${large} 1 ${x1} ${y1}Z`}
+                style={{ fill: `var(--pie-${s.key})`, color: `var(--pie-${s.key})` }}
+                tabIndex={0}
+                role="img"
+                aria-label={text(s)}
+                onPointerEnter={() => setHot(i)}
+                onPointerLeave={() => setHot(-1)}
+                onClick={() => setHot(i)}
+                onFocus={() => setHot(i)}
+                onBlur={() => setHot(-1)}
+              />
+              <path className="pie-edge" d={`M${x0} ${y0}A${r} ${r} 0 ${large} 1 ${x1} ${y1}`} />
+            </g>
           );
         })}
-        <circle className="pie-edge" cx={cx} cy={cy} r={r} />
         {labels.map((l) => {
           const on = hot === l.i;
           const tx = l.right ? cx + r + reach : cx - r - reach;
