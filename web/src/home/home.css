@@ -103,7 +103,9 @@
   .outcome { margin-top: 2px; gap: 3px; flex: 1 1 0; }
   .pie-wrap { max-width: none; min-height: 0; }
   .vs { width: 100%; margin: 0; padding: 3px 10px 6px; font-size: 0.8rem; }
-  .pickers select { font-size: 0.78rem; padding: 6px; flex: 1 1 0; }
+  .pickers { gap: 8px; }
+  .pickers select { font-size: 0.78rem; padding: 6px; flex: 4 1 0; }
+  .pickers select:last-child { flex: 5 1 0; }
   /* Progress becomes a row under the top bar, which keeps "skip to summary" within reach. */
   .rail, .rail.left { top: var(--bar-h); left: 0; right: 0; transform: none; flex-direction: row; justify-content: center; height: 22px; }
   .rail button { height: 22px; width: 26px; }

@@ -29,7 +29,11 @@ async function toScreen(page: Page, i: number, settle = 350) {
 }
 
 const settled = (page: Page) => page.waitForTimeout(1300);
-const ready = (page: Page) => expect(page.locator(".screen")).toHaveCount(10);
+// Ready once the screens exist and the current one has locked, so input is being listened for.
+const ready = async (page: Page) => {
+  await expect(page.locator(".screen")).toHaveCount(10);
+  await expect(page.locator(".ors[data-on], .rail button[aria-current]").first()).toBeAttached();
+};
 
 test.describe("front page", () => {
   test("opens on the model's first batter with rings and pie", async ({ page }) => {
