@@ -9,6 +9,8 @@
   --ink: #f4f6f8;
   --ink-2: #dfe4ea;
   --ink-3: #aeb6c2;
+  --soft: #b3bbc6;
+  --halo: rgb(6 8 12 / 0.9);
   --glow-text: #7cc4ff;
   --line: rgb(255 255 255 / 0.18);
   --panel: rgb(255 255 255 / 0.05);
@@ -62,6 +64,8 @@
   --ink: #0d1b2a;
   --ink-2: #16273a;
   --ink-3: #223446;
+  --soft: #3d4a55;
+  --halo: rgb(255 255 255 / 0.95);
   --glow-text: #0b4a94;
   --line: rgb(13 27 42 / 0.25);
   --panel: rgb(255 255 255 / 0.5);

@@ -157,6 +157,9 @@ export function BatterFigure({
           <polygon points={pts([p.hipBack[0] - 18, p.hipBack[1] + 30], [p.hipFront[0] + 14, p.hipFront[1] + 28], [p.hipFront[0] + 4, p.hipFront[1] - 10], [p.hipBack[0] - 6, p.hipBack[1] - 10])} fill="#dfe3e9" />
           <polygon points={pts([p.hipBack[0] - 6, p.hipBack[1] - 10], [p.hipFront[0] + 4, p.hipFront[1] - 10], [p.hipFront[0] + 2, p.hipFront[1] - 24], [p.hipBack[0] - 3, p.hipBack[1] - 24])} fill={trim} />
 
+          {/* Neck: beneath the shirt and both arms */}
+          <polygon transform={headTransform} points="190,152 240,150 244,186 190,190" fill={SKIN_DARK} />
+
           {/* Torso */}
           <polygon points={pts([p.shoulderBack[0] - 10, p.shoulderBack[1]], [p.shoulderFront[0] + 6, p.shoulderFront[1] - 4], [p.hipFront[0] + 2, p.hipFront[1] - 22], [p.hipBack[0] - 3, p.hipBack[1] - 22])} fill={team} />
           <polygon points={pts([p.shoulderBack[0] - 10, p.shoulderBack[1]], [neck[0] - 18, neck[1] - 2], [hipMid[0] - 12, hipMid[1] - 22], [p.hipBack[0] - 3, p.hipBack[1] - 22])} fill="#000" fillOpacity="0.2" />
@@ -203,9 +206,8 @@ export function BatterFigure({
           <polygon points={pts([p.hands[0] - 18, p.hands[1] - 20], [p.hands[0] + 16, p.hands[1] - 12], [p.hands[0] + 18, p.hands[1] + 20], [p.hands[0] - 14, p.hands[1] + 20])} fill={SHOE} />
           <polyline points={pts([p.hands[0] - 16, p.hands[1]], [p.hands[0] + 17, p.hands[1] + 4])} fill="none" stroke="#fff" strokeOpacity="0.3" strokeWidth="2.5" />
 
-          {/* Neck, head and helmet: no facial features */}
+          {/* Head and helmet: no facial features */}
           <g transform={headTransform}>
-            <polygon points="190,152 240,150 244,186 190,190" fill={SKIN_DARK} />
             <polygon points="178,96 262,92 266,150 238,170 196,168 176,134" fill={SKIN} />
             <polygon points="178,96 214,94 214,168 196,168 176,134" fill="#000" fillOpacity="0.12" />
             <path d="M166 104 C 164 54, 212 34, 244 44 C 272 52, 282 76, 280 98 L 166 110 Z" fill={team} />

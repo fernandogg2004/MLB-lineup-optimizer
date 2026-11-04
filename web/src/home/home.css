@@ -18,7 +18,9 @@
 .rings { flex: none; position: relative; z-index: 2; }
 .who { font-size: clamp(1.55rem, 2.7vw, 2.5rem); font-weight: 700; line-height: 1.1; letter-spacing: -0.01em; color: var(--ink); }
 .who span { color: var(--glow-text); }
-.pos { margin-top: 6px; font-size: 0.92rem; color: var(--ink-2); }
+/* A soft halo keeps the text readable where it crosses the bat, whatever the bat's colour. */
+.pos { margin-top: 6px; font-size: 0.92rem; color: var(--soft); text-shadow: 0 0 3px var(--halo), 0 0 3px var(--halo), 0 0 6px var(--halo); }
+.who { text-shadow: 0 0 5px var(--halo); }
 .figure { position: relative; flex: 1; min-height: 0; margin-top: calc(6px - var(--name-drop)); }
 /* Floodlight behind the batter, so dark team colours still stand out at night. */
 .figure::before { content: ""; position: absolute; left: 50%; top: 4%; width: 104%; aspect-ratio: 1; max-height: 96%; transform: translateX(-50%); border-radius: 50%; background: var(--figure-glow); pointer-events: none; }
@@ -30,9 +32,11 @@
 .data { display: flex; flex-direction: column; justify-content: center; gap: 6px; min-height: 0; min-width: 0; }
 .caption { text-align: center; font-size: 0.82rem; color: var(--ink-3); letter-spacing: 0.02em; }
 /* The forecast card: almost invisible, with its title and selector along the top. */
-.outcome { position: relative; display: flex; flex-direction: column; min-height: 0; flex: 1 1 0; max-height: 400px; margin-top: clamp(4px, 1.6vh, 16px); padding: 10px clamp(10px, 1.2vw, 18px) 8px; border-radius: 18px; background: var(--card); border: 1px solid var(--card-line); }
-.outcome-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
-.outcome-title { font-size: clamp(0.92rem, 1.15vw, 1.1rem); font-weight: 700; letter-spacing: -0.005em; color: var(--ink); }
+/* A quiet title above an almost invisible card, which holds the selector and the chart. */
+.outcome { position: relative; display: flex; flex-direction: column; gap: 5px; min-height: 0; flex: 1 1 0; max-height: 425px; margin-top: clamp(4px, 1.4vh, 14px); }
+.outcome-title { flex: none; padding-left: 4px; font-size: 0.86rem; font-weight: 500; color: var(--soft); }
+.outcome-card { display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; padding: 10px clamp(10px, 1.2vw, 18px) 8px; border-radius: 18px; background: var(--card); border: 1px solid var(--card-line); }
+.outcome-head { position: relative; display: flex; justify-content: center; }
 .pie-wrap { flex: 1 1 0; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 .pie { flex: 1; min-height: 0; width: 100%; display: block; overflow: visible; }
 .slice-group { transition: transform 0.18s; }
@@ -100,15 +104,15 @@
   .ors__note { font-size: 0.7rem; margin-top: 1px; line-height: 1.15; }
   .caption { font-size: 0.72rem; }
   .data { justify-content: flex-start; gap: 3px; }
-  .outcome { margin-top: 4px; padding: 8px 8px 4px; max-height: none; }
-  .outcome-title { font-size: 0.86rem; }
+  .outcome { margin-top: 4px; gap: 3px; max-height: none; }
+  .outcome-title { font-size: 0.78rem; }
+  .outcome-card { padding: 7px 8px 4px; }
   .vs { font-size: 0.78rem; }
   .vs label span { padding: 4px 12px; }
   /* The explanation hangs from the whole row, so it always stays on screen. */
-  .outcome-head { position: relative; }
   .vs label { position: static; }
   .vs input { inset: auto; width: 1px; height: 1px; }
-  .vs-hint { top: calc(100% + 4px); left: 0; max-width: 100%; }
+  .vs-hint { top: calc(100% + 4px); left: 50%; transform: translateX(-50%); max-width: 100%; }
   .pickers { gap: 8px; }
   .pickers select { font-size: 0.78rem; padding: 6px; flex: 4 1 0; }
   .pickers select:last-child { flex: 5 1 0; }

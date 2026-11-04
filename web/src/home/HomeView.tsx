@@ -187,7 +187,8 @@ function Screens(props: {
     [flow],
   );
 
-  useEffect(() => {
+  // Attached before the first paint, so input is never lost in the moment after the page appears.
+  useLayoutEffect(() => {
     const el = scroller.current;
     if (!el || flow) return;
     const a = anim.current;

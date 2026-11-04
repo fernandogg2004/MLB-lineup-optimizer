@@ -107,6 +107,32 @@ test.describe("front page", () => {
     expect(nameOnTop).toBe(true);
   });
 
+  test("the title sits above the card, with the selector centred in it", async ({ page, isMobile }) => {
+    await page.goto("/?lang=en");
+    await ready(page);
+    const first = page.locator('.screen[data-screen="0"]');
+    const title = (await first.locator(".outcome-title").boundingBox())!;
+    const card = (await first.locator(".outcome-card").boundingBox())!;
+    const selector = (await first.locator(".vs").boundingBox())!;
+    expect(title.y + title.height).toBeLessThanOrEqual(card.y + 1);
+    expect(Math.abs(selector.x + selector.width / 2 - (card.x + card.width / 2))).toBeLessThanOrEqual(2);
+    expect(isMobile || title.x < card.x + 12).toBe(true);
+  });
+
+  test("the neck is drawn beneath the shirt and arms", async ({ page }) => {
+    await page.goto("/?lang=en");
+    await ready(page);
+    const ok = await page.locator(".bf").evaluateAll((all) =>
+      all.every((svg) => {
+        const skin = svg.querySelector('polygon[points="190,152 240,150 244,186 190,190"]');
+        const front = svg.querySelector(".bf-front");
+        const bat = svg.querySelector(".bf-bat");
+        return !!skin && !!front && !!bat && !front.contains(skin) && !!(skin.compareDocumentPosition(front) & Node.DOCUMENT_POSITION_FOLLOWING) && !!(skin.compareDocumentPosition(bat) & Node.DOCUMENT_POSITION_FOLLOWING);
+      }),
+    );
+    expect(ok).toBe(true);
+  });
+
   test("the rail stays on the right on every screen", async ({ page, isMobile }) => {
     test.skip(isMobile, "the rail is a row on phones");
     await page.goto("/?lang=en");

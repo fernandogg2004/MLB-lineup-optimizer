@@ -100,8 +100,9 @@ export function BatterScreen(props: {
           <OrbitRingStats rings={rings} active={active} label={seasonLabel} orbiting={false} theme={theme === "day" ? "paper" : "night"} />
         </div>
         <div className="layer outcome" data-depth="0.08">
+          <p className="outcome-title">{t("home.each")}</p>
+          <div className="outcome-card">
           <div className="outcome-head">
-            <p className="outcome-title">{t("home.each")}</p>
             <fieldset className="vs">
               <legend className="sr-only">{t("home.against")}</legend>
               <label>
@@ -118,6 +119,7 @@ export function BatterScreen(props: {
           </div>
           <div className="pie-wrap">
             <Pie probs={vsBullpen ? h.probs_bullpen : h.probs_starter} caption={t("home.each")} against={vsBullpen ? t("home.bullpen") : starterNamed} />
+          </div>
           </div>
         </div>
       </div>
