@@ -12,29 +12,33 @@ test.afterEach(async ({ page }) => {
 });
 
 test("reference game loads with both teams and the actual score", async ({ page }) => {
-  await page.goto("/?lang=en#/");
+  await page.goto("/?lang=en#/statistics");
   await expect(page.getByText("Reference game", { exact: true })).toBeVisible();
   await expect(page.getByText("Historical fact", { exact: true })).toBeVisible();
+  const teamPicker = page.getByRole("combobox", { name: "Team", exact: true });
   for (const team of ["Milwaukee Brewers", "Tampa Bay Rays"]) {
-    await expect(page.getByRole("button", { name: team, exact: true })).toBeVisible();
+    await expect(teamPicker.getByRole("option", { name: team, exact: true })).toBeAttached();
   }
-  await page.getByRole("button", { name: "Tampa Bay Rays", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Tampa Bay Rays", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await teamPicker.selectOption({ label: "Tampa Bay Rays" });
+  await expect(teamPicker).toHaveValue("TB");
   await expect(page.getByText("Ben Williamson").first()).toBeVisible();
   await expect(page.getByText("Ryan Vilade").first()).toBeVisible();
 });
 
 test("language switch translates the interface", async ({ page }) => {
-  await page.goto("/?lang=en#/");
+  await page.goto("/?lang=en#/statistics");
   await expect(page.getByText("Did the managers use the best batting order?")).toBeVisible();
-  await page.getByRole("button", { name: /Español/ }).click();
+  await page.getByRole("button", { name: "Open menu" }).click();
+  await page.getByRole("button", { name: "ES", exact: true }).click();
+  await page.keyboard.press("Escape");
   await expect(page.getByText("¿Usaron los mánagers el mejor orden al bate?")).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("lang", "es");
 });
 
 test("simulator reorders, evaluates and resets", async ({ page }) => {
-  await page.goto("/?lang=en#/");
-  const value = page.locator(".stat-value").nth(4); // simulator value
+  await page.goto("/?lang=en#/statistics/simulator");
+  const value = page.locator(".stat-value").first(); // simulator value
+  await expect(value).toBeVisible();
   const before = await value.textContent();
   await page.getByRole("button", { name: "Load top order" }).click();
   await expect(value).not.toHaveText(before ?? "");
@@ -46,7 +50,7 @@ test("simulator reorders, evaluates and resets", async ({ page }) => {
 
 test("constrained search finds an order with the leadoff hitter locked", async ({ page }) => {
   test.setTimeout(120_000);
-  await page.goto("/?lang=en#/");
+  await page.goto("/?lang=en#/statistics/simulator");
   const firstRow = page.locator(".sim-row").first();
   const leadoff = (await firstRow.locator(".sim-name").textContent())?.trim().split(" ")[0] ?? "";
   await firstRow.getByRole("button", { name: /^Lock / }).click();
@@ -56,21 +60,39 @@ test("constrained search finds an order with the leadoff hitter locked", async (
 });
 
 test("method page renders validation results", async ({ page }) => {
-  await page.goto("/?lang=en#/method");
+  await page.goto("/?lang=en#/statistics/method");
   await expect(page.getByRole("heading", { name: "Method and validation" })).toBeVisible();
   await expect(page.getByText("Limitations")).toBeVisible();
 });
 
+test("addresses from the previous site still work", async ({ page }) => {
+  await page.goto("/?lang=en#/method");
+  await expect(page.getByRole("heading", { name: "Method and validation" })).toBeVisible();
+  await expect(page).toHaveURL(/#\/statistics\/method$/);
+  await page.goto("/?lang=en#/game/849802");
+  await expect(page.getByText("Historical fact", { exact: true })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Game", exact: true })).toHaveValue("849802");
+});
+
+test("statistics page keeps the paper, code and season definitions", async ({ page }) => {
+  await page.goto("/?lang=en#/statistics");
+  await expect(page.getByRole("link", { name: "Paper (PDF)" })).toHaveAttribute("href", /paper\.pdf$/);
+  await expect(page.getByRole("link", { name: "Source code" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Season hitting and percentiles" })).toBeVisible();
+  await expect(page.getByText(/official hitting lines from the MLB Stats API/)).toBeVisible();
+  await expect(page.getByRole("row", { name: /Brice Turang/ }).getByRole("cell", { name: ".816" })).toBeVisible();
+});
+
 test("mobile layout has no horizontal overflow", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 });
-  await page.goto("/?lang=es#/");
+  await page.goto("/?lang=es#/statistics");
   await expect(page.locator(".stat-value").first()).toBeVisible();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(1);
 });
 
 test("editing during a search cancels it instead of overwriting the user's edits (C-2)", async ({ page }) => {
-  await page.goto("/?lang=en#/");
+  await page.goto("/?lang=en#/statistics/simulator");
   await expect(page.locator(".sim-row")).toHaveCount(9);
   const names = async () => page.locator(".sim-row .sim-name").allTextContents();
   const before = await names();
@@ -86,7 +108,7 @@ test("editing during a search cancels it instead of overwriting the user's edits
 });
 
 test("arrow buttons skip locked slots and keep focus in the row (C-3, C-4)", async ({ page }) => {
-  await page.goto("/?lang=en#/");
+  await page.goto("/?lang=en#/statistics/simulator");
   await expect(page.locator(".sim-row")).toHaveCount(9);
   const rows = page.locator(".sim-row");
   const third = (await rows.nth(2).locator(".sim-name").textContent())?.trim() ?? "";

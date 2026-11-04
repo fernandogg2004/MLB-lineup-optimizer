@@ -111,6 +111,7 @@ batting-order snapshot 849805 --season 2026           # dashboard data for anoth
 python scripts/make_paper_assets.py --release         # figures, tables, validation.json, PDF copy
 (cd research && pdflatex paper && bibtex paper && pdflatex paper && pdflatex paper)
 
+batting-order home                                    # Home page data (official hitting lines)
 (cd web && npm ci && npm run dev)                     # dashboard at http://localhost:5173
 (cd web && npx vitest run && npx playwright test)     # unit + end-to-end tests
 ```

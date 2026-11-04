@@ -16,6 +16,11 @@ system at tag `baseline/pre-rebuild`.
 | 8 Four-agent audit | done (round 1 + round-2 verification) | `docs/audits/agent-{A,B,C,D}-*-round1.md`, `findings-register.md` |
 | 9 Handover | done | README, `docs/operations.md`, `orchestration/airflow/README.md` |
 
+## Dashboard redesign (2026-11-04)
+
+New Home page and Statistics area: decisions in `docs/decisions/0003-dashboard-redesign.md`, specification
+in `docs/prompts/dashboard-redesign.md`, review in `docs/audits/agent-C-ux-redesign.md`.
+
 ## Open items (owner decisions, not blockers)
 - Rotate the legacy credentials in the untracked root `.env` of the original system (not used).
 - Confirm the MIT license choice.

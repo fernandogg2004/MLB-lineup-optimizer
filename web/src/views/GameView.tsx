@@ -1,9 +1,8 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { GameSnapshot, Team } from "../data";
 import { useI18n } from "../i18n-context";
 import type { Key } from "../strings";
 import { ChartCard, Histogram, IntervalBar, PairedBars, PmfChart } from "../components/charts";
-import { Simulator } from "./Simulator";
 
 const OUTCOMES = ["K", "BB", "1B", "2B", "3B", "HR", "GB", "AIR"] as const;
 
@@ -16,10 +15,9 @@ function gameSd(snap: GameSnapshot): number {
   return (sd(snap.teams.away.actual.run_distribution) + sd(snap.teams.home.actual.run_distribution)) / 2;
 }
 
-export function GameView({ snap }: { snap: GameSnapshot }) {
+export function GameView({ snap, side }: { snap: GameSnapshot; side: "away" | "home" }) {
   const { t, fmt, signed, pct, date, series } = useI18n();
   const g = snap.game;
-  const [side, setSide] = useState<"away" | "home">("away");
   const team = snap.teams[side];
   const ua = snap.teams.away.optimal.er9 - snap.teams.away.actual.er9;
   const ub = snap.teams.home.optimal.er9 - snap.teams.home.actual.er9;
@@ -77,19 +75,6 @@ export function GameView({ snap }: { snap: GameSnapshot }) {
         </p>
         <p className="text-sm text-muted mt-2">{t("hero.cutoff", { date: date(g.date) })}</p>
       </header>
-
-      <div role="group" aria-label={t("team.select")} className="segmented">
-        {(["away", "home"] as const).map((s) => (
-          <button
-            key={s}
-            aria-pressed={side === s}
-            className={side === s ? "seg seg-on" : "seg"}
-            onClick={() => setSide(s)}
-          >
-            {snap.teams[s].name}
-          </button>
-        ))}
-      </div>
 
       <TeamPanel snap={snap} team={team} />
     </div>
@@ -235,7 +220,6 @@ function TeamPanel({ snap, team }: { snap: GameSnapshot; team: Team }) {
         </dl>
       </ChartCard>
 
-      <Simulator key={`${snap.game.game_pk}-${team.team}`} snap={snap} team={team} />
       <Technical snap={snap} team={team} />
     </section>
   );

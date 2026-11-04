@@ -46,6 +46,24 @@ batting-order ingest 2024 2025 2026 && batting-order build 2024 2025 2026
 The reference game (2026 World Series Game 5, gamePk 849799) is never overwritten by `update`:
 existing snapshots are skipped.
 
+## Home page data
+
+`web/public/data/home/{game_pk}.json` holds what the Home page shows: official season hitting lines
+from the MLB Stats API, percentiles computed against hitters with at least 200 PA, and a light copy of
+the snapshot fields Home needs. `snapshot` and `update` write it automatically. To regenerate it by hand,
+for example after experiment E5 rewrites the reference snapshot:
+
+```bash
+batting-order home                # every snapshot present
+batting-order home 849799         # one game
+```
+
+Responses are cached in `data/raw/statsapi`, so a rebuild from the cache is identical. New clubs or
+abbreviations go in `web/src/home/teams.ts`; an unknown club falls back to a neutral colour.
+
+Optional licensed player photos go in `web/public/players/`, each with a `manifest.json` entry
+(`id`, `file`, `author`, `source`, `license`). A test fails if an image has no entry.
+
 ## Deploying to Vercel (Hobby)
 
 The Vercel project `batting-order-lab` was created with the Vercel CLI. Note that the CLI uploads
@@ -73,8 +91,10 @@ on a schedule you choose. It does not commit or deploy. See its README.
 Statcast and Stats API data are © MLB Advanced Media and are used here for non-commercial research.
 Bulk data are not redistributed in this repository: they are downloaded on demand, and
 `batting-order verify <seasons>` compares them with the SHA-256 checksums published in
-`data_manifest/` (Savant occasionally revises recent games, so a mismatch is reported, not fixed); the site shows player names, lineups, final scores and model-derived
-numbers only.
+`data_manifest/` (Savant occasionally revises recent games, so a mismatch is reported, not fixed). The
+site shows player names, lineups, final scores, official season hitting lines (credited on the Statistics
+page) and model-derived numbers. Player illustrations are original; no MLB or agency photos or logos are
+used.
 
 ## Reproducing the legacy comparison (experiment E2b)
 

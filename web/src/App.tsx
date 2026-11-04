@@ -1,31 +1,55 @@
-import { useEffect, useState } from "react";
-import { fetchJson, validateSnapshot } from "./data";
-import type { GameIndex, GameSnapshot } from "./data";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Menu } from "./components/Menu";
+import { fetchJson } from "./data";
+import type { GameIndex, IndexEntry } from "./data";
+import { useNarrow } from "./home/format";
+import { HomeView } from "./home/HomeView";
 import { I18nProvider } from "./i18n";
 import { useI18n } from "./i18n-context";
-import { GameView } from "./views/GameView";
-import { MethodView } from "./views/MethodView";
+import { homeHash, parseHash, statsHash } from "./route";
+import type { Route } from "./route";
+import { applyTheme, initialTheme } from "./theme";
+import type { Theme } from "./theme";
+import { StatisticsView } from "./views/StatisticsView";
 
-const REPO = "https://github.com/fernandogg2004/mlb-lineup-optimizer";
+function Stadium() {
+  return (
+    <div id="stadium" className="bg" aria-hidden="true">
+      <div className="bg-sky" />
+      <div className="bg-beam b1" />
+      <div className="bg-beam b2" />
+      <div className="bg-beam b3" />
+      <div className="bg-arc" />
+      <div className="bg-field" />
+    </div>
+  );
+}
 
-type Route = { page: "game"; gamePk?: number } | { page: "method" };
-
-function parseHash(): Route {
-  const h = window.location.hash.replace(/^#\/?/, "");
-  if (h.startsWith("method")) return { page: "method" };
-  const m = h.match(/^game\/(\d+)/);
-  return { page: "game", gamePk: m ? Number(m[1]) : undefined };
+function matchLabel(g: IndexEntry, short: boolean, t: ReturnType<typeof useI18n>["t"], series: (s: string) => string, date: (s: string) => string): string {
+  const score = g.away_runs === null || g.home_runs === null ? `${g.away_abbr}–${g.home_abbr}` : `${g.away_abbr} ${g.away_runs}–${g.home_runs} ${g.home_abbr}`;
+  if (g.series_description && g.series_game_number) {
+    return short
+      ? `${t("game.short", { n: g.series_game_number })} · ${score}`
+      : `${t("game.series", { series: series(g.series_description), n: g.series_game_number })} · ${score}`;
+  }
+  return `${date(g.date)} · ${score}`;
 }
 
 function Shell() {
-  const { t, lang, setLang, date } = useI18n();
-  const [route, setRoute] = useState<Route>(parseHash);
+  const { t, series, date } = useI18n();
+  const narrow = useNarrow();
+  const [route, setRoute] = useState<Route>(() => parseHash(window.location.hash));
   const [index, setIndex] = useState<GameIndex | null>(null);
-  const [loaded, setLoaded] = useState<{ pk: number; snap: GameSnapshot | null; error: boolean } | null>(null);
   const [indexError, setIndexError] = useState(false);
+  const [theme, setTheme] = useState<Theme>(initialTheme);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const burger = useRef<HTMLButtonElement>(null);
+  const [selected, setSelected] = useState<{ pk?: number; team?: string }>({});
+
+  useLayoutEffect(() => applyTheme(theme), [theme]);
 
   useEffect(() => {
-    const on = () => setRoute(parseHash());
+    const on = () => setRoute(parseHash(window.location.hash));
     window.addEventListener("hashchange", on);
     return () => window.removeEventListener("hashchange", on);
   }, []);
@@ -34,101 +58,115 @@ function Shell() {
     fetchJson<GameIndex>("index.json").then(setIndex, () => setIndexError(true));
   }, []);
 
-  const gamePk = route.page === "game" ? (route.gamePk ?? index?.reference_game) : undefined;
-  useEffect(() => {
-    if (!index || gamePk === undefined) return;
-    const entry = index.games.find((g) => g.game_pk === gamePk) ?? index.games[0];
-    let cancelled = false;
-    fetchJson<GameSnapshot>(entry.path)
-      .then((s) => {
-        validateSnapshot(s);
-        if (!cancelled) setLoaded({ pk: gamePk, snap: s, error: false });
-      })
-      .catch(() => {
-        if (!cancelled) setLoaded({ pk: gamePk, snap: null, error: true });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [index, gamePk]);
-  const current = loaded && loaded.pk === gamePk ? loaded : null;
-  const snap = current?.snap ?? null;
-  const error = indexError || (current?.error ?? false);
-
   useEffect(() => {
     document.title = `${t("app.name")} — ${t("app.tagline")}`;
   }, [t]);
 
+  // The selected game and team carry over between Home and Statistics.
+  const entry = useMemo(() => {
+    if (!index) return null;
+    const pk = route.pk ?? selected.pk ?? index.reference_game;
+    return index.games.find((g) => g.game_pk === pk) ?? index.games.find((g) => g.game_pk === index.reference_game) ?? index.games[0] ?? null;
+  }, [index, route, selected.pk]);
+  const wanted = route.team ?? selected.team;
+  const team = entry ? (wanted === entry.home_abbr ? entry.home_abbr : wanted === entry.away_abbr ? entry.away_abbr : entry.away_abbr) : "";
+  useEffect(() => {
+    if (entry) setSelected({ pk: entry.game_pk, team }); // eslint-disable-line react/set-state-in-effect -- remembers the last URL's game
+  }, [entry, team]);
+
+  // Replace old-style addresses with the current ones, keeping the same content.
+  useEffect(() => {
+    if (/^#\/(method|game)\b/.test(window.location.hash) && route.page === "statistics") {
+      window.history.replaceState(null, "", statsHash(route.tab, route.pk));
+    }
+  }, [route]);
+
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+  // Focus goes back to the icon once the page behind is interactive again.
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    if (wasOpen.current && !menuOpen) burger.current?.focus();
+    wasOpen.current = menuOpen;
+  }, [menuOpen]);
+
+  const go = (page: "home" | "statistics") => {
+    if (page === route.page) return;
+    window.location.hash = page === "home" ? (entry ? homeHash(entry.game_pk, team) : "#/") : statsHash("game", entry?.game_pk, team);
+    window.scrollTo(0, 0);
+  };
+
+  const select = (pk: number, nextTeam: string) => {
+    window.location.hash = route.page === "home" ? homeHash(pk, nextTeam) : statsHash(route.tab, pk, nextTeam);
+  };
+
+  const pkOnScreen = entry?.game_pk;
+  const onScreen = useCallback(
+    (screen: number) => {
+      if (pkOnScreen === undefined) return;
+      const next = homeHash(pkOnScreen, team, screen);
+      // On the front page, stay at the plain address until the visitor moves.
+      const plain = window.location.hash === "" || window.location.hash === "#/";
+      if (window.location.hash !== next && !(plain && screen === 0)) window.history.replaceState(null, "", next);
+    },
+    [pkOnScreen, team],
+  );
+
+  const target = useMemo(() => ({ screen: route.page === "home" ? route.screen : 0 }), [route]);
+  const showPickers = index !== null && entry !== null && !(route.page === "statistics" && route.tab === "method");
+
   return (
-    <div className="min-h-screen flex flex-col">
-      <a href="#main" className="skip-link">
-        {t("a11y.skip")}
-      </a>
-      <header className="topbar">
-        <div className="container flex flex-wrap items-center gap-x-6 gap-y-2 py-3">
-          <a href="#/" className="brand">
-            <span aria-hidden className="brand-mark">◆</span> {t("app.name")}
-          </a>
-          <nav aria-label={t("a11y.nav")} className="flex flex-wrap gap-4 text-sm">
-            <a href="#/" aria-current={route.page === "game" ? "page" : undefined} className="nav-link">
-              {t("nav.game")}
-            </a>
-            <a href="#/method" aria-current={route.page === "method" ? "page" : undefined} className="nav-link">
-              {t("nav.method")}
-            </a>
-            <a href={`${import.meta.env.BASE_URL}paper.pdf`} className="nav-link">
-              {t("nav.paper")}
-            </a>
-            <a href={REPO} className="nav-link" rel="noopener">
-              {t("nav.code")}
-            </a>
-          </nav>
-          <div className="ml-auto flex flex-wrap items-center justify-end gap-3 min-w-0 max-w-full">
-            {route.page === "game" && index && index.games.length > 1 && (
-              <label className="text-sm flex items-center gap-2">
-                <span className="text-muted hidden sm:inline">{t("game.picker")}</span>
-                <select
-                  className="select"
-                  aria-label={t("game.picker")}
-                  value={gamePk}
-                  onChange={(e) => (window.location.hash = `#/game/${e.target.value}`)}
-                >
-                  {index.games.map((g) => (
-                    <option key={g.game_pk} value={g.game_pk}>
-                      {date(g.date)} · {g.away_abbr} {g.away_runs}–{g.home_runs} {g.home_abbr}
-                      {g.reference ? " ★" : ""}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-            <button
-              className="btn btn-sm"
-              onClick={() => setLang(lang === "en" ? "es" : "en")}
-              lang={lang === "en" ? "es" : "en"}
-            >
-              {t("lang.switch")}
-            </button>
-          </div>
-        </div>
-      </header>
-      <main id="main" className="container flex-1 py-6">
-        {route.page === "method" ? (
-          <MethodView />
-        ) : error ? (
-          <p role="alert">{t("game.error")}</p>
-        ) : snap ? (
-          <GameView snap={snap} />
-        ) : (
-          <p aria-busy="true">{t("game.loading")}</p>
-        )}
-      </main>
-      <footer className="footer">
-        <div className="container py-6 text-xs text-muted space-y-1">
-          <p>{t("footer.data")}</p>
-          <p>{t("footer.disclaimer")}</p>
-        </div>
-      </footer>
+    <div className="app">
+      <Stadium />
+      <div inert={menuOpen}>
+        <a href="#main" className="skip-link">
+          {t("a11y.skip")}
+        </a>
+        <header className="bar">
+          <button ref={burger} className="burger" aria-label={t("menu.open")} aria-expanded={menuOpen} onClick={() => setMenuOpen(true)}>
+            <span />
+            <span />
+            <span />
+          </button>
+          {showPickers && entry && (
+            <div className="pickers">
+              <select aria-label={t("game.picker")} value={entry.game_pk} onChange={(e) => {
+                const pk = Number(e.target.value);
+                const g = index?.games.find((x) => x.game_pk === pk);
+                select(pk, g && (team === g.home_abbr || team === g.away_abbr) ? team : (g?.away_abbr ?? team));
+              }}>
+                {index?.games.map((g) => (
+                  <option key={g.game_pk} value={g.game_pk}>
+                    {matchLabel(g, narrow, t, series, date)}
+                  </option>
+                ))}
+              </select>
+              <select aria-label={t("team.select")} value={team} onChange={(e) => select(entry.game_pk, e.target.value)}>
+                <option value={entry.away_abbr}>{entry.away}</option>
+                <option value={entry.home_abbr}>{entry.home}</option>
+              </select>
+            </div>
+          )}
+        </header>
+        <main id="main" tabIndex={-1}>
+          <h1 className="sr-only">{t("app.name")}</h1>
+          {indexError ? (
+            <p className="home-message" role="alert">
+              {t("game.error")}
+            </p>
+          ) : route.page === "statistics" && route.tab === "method" ? (
+            <StatisticsView tab="method" pk={entry?.game_pk ?? 0} team={team} />
+          ) : !entry ? (
+            <p className="home-message" aria-busy="true">
+              {t("game.loading")}
+            </p>
+          ) : route.page === "statistics" ? (
+            <StatisticsView tab={route.tab} pk={entry.game_pk} team={team} />
+          ) : (
+            <HomeView pk={entry.game_pk} team={team} target={target} theme={theme} menuOpen={menuOpen} onScreen={onScreen} />
+          )}
+        </main>
+      </div>
+      <Menu open={menuOpen} close={closeMenu} page={route.page} go={go} theme={theme} setTheme={setTheme} />
     </div>
   );
 }

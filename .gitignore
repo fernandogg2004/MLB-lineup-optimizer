@@ -52,3 +52,6 @@ airflow.db
 .idea/
 .DS_Store
 Thumbs.db
+
+# Design review screenshots (the single-file mockup is kept as the record)
+docs/prompts/mockups/*.png
