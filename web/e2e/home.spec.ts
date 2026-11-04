@@ -43,7 +43,7 @@ test.describe("front page", () => {
     await expect(first.locator(".pos")).toHaveText("Batted 5th in the real lineup");
     for (const [stat, value, note] of [["AVG", ".268", "78th percentile"], ["OBP", ".366", "93rd percentile"], ["SLG", ".450", "77th percentile"], ["OPS", ".816", "84th percentile"]]) {
       const ring = first.getByRole("meter", { name: stat });
-      await expect(ring).toHaveAttribute("aria-valuetext", new RegExp(`^${value.replace(".", "\\.")}, ${note}`));
+      await expect(ring).toHaveAttribute("aria-valuetext", new RegExp(`: ${value.replace(".", "\\.")}, ${note}`));
     }
     await expect(first.locator(".ors__note")).toHaveText(["78th percentile", "93rd percentile", "77th percentile", "84th percentile"]);
     // Numbers settle on the true value at the lock.
@@ -57,8 +57,54 @@ test.describe("front page", () => {
     const first = page.locator('.screen[data-screen="0"]');
     await expect(first.locator(".kicker, .intro, .ors__orbit")).toHaveCount(0);
     await expect(first.locator(".rings .caption")).toHaveCount(0);
-    await expect(first.locator(".outcome-title")).toHaveText("Expected outcome for each trip to the plate:");
+    await expect(first.locator(".outcome-title")).toHaveText("Expected outcome against:");
     await expect(first.getByRole("radio", { name: "Starting pitcher: Drew Rasmussen" })).toBeChecked();
+  });
+
+  test("the options explain themselves, and stay on screen", async ({ page }) => {
+    for (const [lang, w, h, hints] of [
+      ["en", 1440, 900, ["Drew Rasmussen, who begins the game for the other team.", "The relief pitchers who take over after him."]],
+      ["en", 390, 664, ["Drew Rasmussen, who begins the game for the other team.", "The relief pitchers who take over after him."]],
+      ["es", 390, 664, ["Drew Rasmussen, quien empieza el partido por el otro equipo.", "Los relevistas que entran después de él."]],
+    ] as const) {
+      await page.setViewportSize({ width: w, height: h });
+      await page.goto(`/?lang=${lang}`);
+      const first = page.locator('.screen[data-screen="0"]');
+      await expect(first.locator(".vs")).toBeVisible();
+      for (const i of [0, 1]) {
+        const label = first.locator(".vs label").nth(i);
+        await label.hover({ force: true });
+        const hint = label.locator(".vs-hint");
+        await expect(hint).toBeVisible();
+        await expect(hint).toHaveText(hints[i]);
+        await page.waitForTimeout(200);
+        const box = (await hint.boundingBox())!;
+        expect(box.x, `${lang} ${w} ${i}`).toBeGreaterThanOrEqual(0);
+        expect(box.x + box.width, `${lang} ${w} ${i}`).toBeLessThanOrEqual(w);
+      }
+    }
+  });
+
+  test("arms pass in front of a chain, and the name sits over the bat", async ({ page, isMobile }) => {
+    await page.goto("/?lang=en");
+    await ready(page);
+    const chains = await page.locator(".bf-chain").evaluateAll((all) =>
+      all.map((c) => {
+        const front = c.closest("svg")?.querySelector(".bf-front");
+        const bat = c.closest("svg")?.querySelector(".bf-bat");
+        const before = (x?: Element | null) => !!x && !!(c.compareDocumentPosition(x) & Node.DOCUMENT_POSITION_FOLLOWING);
+        return before(front) && before(bat);
+      }),
+    );
+    expect(chains.length).toBeGreaterThan(0);
+    expect(chains.every(Boolean)).toBe(true);
+    if (isMobile) return;
+    const nameOnTop = await page.locator('.screen[data-screen="0"] .who').evaluate((e) => {
+      const r = e.getBoundingClientRect();
+      const hit = document.elementFromPoint(r.left + r.width * 0.25, r.top + r.height / 2);
+      return e.contains(hit);
+    });
+    expect(nameOnTop).toBe(true);
   });
 
   test("the rail stays on the right on every screen", async ({ page, isMobile }) => {
@@ -119,7 +165,7 @@ test.describe("front page", () => {
     const first = page.locator('.screen[data-screen="0"]');
     await first.getByRole("meter", { name: "OBP" }).focus();
     await expect(first.locator(".ors__hint").nth(1)).toBeVisible();
-    await expect(first.locator(".ors__hint").nth(1)).toHaveText("On-base percentage: how often he reaches base. Better than 93% of hitters.");
+    await expect(first.locator(".ors__hint").nth(1)).toHaveText("How often he reaches base.");
   });
 });
 

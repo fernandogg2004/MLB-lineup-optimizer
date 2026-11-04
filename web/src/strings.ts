@@ -1,11 +1,12 @@
 export type Lang = "en" | "es";
 
 const en = {
-  "stat.ops_def": "on-base plus slugging, a single overall measure.",
-  "stat.slg_def": "bases per at-bat; longer hits count for more.",
-  "stat.obp_def": "how often he reaches base.",
-  "stat.avg_def": "hits per at-bat.",
-  "home.hint": "{name}: {def} Better than {pct} of hitters.",
+  "home.bullpen_hint": "The relief pitchers who take over after him.",
+  "home.starter_hint": "{name}, who begins the game for the other team.",
+  "stat.ops_def": "On-base plus slugging, a single overall measure.",
+  "stat.slg_def": "Bases per at-bat; longer hits count for more.",
+  "stat.obp_def": "How often he reaches base.",
+  "stat.avg_def": "Hits per at-bat.",
   "home.starter_named": "Starting pitcher: {name}",
   "title.home": "How much does the batting order matter?",
   "hit.credits": "Player photos: {credits}",
@@ -29,7 +30,7 @@ const en = {
   "home.season_prev": "Last full season ({season})",
   "home.small": "small sample",
   "home.nodata": "No data",
-  "home.each": "Expected outcome for each trip to the plate:",
+  "home.each": "Expected outcome against:",
   "home.against": "Pitching against this batter",
   "home.bullpen": "Bullpen",
   "home.pctile": "{ord} percentile",
@@ -295,11 +296,12 @@ const en = {
 type Dict = Record<keyof typeof en, string>;
 
 const es: Dict = {
-  "stat.ops_def": "embasarse más slugging, una medida global.",
-  "stat.slg_def": "bases por turno oficial; los batazos largos cuentan más.",
-  "stat.obp_def": "con qué frecuencia llega a base.",
-  "stat.avg_def": "hits por turno oficial.",
-  "home.hint": "{name}: {def} Mejor que el {pct} de los bateadores.",
+  "home.bullpen_hint": "Los relevistas que entran después de él.",
+  "home.starter_hint": "{name}, quien empieza el partido por el otro equipo.",
+  "stat.ops_def": "Embasarse más slugging, una medida global.",
+  "stat.slg_def": "Bases por turno oficial; los batazos largos cuentan más.",
+  "stat.obp_def": "Con qué frecuencia llega a base.",
+  "stat.avg_def": "Hits por turno oficial.",
   "home.starter_named": "Abridor: {name}",
   "title.home": "¿Cuánto importa el orden al bate?",
   "hit.credits": "Fotos de los jugadores: {credits}",
@@ -323,7 +325,7 @@ const es: Dict = {
   "home.season_prev": "Última temporada completa ({season})",
   "home.small": "muestra pequeña",
   "home.nodata": "Sin datos",
-  "home.each": "Resultado esperado en cada aparición al plato:",
+  "home.each": "Resultado esperado contra:",
   "home.against": "Lanzando contra este bateador",
   "home.bullpen": "Bullpen",
   "home.pctile": "percentil {ord}",

@@ -70,7 +70,8 @@ widths and made some screens overflow on Linux. Layout tests now match what visi
 above the name, no fielding position, no orbiting words and no caption above the rings, whose explanation now
 appears on hover, focus or tap. This reverses the review's fixes for C-01 and part of C-02 and C-10: the page
 no longer says in words what it is, apart from the site name, and the rings are not labelled as past results
-except in their explanation. The forecast card follows the owner's reference image. The rail stays on the
+on screen. Ring explanations state only what the statistic measures, and the selector reads as a sentence,
+"Expected outcome against: Starting pitcher / Bullpen", with each option explained on hover. The forecast card follows the owner's reference image. The rail stays on the
 right, and the menu is white in Day.
 
 ## Consequences

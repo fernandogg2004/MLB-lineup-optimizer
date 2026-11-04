@@ -109,7 +109,7 @@ export function Pie({ probs, caption, against }: { probs: number[]; caption: str
       </svg>
       <table className="sr-only">
         <caption>
-          {caption}. {against}
+          {caption} {against}
         </caption>
         <tbody>
           {slices.map((s) => (

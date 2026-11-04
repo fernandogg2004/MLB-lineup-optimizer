@@ -103,6 +103,7 @@ export function BatterFigure({
   const hipMid: P = [(p.hipBack[0] + p.hipFront[0]) / 2, (p.hipBack[1] + p.hipFront[1]) / 2];
   const headX = neck[0] - 215 + (p.head?.dx ?? 0);
   const headY = neck[1] - 184 + (p.head?.dy ?? 0);
+  const headTransform = `translate(${headX} ${headY})${p.head?.tilt ? ` rotate(${p.head.tilt} 215 170)` : ""}`;
   const shin = variant.longPants ? PANTS_DARK : team;
   const shinFront = variant.longPants ? PANTS : team;
   const forearm = variant.longSleeves ? team : SKIN;
@@ -162,6 +163,14 @@ export function BatterFigure({
           <polygon points={pts([p.shoulderFront[0] - 32, p.shoulderFront[1] - 3], [p.shoulderFront[0] + 6, p.shoulderFront[1] - 4], [p.hipFront[0] + 2, p.hipFront[1] - 22], [p.hipFront[0] - 20, p.hipFront[1] - 21])} fill="#fff" fillOpacity="0.11" />
           {limb([neck[0] + 4, neck[1]], [hipMid[0] + 6, hipMid[1] - 22], 10, 10, trim, "placket")}
 
+          {/* Chain: on the chest, so both arms pass in front of it */}
+          {variant.chain && (
+            <g className="bf-chain" transform={headTransform}>
+              <polyline points="188,176 200,204 217,216 234,204 246,172" fill="none" stroke={variant.chain === "gold" ? "#e6c253" : "#d9dfe6"} strokeWidth="3.5" strokeLinejoin="round" />
+              <circle cx="217" cy="221" r="6.5" fill={variant.chain === "gold" ? "#e6c253" : "#d9dfe6"} />
+            </g>
+          )}
+
           {/* Back arm, behind the bat */}
           {limb(p.shoulderBack, p.elbowBack, 38, 32, team, "ub")}
           {shade(p.shoulderBack, p.elbowBack, 38, 32, "sub")}
@@ -179,7 +188,7 @@ export function BatterFigure({
           <ellipse cx="149" cy="190" rx="9" ry="6" transform="rotate(-32 149 190)" fill={bat.grip} />
         </g>
 
-        <g filter={`url(#${uid}-paper)`}>
+        <g className="bf-front" filter={`url(#${uid}-paper)`}>
           {/* Front arm, across the chest to the hands */}
           {limb(p.shoulderFront, p.elbowFront, 40, 34, team, "uf")}
           {shade(p.shoulderFront, p.elbowFront, 40, 34, "suf", 0.18)}
@@ -195,16 +204,10 @@ export function BatterFigure({
           <polyline points={pts([p.hands[0] - 16, p.hands[1]], [p.hands[0] + 17, p.hands[1] + 4])} fill="none" stroke="#fff" strokeOpacity="0.3" strokeWidth="2.5" />
 
           {/* Neck, head and helmet: no facial features */}
-          <g transform={`translate(${headX} ${headY})${p.head?.tilt ? ` rotate(${p.head.tilt} 215 170)` : ""}`}>
+          <g transform={headTransform}>
             <polygon points="190,152 240,150 244,186 190,190" fill={SKIN_DARK} />
             <polygon points="178,96 262,92 266,150 238,170 196,168 176,134" fill={SKIN} />
             <polygon points="178,96 214,94 214,168 196,168 176,134" fill="#000" fillOpacity="0.12" />
-            {variant.chain && (
-              <>
-                <polyline points="188,176 200,204 217,216 234,204 246,172" fill="none" stroke={variant.chain === "gold" ? "#e6c253" : "#d9dfe6"} strokeWidth="3.5" strokeLinejoin="round" />
-                <circle className="bf-pendant" cx="217" cy="221" r="6.5" fill={variant.chain === "gold" ? "#e6c253" : "#d9dfe6"} />
-              </>
-            )}
             <path d="M166 104 C 164 54, 212 34, 244 44 C 272 52, 282 76, 280 98 L 166 110 Z" fill={team} />
             <path d="M166 104 C 164 54, 212 34, 222 38 C 206 56, 202 84, 204 106 Z" fill="#000" fillOpacity="0.24" />
             <path d="M214 52 C 240 44, 262 60, 268 82 C 248 64, 230 56, 214 52 Z" fill="#fff" fillOpacity="0.2" />

@@ -7,7 +7,7 @@ import { useI18n } from "../i18n-context";
 import type { Key } from "../strings";
 import type { Theme } from "../theme";
 import { ordinal } from "./derive";
-import { percentText, useNarrow } from "./format";
+import { useNarrow } from "./format";
 import { Pie } from "./Pie";
 import { kitFor } from "./teams";
 
@@ -49,10 +49,10 @@ export function BatterScreen(props: {
         const value = b.rates[k];
         const pct = b.pct[k];
         if (value === null || pct === null) {
-          return { label: k.toUpperCase(), value: 0, max: 100, display: "—", note: t("home.nodata"), hint: name, valueText: `${name}: ${t("home.nodata")}` };
+          return { label: k.toUpperCase(), value: 0, max: 100, display: "—", note: t("home.nodata"), hint: t(`stat.${k}_def` as Key), valueText: `${name}: ${t("home.nodata")}` };
         }
         const pctile = t("home.pctile", { ord: lang === "es" ? String(pct) : ordinal(pct, "en") });
-        const hint = t("home.hint", { name, def: t(`stat.${k}_def` as Key), pct: percentText(pct, lang) });
+        const hint = t(`stat.${k}_def` as Key);
         return {
           label: k.toUpperCase(),
           value: pct,
@@ -60,7 +60,7 @@ export function BatterScreen(props: {
           display: value,
           note: pctile,
           hint,
-          valueText: `${value}, ${pctile}. ${hint}`,
+          valueText: `${name}: ${value}, ${pctile}. ${hint}`,
         };
       }),
     [b, t, lang],
@@ -104,13 +104,15 @@ export function BatterScreen(props: {
             <p className="outcome-title">{t("home.each")}</p>
             <fieldset className="vs">
               <legend className="sr-only">{t("home.against")}</legend>
-              <label title={starterNamed}>
+              <label>
                 <input type="radio" name={`vs-${slot}`} aria-label={starterNamed} checked={!vsBullpen} onChange={() => setVsBullpen(false)} />
                 <span>{t("home.starter")}</span>
+                <em className="vs-hint">{t("home.starter_hint", { name: team.opponent_starter.name })}</em>
               </label>
               <label>
                 <input type="radio" name={`vs-${slot}`} checked={vsBullpen} onChange={() => setVsBullpen(true)} />
                 <span>{t("home.bullpen")}</span>
+                <em className="vs-hint">{t("home.bullpen_hint")}</em>
               </label>
             </fieldset>
           </div>
