@@ -107,6 +107,13 @@ test.describe("front page", () => {
     expect(nameOnTop).toBe(true);
   });
 
+  test("the hover labels centre their text", async ({ page }) => {
+    await page.goto("/?lang=en");
+    await ready(page);
+    const hints = page.locator('.screen[data-screen="0"] .vs-hint');
+    for (const i of [0, 1]) await expect(hints.nth(i)).toHaveCSS("text-align", "center");
+  });
+
   test("the selector is centred in the card", async ({ page }) => {
     await page.goto("/?lang=en");
     await ready(page);
@@ -254,6 +261,36 @@ test.describe("the lock", () => {
     await page.mouse.wheel(0, 100);
     await page.waitForTimeout(1000); // landed; the rings take over a second to fill
     await page.mouse.wheel(0, 100);
+    await expect.poll(() => position(page), { timeout: 6000 }).toBe(2);
+  });
+
+  test("a new flick counts during the coast of the last one, before the rings finish", async ({ page, isMobile }) => {
+    test.skip(isMobile, "wheel");
+    await page.goto("/?lang=en");
+    await ready(page);
+    await page.mouse.move(700, 450);
+    const events: Promise<void>[] = [];
+    // A coast that never pauses, long enough to outlast the move.
+    let size = 160;
+    const started = Date.now();
+    while (Date.now() - started < 1100) {
+      events.push(page.mouse.wheel(0, Math.max(1, Math.round(size))));
+      size *= 0.95;
+      await new Promise((r) => setTimeout(r, 16));
+    }
+    // A clearly stronger second flick, with no pause before it, which then coasts as the first one did.
+    size = 240;
+    const flicked = Date.now();
+    for (const rise of [90, 180]) {
+      events.push(page.mouse.wheel(0, rise));
+      await new Promise((r) => setTimeout(r, 16));
+    }
+    while (Date.now() - flicked < 700) {
+      events.push(page.mouse.wheel(0, Math.max(1, Math.round(size))));
+      size *= 0.97;
+      await new Promise((r) => setTimeout(r, 16));
+    }
+    await Promise.all(events);
     await expect.poll(() => position(page), { timeout: 6000 }).toBe(2);
   });
 

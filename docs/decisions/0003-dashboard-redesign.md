@@ -43,10 +43,13 @@ figure does not show the hitter's real batting side.
 
 **The lock is explicit on wheel and keyboard, native on touch.** Browser snapping alone does not hold:
 in testing, one large wheel delta skipped three screens and a small one bounced back. One gesture moves
-one screen. A scroll is one continuous stretch of wheel input, ended by a pause of 200 ms read from the
-events' timestamps, so a busy page cannot split it. Trying to detect a new scroll from changes in speed made
-long scrolls skip a batter, so it was removed: input during a move is ignored, and only a pause starts the next
-scroll. On a trackpad, touching it stops the coasting, which provides that pause. Viewports under 600 px tall (landscape phones) use normal
+one screen. `home/wheel-gesture.ts` decides where a scroll begins, from the events' own timestamps so a busy
+page cannot fake a pause: a pause of 200 ms, a reversal, or a sharp jump after the stream has clearly faded,
+which is how a flick looks during a trackpad's coast. Reacting to ordinary changes in speed made long scrolls
+skip a batter, so a jump must be large and hold briefly. It is measured in time rather than events, because a
+busy page delivers fewer, larger events. Speed alone cannot separate the two cases, because a long scroll's swings
+overlap a flick's rise, so the stream must also have stayed low for 500 ms, which coasts do and swings do not.
+Thresholds were tuned on simulated and recorded browser streams to favour a missed flick over a skipped batter. A flick while the coast is still strong therefore waits. Viewports under 600 px tall (landscape phones) use normal
 scrolling, because snapping there would make content unreachable. Rings sit four in a row on phones
 under 800 px tall, where a 2 x 2 grid does not fit.
 

@@ -9,11 +9,10 @@ import { lineupFigures } from "./figures";
 import { prefersReducedMotion, useFlow } from "./format";
 import { setStadiumDepth } from "./stadium";
 import { SummaryScreen } from "./SummaryScreen";
+import { createWheelGesture } from "./wheel-gesture";
 import "./home.css";
 
 const MOVE_MS = 850;
-/** Wheel input with no pause this long is one scroll, however long it lasts or however it varies. */
-const GESTURE_GAP_MS = 200;
 /** After this long with no scrolling and no finger down, the page must be resting on a screen. */
 const SETTLE_AFTER_MS = 180;
 
@@ -36,7 +35,7 @@ function Screens(props: {
   const [progress, setProgress] = useState(target.screen);
   const [nearSummary, setNearSummary] = useState(false);
   const [vsBullpen, setVsBullpen] = useState(false);
-  const anim = useRef({ running: false, lastWheel: -Infinity, armed: true, raf: 0 });
+  const anim = useRef({ running: false, armed: true, raf: 0 });
   const menuRef = useRef(menuOpen);
   useEffect(() => {
     menuRef.current = menuOpen;
@@ -189,15 +188,14 @@ function Screens(props: {
     if (!el || flow) return;
     const a = anim.current;
     const current = () => Math.round(el.scrollTop / screenHeight());
+    const gesture = createWheelGesture();
     const onWheel = (e: WheelEvent) => {
       if (e.ctrlKey) return; // browser zoom
       e.preventDefault();
-      // One scroll moves one screen. A scroll is one continuous stretch of wheel input, including a
-      // trackpad's coasting: only a pause starts the next one, however long it lasts or however its
-      // speed varies. Input during a move is ignored but still counts as the same scroll. The event's
-      // own timestamp is used because a busy page delivers events late, which would look like pauses.
-      if (e.timeStamp - a.lastWheel > GESTURE_GAP_MS) a.armed = true;
-      a.lastWheel = e.timeStamp;
+      // One scroll moves one screen; wheel-gesture.ts decides where a scroll begins. The event's own
+      // timestamp is used because a busy page delivers events late, which would look like pauses.
+      // A new scroll made during a move takes effect on its first event after landing.
+      if (gesture(e.deltaY, e.timeStamp)) a.armed = true;
       if (a.running || !a.armed || Math.abs(e.deltaY) < 4) return;
       a.armed = false;
       jump(current() + Math.sign(e.deltaY));

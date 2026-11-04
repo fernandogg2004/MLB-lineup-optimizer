@@ -59,7 +59,7 @@
 .vs input:checked + span { background: var(--seg-on); color: var(--seg-on-ink); }
 .vs input:focus-visible + span { outline: 2px solid var(--focus); outline-offset: 2px; }
 /* What each option means, in the same style as a ring's explanation. */
-.vs-hint { position: absolute; z-index: 3; top: calc(100% + 7px); left: 0; width: max-content; max-width: 215px; padding: 5px 9px; border-radius: 8px; background: #05070b; color: #fff; font-size: 0.78rem; font-style: normal; font-weight: 400; line-height: 1.25; opacity: 0; visibility: hidden; transition: opacity 0.15s; pointer-events: none; }
+.vs-hint { position: absolute; z-index: 3; top: calc(100% + 7px); left: 0; width: max-content; max-width: 215px; padding: 5px 9px; border-radius: 8px; background: #05070b; color: #fff; font-size: 0.78rem; font-style: normal; font-weight: 400; line-height: 1.25; text-align: center; opacity: 0; visibility: hidden; transition: opacity 0.15s; pointer-events: none; }
 .vs label:hover .vs-hint, .vs input:focus-visible ~ .vs-hint { opacity: 1; visibility: visible; }
 
 /* Summary */
