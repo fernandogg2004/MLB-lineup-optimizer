@@ -22,3 +22,11 @@ export function applyTheme(theme: Theme): void {
     /* private browsing: the choice simply is not remembered */
   }
 }
+
+/** Drop `?theme=` once the visitor chooses, so a reload keeps their choice. */
+export function clearThemeOverride(): void {
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has("theme")) return;
+  url.searchParams.delete("theme");
+  window.history.replaceState(null, "", url);
+}

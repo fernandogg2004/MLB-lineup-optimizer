@@ -19,9 +19,12 @@ export function useMedia(query: string): boolean {
 }
 
 /** Too short for one locked screen per batter: the page falls back to normal scrolling. */
-export const FLOW_QUERY = "(max-height: 559px)";
+export const FLOW_QUERY = "(max-height: 599px)";
 /** Picture and statistics stack instead of sitting side by side. */
-export const NARROW_QUERY = `(max-width: 820px), ${FLOW_QUERY}`;
+export const NARROW_QUERY = `(max-width: 860px), ${FLOW_QUERY}`;
+
+/** The pie switches to wrapped labels here, where the column is too narrow for one-line labels. */
+export const COMPACT_PIE_QUERY = `(max-width: 1100px), ${FLOW_QUERY}`;
 
 export function useNarrow(): boolean {
   return useMedia(NARROW_QUERY);

@@ -7,7 +7,7 @@
 }
 
 .ors {
-  --ors-size: clamp(118px, min(12.5vw, 21vh), 190px);
+  --ors-size: clamp(104px, min(12.5vw, 21vh), 190px);
   --ors-weight: calc(var(--ors-size) * 0.052);
   --ors-c1: #7cc4ff;
   --ors-c2: #4f8dff;
@@ -34,9 +34,8 @@
 
 .ors__row {
   display: flex;
-  flex-wrap: wrap;
   justify-content: center;
-  gap: clamp(10px, 2vw, 34px);
+  gap: clamp(8px, 2vw, 34px);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -81,7 +80,7 @@
 }
 .ors__orbit text {
   fill: var(--ors-orbit);
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0;
 }
@@ -216,12 +215,16 @@
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.15s;
-  pointer-events: none;
 }
 .ors__item:hover .ors__hint,
 .ors__item:focus-within .ors__hint {
   opacity: 1;
   visibility: visible;
+}
+/* Esc dismisses it until the pointer or focus leaves. */
+.ors__item[data-hint-off] .ors__hint {
+  opacity: 0;
+  visibility: hidden;
 }
 
 .ors__num {

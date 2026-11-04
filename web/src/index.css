@@ -18,11 +18,12 @@
   --pie-single: #4f8dff;
   --pie-xbh: #a6e3ff;
   --pie-hr: #ffd27a;
-  --pie-k: #59626f;
+  --pie-k: #6a7481;
   --pie-gb: #6f7987;
   --pie-air: #8791a0;
   --pie-stroke: #0a0e14;
   --pie-leader: #7d8794;
+  --pie-edge: rgb(255 255 255 / 0.55);
 
   --surface-0: #06080c;
   --surface-1: rgb(14 20 29 / 0.88);
@@ -64,6 +65,7 @@
   --pie-air: #a1abb6;
   --pie-stroke: #ffffff;
   --pie-leader: #31404e;
+  --pie-edge: #31404e;
 
   --surface-0: #bfe3f7;
   --surface-1: rgb(255 255 255 / 0.9);
@@ -88,7 +90,7 @@
 }
 
 html {
-  font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: "Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   background: var(--surface-0);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
@@ -253,13 +255,17 @@ summary::-webkit-details-marker { color: var(--text-muted); }
 
 /* ---- Top bar ---------------------------------------------------------------------------- */
 .bar { position: fixed; z-index: 20; top: 0; left: 0; right: 0; height: var(--bar-h); display: flex; align-items: center; gap: 16px; padding: 0 18px;
-  background: linear-gradient(180deg, rgb(6 8 12 / .9), rgb(6 8 12 / .62)); border-bottom: 1px solid rgb(255 255 255 / .09); }
-:root[data-theme="day"] .bar { background: linear-gradient(180deg, rgb(255 255 255 / .86), rgb(255 255 255 / .62)); border-bottom-color: rgb(13 27 42 / .14); }
+  background: linear-gradient(180deg, rgb(6 8 12 / .94), rgb(6 8 12 / .8)); border-bottom: 1px solid rgb(255 255 255 / .09); }
+:root[data-theme="day"] .bar { background: linear-gradient(180deg, rgb(255 255 255 / .94), rgb(255 255 255 / .82)); border-bottom-color: rgb(13 27 42 / .14); }
 .burger { width: 40px; height: 40px; flex: none; display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 0 9px; border-radius: 8px; cursor: pointer; }
 .burger span { display: block; height: 2px; background: #fff; border-radius: 2px; }
 .burger:hover { background: rgb(255 255 255 / .08); }
 :root[data-theme="day"] .bar .burger span { background: #0d1b2a; }
 :root[data-theme="day"] .bar .burger:hover { background: rgb(13 27 42 / .08); }
+.brand { display: none; }
+@media (min-width: 1000px) {
+  .brand { display: block; position: absolute; left: 50%; transform: translateX(-50%); font-weight: 700; font-size: .95rem; letter-spacing: -.01em; color: var(--ink); white-space: nowrap; pointer-events: none; }
+}
 .pickers { flex: 1; min-width: 0; display: flex; justify-content: space-between; gap: 12px; max-width: min(1000px, 100%); margin: 0 auto; }
 .pickers select { min-width: 0; max-width: 100%; font: inherit; font-size: .9rem; color: var(--ink); background: rgb(255 255 255 / .07); border: 1px solid rgb(255 255 255 / .2); border-radius: 8px; padding: 7px 10px; }
 .pickers select option { background: #11161d; }
@@ -273,6 +279,9 @@ summary::-webkit-details-marker { color: var(--text-muted); }
 .menu-panel { position: absolute; top: 0; bottom: 0; left: 0; width: min(320px, 85vw); padding: 72px 18px 22px; display: flex; flex-direction: column; justify-content: space-between; background: rgb(0 0 0 / .85); backdrop-filter: blur(7px); transform: translateX(-100%); transition: transform .28s cubic-bezier(.2, .8, .2, 1); --focus: #7cc4ff; }
 .menu.open .menu-panel { transform: none; }
 .menu-close { position: absolute; top: 6px; left: 18px; }
+.menu-name { position: absolute; top: 15px; left: 72px; color: #fff; font-weight: 700; font-size: .95rem; }
+html.stats { scrollbar-gutter: stable; }
+html.menu-locked { overflow: hidden; }
 .menu-items { position: relative; display: flex; flex-direction: column; }
 .menu-glow { position: absolute; left: 0; right: 0; top: 0; height: 56px; border-radius: 10px; background: radial-gradient(70% 90% at 22% 50%, rgb(124 196 255 / .3), rgb(124 196 255 / .06) 70%, transparent); box-shadow: inset 0 0 0 1px rgb(124 196 255 / .18); transition: transform .28s cubic-bezier(.3, .8, .3, 1); }
 .menu-item { position: relative; height: 56px; padding: 0 14px; text-align: left; font-size: 1.08rem; color: #fff; cursor: pointer; }

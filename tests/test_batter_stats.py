@@ -22,7 +22,7 @@ from batting_order.batter_stats import (
     rate,
 )
 from batting_order.config import REFERENCE_GAME, project_root
-from batting_order.data.statsapi import StatsApi
+from batting_order.data.statsapi import StatsApi, starting_position
 
 
 def _split(
@@ -149,7 +149,7 @@ def test_home_files_copy_the_snapshot_exactly() -> None:
             assert h["uncertainty"]["p_opt_better"] == s["uncertainty"]["p_opt_better"]
             assert h["uncertainty"]["diff_q05"] == s["uncertainty"]["diff_q05"]
             for hh, sh in zip(h["hitters"], s["hitters"], strict=True):
-                for k in ("id", "name", "pos", "slot", "probs_starter", "probs_bullpen"):
+                for k in ("id", "name", "slot", "probs_starter", "probs_bullpen"):
                     assert hh[k] == sh[k], k
 
 
@@ -170,6 +170,23 @@ def test_rebuilding_home_data_is_reproducible() -> None:
         pytest.skip("official hitting response not cached locally")
     published = json.loads((_web_data() / "home" / f"{REFERENCE_GAME}.json").read_text("utf-8"))
     assert rebuilt == published
+
+
+def test_lineups_have_no_duplicate_fielding_positions() -> None:
+    """A player who changed position mid-game must appear where he started it."""
+    for _, home in _published():
+        for team in home["teams"].values():
+            positions = [h["pos"] for h in team["hitters"]]
+            assert len(set(positions)) == 9, (home["game"]["game_pk"], team["team"], positions)
+
+
+def test_starting_position_is_the_first_one_played() -> None:
+    switched = {
+        "position": {"abbreviation": "SS"},
+        "allPositions": [{"abbreviation": "2B"}, {"abbreviation": "SS"}],
+    }
+    assert starting_position(switched) == "2B"
+    assert starting_position({"position": {"abbreviation": "C"}}) == "C"
 
 
 def test_reference_values_for_turang() -> None:

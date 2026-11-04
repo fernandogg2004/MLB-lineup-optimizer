@@ -8,7 +8,7 @@ import { I18nProvider } from "./i18n";
 import { useI18n } from "./i18n-context";
 import { homeHash, parseHash, statsHash } from "./route";
 import type { Route } from "./route";
-import { applyTheme, initialTheme } from "./theme";
+import { applyTheme, clearThemeOverride, initialTheme } from "./theme";
 import type { Theme } from "./theme";
 import { StatisticsView } from "./views/StatisticsView";
 
@@ -49,7 +49,10 @@ function Shell() {
   useLayoutEffect(() => applyTheme(theme), [theme]);
 
   useEffect(() => {
-    const on = () => setRoute(parseHash(window.location.hash));
+    const on = () => {
+      setRoute(parseHash(window.location.hash));
+      setMenuOpen(false);
+    };
     window.addEventListener("hashchange", on);
     return () => window.removeEventListener("hashchange", on);
   }, []);
@@ -58,9 +61,21 @@ function Shell() {
     fetchJson<GameIndex>("index.json").then(setIndex, () => setIndexError(true));
   }, []);
 
+  // Every page has its own title.
   useEffect(() => {
-    document.title = `${t("app.name")} — ${t("app.tagline")}`;
-  }, [t]);
+    const page =
+      route.page === "home"
+        ? t("title.home")
+        : t(route.tab === "method" ? "nav.method" : route.tab === "simulator" ? "nav.simulator" : "nav.game");
+    document.title = `${page} · ${t("app.name")}`;
+  }, [t, route]);
+
+  // Statistics scrolls the page itself, so the page is held still while the menu is open.
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle("stats", route.page === "statistics");
+    root.classList.toggle("menu-locked", menuOpen);
+  }, [menuOpen, route.page]);
 
   // The selected game and team carry over between Home and Statistics.
   const entry = useMemo(() => {
@@ -103,6 +118,9 @@ function Shell() {
   const onScreen = useCallback(
     (screen: number) => {
       if (pkOnScreen === undefined) return;
+      // Never overwrite an address the visitor has just navigated to.
+      const here = parseHash(window.location.hash);
+      if (here.page !== "home" || (here.pk !== undefined && (here.pk !== pkOnScreen || here.team !== team))) return;
       const next = homeHash(pkOnScreen, team, screen);
       // On the front page, stay at the plain address until the visitor moves.
       const plain = window.location.hash === "" || window.location.hash === "#/";
@@ -118,7 +136,15 @@ function Shell() {
     <div className="app">
       <Stadium />
       <div inert={menuOpen}>
-        <a href="#main" className="skip-link">
+        <a
+          href="#main"
+          className="skip-link"
+          onClick={(e) => {
+            // A real jump would change the hash, which is this site's page address.
+            e.preventDefault();
+            document.getElementById("main")?.focus();
+          }}
+        >
           {t("a11y.skip")}
         </a>
         <header className="bar">
@@ -127,6 +153,7 @@ function Shell() {
             <span />
             <span />
           </button>
+          <span className="brand">{t("app.name")}</span>
           {showPickers && entry && (
             <div className="pickers">
               <select aria-label={t("game.picker")} value={entry.game_pk} onChange={(e) => {
@@ -148,7 +175,7 @@ function Shell() {
           )}
         </header>
         <main id="main" tabIndex={-1}>
-          <h1 className="sr-only">{t("app.name")}</h1>
+          {(route.page === "home" || route.tab === "simulator") && <h1 className="sr-only">{t("app.name")}</h1>}
           {indexError ? (
             <p className="home-message" role="alert">
               {t("game.error")}
@@ -166,7 +193,10 @@ function Shell() {
           )}
         </main>
       </div>
-      <Menu open={menuOpen} close={closeMenu} page={route.page} go={go} theme={theme} setTheme={setTheme} />
+      <Menu open={menuOpen} close={closeMenu} page={route.page} go={go} theme={theme} setTheme={(next) => {
+        clearThemeOverride();
+        setTheme(next);
+      }} />
     </div>
   );
 }

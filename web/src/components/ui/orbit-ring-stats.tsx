@@ -94,6 +94,7 @@ export function OrbitRingStats({
   const hot = useRef<number>(-1);
   const raf = useRef(0);
   const [seen, setSeen] = useState(false);
+  const [hintOff, setHintOff] = useState(-1);
   const controlled = active !== undefined;
   const on = controlled ? active : seen;
   const count = rings.length;
@@ -172,7 +173,7 @@ export function OrbitRingStats({
           const p = Math.max(0, Math.min(1, g.value / max));
           const words = (g.orbit ?? g.label).toUpperCase();
           // Repeat the words until they go round once, then spread them to exactly one lap.
-          const reps = Math.max(1, Math.round(LAP / ((words.length + 3) * 6.4)));
+          const reps = Math.max(1, Math.round(LAP / ((words.length + 3) * 7.3)));
           const lap = Array.from({ length: reps }, () => `${words} · `).join("");
           const shown = g.display ?? `${g.value}`;
           const centre: ReactNode = (
@@ -185,8 +186,16 @@ export function OrbitRingStats({
             <li
               key={g.label}
               className="ors__item"
+              data-hint-off={hintOff === i || undefined}
               onPointerEnter={() => (hot.current = i)}
-              onPointerLeave={() => (hot.current = -1)}
+              onPointerLeave={() => {
+                hot.current = -1;
+                setHintOff(-1);
+              }}
+              onBlur={() => setHintOff(-1)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setHintOff(i);
+              }}
             >
               <p className="ors__label">{g.label}</p>
               <div

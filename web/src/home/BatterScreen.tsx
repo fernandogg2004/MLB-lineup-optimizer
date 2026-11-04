@@ -11,6 +11,7 @@ import { Pie } from "./Pie";
 import { kitFor } from "./teams";
 
 const RATES: Rate[] = ["avg", "obp", "slg", "ops"];
+const POSITIONS = new Set(["C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "DH", "P", "PH"]);
 
 export interface PlayerPhoto {
   id: number;
@@ -73,12 +74,17 @@ export function BatterScreen(props: {
     <section className={`screen batter ${slot % 2 ? "flip" : ""}`} data-screen={slot} aria-label={`${slotName}: ${h.name}`}>
       <div className="pic">
         <div className="layer pic-text" data-depth="0.28">
+        {slot === 0 && <p className="intro">{t("home.intro")}</p>}
         <p className="kicker">{t("home.kicker", { team: team.name, n: slot + 1 })}</p>
         <h2 className="who">
-          <span>{slotName}.</span> {h.name}
+          <span>
+            {slotName}
+            {lang === "en" ? "." : ""}
+          </span>{" "}
+          {h.name}
         </h2>
         <p className="pos">
-          {h.pos} · {hitterIndex === slot ? t("home.same") : t("home.was", { slot: ordinal(hitterIndex + 1, lang) })}
+          {POSITIONS.has(h.pos) ? t(`pos.${h.pos}` as Key) : h.pos} · {hitterIndex === slot ? t("home.same") : t("home.was", { slot: ordinal(hitterIndex + 1, lang) })}
         </p>
         </div>
         <div className="layer figure" data-depth="0.46">
@@ -100,12 +106,16 @@ export function BatterScreen(props: {
         <div className="layer outcome" data-depth="0.08">
           <div className="pie-wrap">
             <p className="caption">{t("home.each")}</p>
-            <Pie probs={vsBullpen ? h.probs_bullpen : h.probs_starter} caption={t("home.each")} />
+            <Pie
+              probs={vsBullpen ? h.probs_bullpen : h.probs_starter}
+              caption={t("home.each")}
+              against={vsBullpen ? t("home.bullpen") : t("home.starter", { name: team.opponent_starter.name })}
+            />
           </div>
           <fieldset className="vs">
             <legend>{t("home.against")}</legend>
             <label>
-              <input type="radio" name={`vs-${slot}`} checked={!vsBullpen} onChange={() => setVsBullpen(false)} /> {team.opponent_starter.name}
+              <input type="radio" name={`vs-${slot}`} checked={!vsBullpen} onChange={() => setVsBullpen(false)} /> {t("home.starter", { name: team.opponent_starter.name })}
             </label>
             <label>
               <input type="radio" name={`vs-${slot}`} checked={vsBullpen} onChange={() => setVsBullpen(true)} /> {t("home.bullpen")}

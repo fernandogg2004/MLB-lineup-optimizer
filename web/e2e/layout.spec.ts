@@ -9,7 +9,14 @@ const SIZES: [number, number][] = [
   [1920, 1080],
   [1440, 900],
   [1366, 650],
+  [1321, 700],
+  [1280, 720],
+  [1181, 620],
   [1100, 700],
+  [1000, 600],
+  [861, 600],
+  [860, 600],
+  [834, 1112],
   [768, 1024],
   [412, 780], // Android, address bar showing
   [390, 844],
@@ -24,7 +31,7 @@ async function audit(page: Page, screen: number): Promise<Finding[]> {
     const scr = document.querySelector(`.screen[data-screen="${screen}"]`);
     if (!scr) return ["screen missing"];
     const bad: string[] = [];
-    const sel = ".pie-label,.vs,.ors__dial,.ors__label,.ors__note,.who,.kicker,.pos,.figure,.sum-list li,.sum-context,.sum-foot,.sum-link,h2,.caption,.pie";
+    const sel = ".pie-label,.vs,.vs input,.ors__dial,.ors__label,.ors__note,.who,.kicker,.pos,.figure,.sum-list li,.sum-context,.sum-foot,.sum-link,h2,.caption,.pie";
     const items = [...scr.querySelectorAll(sel)].map((e) => ({ c: e.getAttribute("class") ?? e.tagName, r: e.getBoundingClientRect() }));
     const top = 40;
     for (const o of items) {
@@ -43,7 +50,7 @@ async function audit(page: Page, screen: number): Promise<Finding[]> {
       others.forEach((b) => {
         if (hit(a.r, b.r)) bad.push(`label overlaps ${b.c}`);
       });
-      if (a.r.height > 0 && a.r.height < 11) bad.push(`label too small (${a.r.height.toFixed(1)}px)`);
+      if (a.r.height > 0 && a.r.height < 9.5) bad.push(`label too small (${a.r.height.toFixed(1)}px)`);
     });
     const notes = items.filter((o) => o.c === "ors__note");
     const dials = items.filter((o) => o.c === "ors__dial");

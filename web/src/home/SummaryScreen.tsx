@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { HomeData, HomeTeam } from "../data";
 import { useI18n } from "../i18n-context";
-import { bestToWorstGap, ordinal, splitTemplate, wholePercent } from "./derive";
+import { bestToWorstGap, ordinal, runSpread, splitTemplate, wholePercent } from "./derive";
 import { percentText, prefersReducedMotion } from "./format";
 import { summaryLines } from "./summary";
 
@@ -74,16 +74,14 @@ export function SummaryScreen({ data, team, on, spinning }: { data: HomeData; te
           })}
         </ul>
         <p className="sum-context">
-          {t("sum.context", {
+          {t(wholePercent(team.actual.percentile).kind === "more" ? "sum.context_top" : "sum.context", {
             rank: whole(team.actual.percentile, true),
             count: int(team.all_orders.count),
             gap: fmt(bestToWorstGap(team), 2),
           })}
         </p>
-        <p className="sum-foot">
-          {hasScore && `${t("sum.final", { score: `${g.away_abbr} ${g.away_runs}–${g.home_runs} ${g.home_abbr}` })} `}
-          {t("sum.note")}
-        </p>
+        {hasScore && <p className="sum-final">{t("sum.final", { score: `${g.away_abbr} ${g.away_runs}–${g.home_runs} ${g.home_abbr}` })}</p>}
+        <p className="sum-foot">{t("sum.note", { sd: fmt(runSpread(team), 1) })}</p>
         <p className="sum-link">
           <a className="link" href="#/statistics">
             {t("sum.link")}

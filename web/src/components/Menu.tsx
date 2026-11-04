@@ -15,6 +15,7 @@ export function Menu(props: {
   const { t, lang, setLang } = useI18n();
   const [hover, setHover] = useState<number | null>(null);
   const first = useRef<HTMLButtonElement>(null);
+  const panel = useRef<HTMLElement>(null);
   const glowAt = hover ?? (page === "home" ? 0 : 1);
 
   useEffect(() => {
@@ -22,20 +23,28 @@ export function Menu(props: {
     first.current?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") close();
+      if (e.key !== "Tab" || !panel.current) return;
+      // Keep the keyboard inside the menu.
+      const items = [...panel.current.querySelectorAll<HTMLElement>("button")];
+      const at = items.indexOf(document.activeElement as HTMLElement);
+      const next = e.shiftKey ? (at <= 0 ? items.length - 1 : at - 1) : at === items.length - 1 ? 0 : at + 1;
+      e.preventDefault();
+      items[next]?.focus();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, close]);
 
   return (
-    <div className={`menu ${open ? "open" : ""}`} inert={!open}>
+    <div className={`menu ${open ? "open" : ""}`} inert={!open} role="dialog" aria-modal="true" aria-label={t("app.name")}>
       <button className="menu-scrim" aria-label={t("menu.close")} tabIndex={-1} onClick={close} />
-      <nav className="menu-panel" aria-label={t("a11y.nav")}>
+      <nav ref={panel} className="menu-panel" aria-label={t("a11y.nav")}>
         <button className="burger menu-close" aria-label={t("menu.close")} onClick={close}>
           <span />
           <span />
           <span />
         </button>
+        <p className="menu-name">{t("app.name")}</p>
         <div className="menu-items" onPointerLeave={() => setHover(null)}>
           <span className="menu-glow" style={{ transform: `translateY(${glowAt * 56}px)` }} aria-hidden="true" />
           {(["home", "statistics"] as const).map((p, i) => (

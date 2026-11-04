@@ -97,6 +97,13 @@ export function chanceOfFivePlus(t: HomeTeam): number {
   return t.optimal.run_distribution.slice(5).reduce((a, b) => a + b, 0);
 }
 
+/** Standard deviation of one game's runs under the model's order. */
+export function runSpread(t: HomeTeam): number {
+  const d = t.optimal.run_distribution;
+  const mean = d.reduce((a, p, r) => a + p * r, 0);
+  return Math.sqrt(d.reduce((a, p, r) => a + p * (r - mean) ** 2, 0));
+}
+
 export function bestToWorstGap(t: HomeTeam): number {
   return t.optimal.er9 - t.worst.er9;
 }

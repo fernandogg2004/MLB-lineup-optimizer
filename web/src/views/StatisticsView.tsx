@@ -14,6 +14,13 @@ const REPO = "https://github.com/fernandogg2004/mlb-lineup-optimizer";
 function SeasonHitting({ pk, team }: { pk: number; team: string }) {
   const { t, date } = useI18n();
   const [data, setData] = useState<HomeData | null>(null);
+  const [photos, setPhotos] = useState<{ author: string; source: string; license: string }[]>([]);
+  useEffect(() => {
+    fetch(`${import.meta.env.BASE_URL}players/manifest.json`)
+      .then((r) => (r.ok ? (r.json() as Promise<{ players: { author: string; source: string; license: string }[] }>) : { players: [] }))
+      .then((m) => setPhotos(m.players))
+      .catch(() => setPhotos([]));
+  }, []);
   useEffect(() => {
     let cancelled = false;
     fetchJson<HomeData>(`home/${pk}.json`).then(
@@ -38,7 +45,7 @@ function SeasonHitting({ pk, team }: { pk: number; team: string }) {
         {t("hit.title")}
       </h2>
       <p className="card-sub">{t("hit.sub", { start: date(hit.start), end: date(hit.end), season: hit.season })}</p>
-      <div className="overflow-x-auto mt-3" tabIndex={0} role="region" aria-label={t("hit.title")}>
+      <div className="overflow-x-auto mt-3" tabIndex={0} role="region" aria-label={t("hit.table")}>
         <table className="data-table">
           <thead>
             <tr>
@@ -85,6 +92,11 @@ function SeasonHitting({ pk, team }: { pk: number; team: string }) {
       <p className="text-sm mt-2">{t("hit.pool", { min: hit.min_pa, pool: hit.pool_size })}</p>
       <p className="text-sm mt-2">{t("hit.pie")}</p>
       <p className="text-sm mt-2 text-muted">{t("hit.figure")}</p>
+      {photos.length > 0 && (
+        <p className="text-sm mt-2 text-muted">
+          {t("hit.credits", { credits: photos.map((p) => `${p.author} (${p.license})`).join("; ") })}
+        </p>
+      )}
     </section>
   );
 }

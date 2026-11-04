@@ -36,7 +36,7 @@ test.describe("front page", () => {
     await page.goto("/?lang=en");
     const first = page.locator('.screen[data-screen="0"]');
     await expect(first.getByRole("heading", { level: 2 })).toHaveText("1st. Brice Turang");
-    await expect(first.getByText("2B · Batted 5th in the real lineup")).toBeVisible();
+    await expect(first.getByText("Second base · Batted 5th in the real lineup")).toBeVisible();
     await expect(first.getByText("The model's best order for Milwaukee Brewers · 1 of 9")).toBeVisible();
     for (const [stat, value, note] of [["AVG", ".268", "78th percentile"], ["OBP", ".366", "93rd percentile"], ["SLG", ".450", "77th percentile"], ["OPS", ".816", "84th percentile"]]) {
       const ring = first.getByRole("meter", { name: stat });
@@ -47,6 +47,15 @@ test.describe("front page", () => {
     await expect(first.locator(".ors").first()).toHaveAttribute("data-on", "true");
     await expect(first.getByRole("meter", { name: "OPS" })).toHaveAttribute("aria-valuenow", "84");
     await expect(page).not.toHaveURL(/#\/g\//);
+  });
+
+  test("says what the page is, and separates past results from the forecast", async ({ page }) => {
+    await page.goto("/?lang=en");
+    const first = page.locator('.screen[data-screen="0"]');
+    await expect(first.getByText("If this team batted in a different order, how many more runs would a statistical model expect?")).toBeVisible();
+    await expect(first.getByText(/^Regular season, before this game/)).toBeVisible();
+    await expect(first.getByText("The model's forecast for each trip to the plate", { exact: true })).toBeVisible();
+    await expect(first.getByLabel("Starting pitcher: Drew Rasmussen")).toBeChecked();
   });
 
   test("pie switches between the starter and the bullpen, and the choice persists", async ({ page }) => {
@@ -90,10 +99,13 @@ test.describe("the lock", () => {
     await page.mouse.wheel(0, 100);
     await settled(page);
     expect(await position(page)).toBe(2);
+    // Events go out on a fixed schedule, as a device sends them, without waiting for each frame.
+    const gesture: Promise<void>[] = [];
     for (let i = 0; i < 25; i++) {
-      await page.mouse.wheel(0, 120);
-      await page.waitForTimeout(30);
+      gesture.push(page.mouse.wheel(0, 120));
+      await new Promise((r) => setTimeout(r, 30));
     }
+    await Promise.all(gesture);
     await settled(page);
     expect(await position(page)).toBe(3);
     await page.mouse.wheel(0, -100);
@@ -223,22 +235,57 @@ test.describe("layout on each screen", () => {
 
   test("the summary lands on the true values and uses expected runs only", async ({ page }) => {
     await page.goto("/?lang=en#/g/849799/MIL/summary");
+    await expect(page.locator(".summary h2")).toHaveText("According to the model, this lineup…");
     const list = page.locator(".sum-list");
-    await expect(list.locator("li").nth(0).locator("span").last()).toHaveText("expects 3.84 runs this game.", { timeout: 5000 });
-    await expect(list.locator("li").nth(1).locator("span").last()).toHaveText("moves Brice Turang up from 5th to 1st, its biggest change.");
-    await expect(list.locator("li").nth(2).locator("span").last()).toHaveText("sends its first hitter to the plate 4.6 times and its ninth 3.7 times.");
-    await expect(list.locator("li").nth(3).locator("span").last()).toHaveText("adds +0.01 runs a game, about 2 over 162 games.");
-    await expect(list.locator("li").nth(4).locator("span").last()).toHaveText("beats the real lineup in 91 of 100 model re-runs, so the model is not certain of the gain.");
-    await expect(list.locator("li").nth(5).locator("span").last()).toHaveText("scores at least once in 92% of games, and five or more in 35%.");
+    const line = (i: number) => list.locator("li").nth(i).locator("span").last();
+    await expect(line(0)).toHaveText("expects 3.84 runs this game.", { timeout: 5000 });
+    await expect(line(1)).toHaveText("moves Brice Turang up from 5th to 1st, its biggest change.");
+    await expect(line(2)).toHaveText("would send its first hitter to the plate 4.6 times and its ninth 3.7 times.");
+    await expect(line(3)).toHaveText("would add +0.01 runs a game, about 2 over 162 games of this matchup.");
+    await expect(line(4)).toHaveText("beats the real lineup in 91 of 100 re-estimates of the players' ability, so the model is not certain of the gain.");
+    await expect(line(5)).toHaveText("would score at least once in 92% of games, and five or more in 35%.");
     await expect(page.locator(".sum-context")).toHaveText("The real order was already better than 98% of the 362,880 possible orders. The best and worst of them are only 0.05 runs apart.");
-    await expect(page.locator(".sum-foot")).toContainText("Final score: MIL 4–1 TB.");
+    await expect(page.locator(".sum-final")).toHaveText("What actually happened: MIL 4–1 TB.");
+    await expect(page.locator(".sum-foot")).toContainText("All numbers above are model estimates.");
+    await expect(page.locator(".sum-foot")).not.toContainText("MIL");
+  });
+
+  test("a near-certain rank does not read as better than more than", async ({ page }) => {
+    await page.goto("/?lang=en#/g/849799/TB/summary");
+    await expect(page.locator(".sum-context")).toContainText("already in the top 1% of the 362,880");
+    await expect(page.locator(".sum-context")).not.toContainText("more than");
   });
 
   test("Spanish uses its own number format", async ({ page }) => {
     await page.goto("/?lang=es#/g/849799/TB/summary");
-    await expect(page.locator(".sum-list li").nth(0).locator("span").last()).toHaveText("espera 3,36 carreras en este partido.", { timeout: 5000 });
+    await expect(page.locator(".sum-list li").nth(0).locator("span").last()).toHaveText("anotaría unas 3,36 carreras en este partido.", { timeout: 5000 });
     await expect(page.locator(".sum-context")).toContainText("362.880");
     await expect(page.locator(".sum-list li").nth(4).locator("span").last()).toContainText("más de 99 de 100");
+  });
+
+  test("a ring's explanation stays on top and on screen, and Esc dismisses it", async ({ page }) => {
+    for (const [w, h] of [[1280, 800], [375, 667], [320, 700]] as const) {
+      await page.setViewportSize({ width: w, height: h });
+      await page.goto("/?lang=es");
+      const first = page.locator('.screen[data-screen="0"]');
+      for (const stat of ["AVG", "OBP", "SLG", "OPS"]) {
+        const ring = first.getByRole("meter", { name: stat });
+        await ring.focus();
+        const hint = ring.locator("xpath=..").locator(".ors__hint");
+        await expect(hint).toBeVisible();
+        await page.waitForTimeout(200);
+        const box = (await hint.boundingBox())!;
+        expect(box.x, `${stat} at ${w}`).toBeGreaterThanOrEqual(0);
+        expect(box.x + box.width, `${stat} at ${w}`).toBeLessThanOrEqual(w);
+        const onTop = await hint.evaluate((e) => {
+          const r = e.getBoundingClientRect();
+          return e.contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2));
+        });
+        expect(onTop, `${stat} at ${w}`).toBe(true);
+        await page.keyboard.press("Escape");
+        await expect(hint).toBeHidden();
+      }
+    }
   });
 });
 
@@ -278,10 +325,69 @@ test.describe("navigation", () => {
     expect(await position(page)).toBe(4);
   });
 
+  test("the skip link moves focus without leaving the page", async ({ page }) => {
+    await page.goto("/?lang=en#/g/849799/TB/6");
+    await ready(page);
+    const skip = page.getByRole("link", { name: "Skip to content" });
+    await skip.focus();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/#\/g\/849799\/TB\/6$/);
+    expect(await position(page)).toBe(5);
+    await expect(page.locator("#main")).toBeFocused();
+    await page.goto("/?lang=en#/statistics/simulator/849799/TB");
+    await page.getByRole("link", { name: "Skip to content" }).focus();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/#\/statistics\/simulator\/849799\/TB$/);
+  });
+
+  test("rotating a phone keeps the same batter", async ({ page, isMobile }) => {
+    test.skip(isMobile, "viewport set by hand");
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/?lang=en");
+    await ready(page);
+    await page.getByRole("button", { name: "6th, Christian Yelich" }).click();
+    await settled(page);
+    expect(await position(page)).toBe(5);
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.waitForTimeout(400);
+    await expect(page.locator('.screen[data-screen="5"] .who')).toBeInViewport();
+    await expect(page).toHaveURL(/\/6$/);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(400);
+    expect(await position(page)).toBe(5);
+    await expect(page).toHaveURL(/\/6$/);
+  });
+
+  test("resizing during a move still lands one screen on", async ({ page, isMobile }) => {
+    test.skip(isMobile, "keyboard");
+    await page.goto("/?lang=en#/g/849799/MIL/6");
+    await expect(page.locator('.screen[data-screen="5"] .ors')).toHaveAttribute("data-on", "true");
+    await page.keyboard.press("ArrowDown");
+    await page.waitForTimeout(300);
+    await page.setViewportSize({ width: 1100, height: 640 });
+    await settled(page);
+    expect(await position(page)).toBe(6);
+  });
+
+  test("every page has its own title", async ({ page }) => {
+    await page.goto("/?lang=en");
+    await expect(page).toHaveTitle("How much does the batting order matter? · Batting Order Lab");
+    await page.goto("/?lang=en#/statistics/method");
+    await expect(page).toHaveTitle("Method & validation · Batting Order Lab");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+  });
+
   test("invalid addresses fall back safely", async ({ page }) => {
     await page.goto("/?lang=en#/g/1/NOPE/99");
     await expect(page.locator('.screen[data-screen="0"] .who')).toHaveText("1st. Brice Turang");
     expect(await position(page)).toBe(0);
+  });
+
+  test("the fielding position is where the player started", async ({ page }) => {
+    await page.goto("/?lang=en#/g/849805/TB/1");
+    await ready(page);
+    const positions = await page.locator(".screen .pos").allTextContents();
+    expect(positions.filter((p) => p.startsWith("Shortstop"))).toHaveLength(1);
   });
 
   test("the selected game and team carry over to Statistics and back", async ({ page }) => {
@@ -323,6 +429,37 @@ test.describe("menu", () => {
     await expect(page.locator(".bar").locator("xpath=..")).toHaveAttribute("inert", "");
     await page.keyboard.press("Escape");
     await expect(open).toBeFocused();
+    await expect(page.locator(".menu")).not.toHaveClass(/open/);
+  });
+
+  test("keeps the keyboard inside, holds Statistics still, and closes on back", async ({ page, isMobile }) => {
+    await page.goto("/?lang=en#/statistics");
+    await expect(page.getByText("Historical fact", { exact: true })).toBeVisible();
+    if (!isMobile) {
+      await page.mouse.move(700, 450);
+      await page.mouse.wheel(0, 300);
+      await page.waitForTimeout(300);
+    }
+    const y = await page.evaluate(() => window.scrollY);
+    await page.getByRole("button", { name: "Open menu" }).click();
+    await page.waitForTimeout(350);
+    if (!isMobile) {
+      await page.mouse.move(800, 450);
+      await page.mouse.wheel(0, 800);
+      await page.waitForTimeout(300);
+      expect(await page.evaluate(() => window.scrollY)).toBe(y);
+    }
+    for (let i = 0; i < 12; i++) {
+      await page.keyboard.press("Tab");
+      expect(await page.evaluate(() => !!document.activeElement?.closest(".menu"))).toBe(true);
+    }
+    await page.keyboard.press("Escape");
+    await page.getByRole("link", { name: "Simulator" }).click();
+    await expect(page).toHaveURL(/simulator/);
+    await page.getByRole("button", { name: "Open menu" }).click();
+    await expect(page.locator(".menu")).toHaveClass(/open/);
+    await page.goBack();
+    await expect(page).not.toHaveURL(/simulator/);
     await expect(page.locator(".menu")).not.toHaveClass(/open/);
   });
 

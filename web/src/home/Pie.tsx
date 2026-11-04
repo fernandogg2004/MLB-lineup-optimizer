@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useI18n } from "../i18n-context";
 import type { Key } from "../strings";
 import { pieSlices, type Slice } from "./derive";
-import { percentText, useNarrow } from "./format";
+import { COMPACT_PIE_QUERY, percentText, useMedia } from "./format";
 
 function polar(cx: number, cy: number, r: number, a: number): [number, number] {
   return [cx + r * Math.sin(a), cy - r * Math.cos(a)];
@@ -22,12 +22,12 @@ function wrap(text: string, max: number): string[] {
 }
 
 /** Interactive outcome pie: every slice carries its percentage and name without hovering. */
-export function Pie({ probs, caption }: { probs: number[]; caption: string }) {
+export function Pie({ probs, caption, against }: { probs: number[]; caption: string; against: string }) {
   const { t, lang } = useI18n();
   const [hot, setHot] = useState(-1);
-  const compact = useNarrow();
+  const compact = useMedia(COMPACT_PIE_QUERY);
   const slices = pieSlices(probs);
-  const text = (s: Slice) => `${s.belowOne ? "<1%" : percentText(s.percent, lang)} ${t(`slice.${s.key}` as Key)}`;
+  const text = (s: Slice) => `${s.belowOne ? `<${percentText(1, lang)}` : percentText(s.percent, lang)} ${t(`slice.${s.key}` as Key)}`;
 
   const W = compact ? 400 : 520;
   const H = compact ? 236 : 248;
@@ -84,6 +84,7 @@ export function Pie({ probs, caption }: { probs: number[]; caption: string }) {
             />
           );
         })}
+        <circle className="pie-edge" cx={cx} cy={cy} r={r} />
         {labels.map((l) => {
           const on = hot === l.i;
           const tx = l.right ? cx + r + reach : cx - r - reach;
@@ -91,11 +92,11 @@ export function Pie({ probs, caption }: { probs: number[]; caption: string }) {
           return (
             <g key={l.s.key} className={hot >= 0 && !on ? "pie-row dim" : "pie-row"} aria-hidden="true">
               <polyline className="pie-leader" points={`${l.ex},${l.ey} ${tx - (l.right ? 6 : -6)},${l.y} ${tx - (l.right ? 1 : -1)},${l.y}`} />
-              <text x={tx} y={l.y + 4 - (lines.length - 1) * 7} textAnchor={l.right ? "start" : "end"} className={on ? "pie-label on" : "pie-label"}>
+              <text x={tx} y={l.y + 4 - (lines.length - 1) * 7} textAnchor={l.right ? "start" : "end"} className={`pie-label ${compact ? "compact" : ""} ${on ? "on" : ""}`}>
                 {lines.map((ln, k) => {
                   const pct = k === 0 ? ln.slice(0, ln.indexOf(" ")) : "";
                   return (
-                    <tspan key={k} x={tx} dy={k ? 14 : 0}>
+                    <tspan key={k} x={tx} dy={k ? 15 : 0}>
                       {pct && <tspan className="pie-pct">{pct}</tspan>}
                       {pct ? ln.slice(pct.length) : ln}
                     </tspan>
@@ -107,12 +108,14 @@ export function Pie({ probs, caption }: { probs: number[]; caption: string }) {
         })}
       </svg>
       <table className="sr-only">
-        <caption>{caption}</caption>
+        <caption>
+          {caption}. {against}
+        </caption>
         <tbody>
           {slices.map((s) => (
             <tr key={s.key}>
               <th scope="row">{t(`slice.${s.key}` as Key)}</th>
-              <td>{s.belowOne ? "<1%" : percentText(s.percent, lang)}</td>
+              <td>{s.belowOne ? `<${percentText(1, lang)}` : percentText(s.percent, lang)}</td>
             </tr>
           ))}
         </tbody>

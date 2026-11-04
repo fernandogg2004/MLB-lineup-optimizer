@@ -6,6 +6,11 @@ import { ChartCard, Histogram, IntervalBar, PairedBars, PmfChart } from "../comp
 
 const OUTCOMES = ["K", "BB", "1B", "2B", "3B", "HR", "GB", "AIR"] as const;
 
+/** A re-estimate count cannot prove certainty, so it never reads as 100%. */
+function certainty(p: number, pct: (v: number) => string, t: (k: Key, v?: Record<string, string | number>) => string): string {
+  return p > 0.99 ? t("cap.more", { n: pct(0.99) }) : pct(p);
+}
+
 function sd(p: number[]): number {
   const m = p.reduce((a, v, i) => a + v * i, 0);
   return Math.sqrt(p.reduce((a, v, i) => a + v * (i - m) ** 2, 0));
@@ -105,7 +110,7 @@ function TeamPanel({ snap, team }: { snap: GameSnapshot; team: Team }) {
           label={t("kpi.uplift")}
           value={signed(uplift, 3)}
           sub={t("kpi.uplift_sub", { lo: signed(u.diff_q05, 3), hi: signed(u.diff_q95, 3) })}
-          extra={t("kpi.prob", { p: pct(u.p_opt_better) })}
+          extra={t("kpi.prob", { p: certainty(u.p_opt_better, pct, t) })}
         />
         <Stat
           label={t("kpi.rank")}
@@ -211,7 +216,7 @@ function TeamPanel({ snap, team }: { snap: GameSnapshot; team: Team }) {
           </div>
           <div className="mini">
             <dt className="text-muted">{t("unc.prob")}</dt>
-            <dd className="mini-val">{pct(u.p_opt_better)}</dd>
+            <dd className="mini-val">{certainty(u.p_opt_better, pct, t)}</dd>
           </div>
           <div className="mini">
             <dt className="text-muted">{t("unc.stable")}</dt>

@@ -41,9 +41,10 @@ figure does not show the hitter's real batting side.
 
 **The lock is explicit on wheel and keyboard, native on touch.** Browser snapping alone does not hold:
 in testing, one large wheel delta skipped three screens and a small one bounced back. One gesture moves
-one screen; event timestamps separate gestures, so a busy page cannot split one into several. Viewports
-under 560 px tall (landscape phones) use normal scrolling, because snapping there would make content
-unreachable.
+one screen; a pause of 240 ms between wheel events, read from their timestamps, ends a gesture, so a
+busy page cannot split one into several. Viewports under 600 px tall (landscape phones) use normal
+scrolling, because snapping there would make content unreachable. Rings sit four in a row on phones
+under 760 px tall, where a 2 x 2 grid does not fit, and hide their orbiting words below 600 px wide.
 
 **Motion runs on the compositor.** Only `transform` and `opacity` animate, so nothing repaints while
 scrolling. An early design swung the bat; that repainted the whole figure each frame and dropped a
@@ -52,6 +53,14 @@ throttled test to 8 fps, so the parallax uses independent layers instead.
 **Team colours from a public listing.** teamcolorcodes.com, not the clubs' brand guides, which were not
 available. Where a club's two listed colours are too close to read on a small figure, the trim is white
 or silver. Tampa Bay's shirt is its light blue, as approved in the mockup review.
+
+**Wording says who is speaking.** The independent review (`docs/audits/agent-C-ux-redesign.md`) found the
+approved summary read as observed fact, against this project's invariant. The owner's brief said "something
+like", so the wording changed within it: the heading names the model, verbs became conditional, and the real
+score sits on its own line, apart from the note about estimates.
+
+**One bundled font.** Inter (SIL Open Font License) ships with the site, because system fonts have different
+widths and made some screens overflow on Linux. Layout tests now match what visitors see.
 
 ## Consequences
 

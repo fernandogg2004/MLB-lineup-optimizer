@@ -38,7 +38,29 @@ function Screens(props: {
     menuRef.current = menuOpen;
   }, [menuOpen]);
 
-  const screenHeight = () => scroller.current?.querySelector<HTMLElement>(".screen")?.offsetHeight ?? 1;
+  const screenHeight = () => scroller.current?.querySelector<HTMLElement>(".screen")?.getBoundingClientRect().height ?? 1;
+  // The screen the visitor is on, kept through rotation and resizing.
+  const current = useRef(target.screen);
+  const place = useCallback(
+    (i: number) => {
+      const el = scroller.current;
+      if (!el) return;
+      if (flow) el.querySelector(`.screen[data-screen="${i}"]`)?.scrollIntoView();
+      else el.scrollTop = i * screenHeight();
+    },
+    [flow],
+  );
+
+  // Deep links and the back button: run first, so nothing reports the wrong screen meanwhile.
+  useLayoutEffect(() => {
+    current.current = target.screen;
+    place(target.screen);
+  }, [target]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Rotating into or out of normal scrolling keeps the same batter.
+  useLayoutEffect(() => {
+    place(current.current);
+  }, [place]);
 
   // Visuals follow the scroll position: depth, fade, and which screen is locked.
   useLayoutEffect(() => {
@@ -53,7 +75,22 @@ function Screens(props: {
     if (flow) {
       clear();
       setStadiumDepth(0);
-      return;
+      let frame = 0;
+      const onFlowScroll = () => {
+        if (frame) return;
+        frame = requestAnimationFrame(() => {
+          frame = 0;
+          const screens = [...el.querySelectorAll<HTMLElement>(".screen")];
+          const seen = screens.filter((s) => s.offsetTop <= el.scrollTop + el.clientHeight / 2).length - 1;
+          current.current = Math.max(0, seen);
+          onScreen(current.current);
+        });
+      };
+      el.addEventListener("scroll", onFlowScroll, { passive: true });
+      return () => {
+        el.removeEventListener("scroll", onFlowScroll);
+        cancelAnimationFrame(frame);
+      };
     }
     let frame = 0;
     const update = () => {
@@ -61,15 +98,18 @@ function Screens(props: {
       const h = screenHeight();
       const y = el.scrollTop / h;
       const nearest = Math.max(0, Math.min(SUMMARY_SCREEN, Math.round(y)));
+      const isLocked = Math.abs(y - nearest) < 0.02;
+      if (isLocked) current.current = nearest;
       setProgress(nearest);
-      setLocked(Math.abs(y - nearest) < 0.02 ? nearest : null);
+      setLocked(isLocked ? nearest : null);
       setNearSummary(y > SUMMARY_SCREEN - 1 + 0.02);
       const still = prefersReducedMotion();
       if (!still) setStadiumDepth(y);
       el.querySelectorAll<HTMLElement>(".screen").forEach((s) => {
         const p = Number(s.dataset.screen) - y; // 0 at the lock, +1 below, -1 above
         // Screens out of view leave the tab order and stop painting.
-        s.style.visibility = Math.abs(p) >= 0.999 ? "hidden" : "visible";
+        const hidden = isLocked ? Number(s.dataset.screen) !== nearest : Math.abs(p) >= 0.999;
+        s.style.visibility = hidden ? "hidden" : "visible";
         if (still) return;
         s.querySelectorAll<HTMLElement>(".layer").forEach((l) => {
           const depth = Number(l.dataset.depth ?? 0.2);
@@ -82,15 +122,19 @@ function Screens(props: {
     const onScroll = () => {
       if (!frame) frame = requestAnimationFrame(update);
     };
+    const onResize = () => {
+      if (!anim.current.running) el.scrollTop = current.current * screenHeight();
+      onScroll();
+    };
     update();
     el.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
+    window.addEventListener("resize", onResize);
     return () => {
       el.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
+      window.removeEventListener("resize", onResize);
       cancelAnimationFrame(frame);
     };
-  }, [flow]);
+  }, [flow, onScreen]);
 
   // The lock: one gesture moves one screen. Browser snapping alone does not hold on a wheel (a large
   // delta skips screens and a small one bounces back), so wheel and keyboard are moved here while
@@ -105,13 +149,12 @@ function Screens(props: {
         el.querySelector(`.screen[data-screen="${i}"]`)?.scrollIntoView();
         return;
       }
-      const to = i * screenHeight();
-      const from = el.scrollTop;
+      const from = el.scrollTop / screenHeight();
       cancelAnimationFrame(a.raf);
-      if (prefersReducedMotion() || from === to) {
+      if (prefersReducedMotion() || from === i) {
         a.running = false;
         el.style.removeProperty("scroll-snap-type");
-        el.scrollTop = to;
+        el.scrollTop = i * screenHeight();
         return;
       }
       a.running = true;
@@ -120,7 +163,8 @@ function Screens(props: {
       const step = (now: number) => {
         const k = Math.min(1, (now - t0) / MOVE_MS);
         const e = k < 0.5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2;
-        el.scrollTop = from + (to - from) * e;
+        // Positions are in screens, so a resize during the move still lands on the right one.
+        el.scrollTop = (from + (i - from) * e) * screenHeight();
         if (k < 1) a.raf = requestAnimationFrame(step);
         else {
           el.style.removeProperty("scroll-snap-type");
@@ -179,16 +223,6 @@ function Screens(props: {
     };
   }, [flow, jump]);
 
-  // Deep links and the back button.
-  useLayoutEffect(() => {
-    const el = scroller.current;
-    if (!el) return;
-    const h = screenHeight();
-    if (Math.round(el.scrollTop / h) === target.screen) return;
-    if (flow) el.querySelector(`.screen[data-screen="${target.screen}"]`)?.scrollIntoView();
-    else el.scrollTop = target.screen * h;
-  }, [target, flow]);
-
   // Keep the address shareable without filling the back history.
   useEffect(() => {
     if (!flow && locked !== null) onScreen(locked);
@@ -202,7 +236,7 @@ function Screens(props: {
 
   return (
     <>
-      <div className={`scroller ${flow ? "flow" : ""}`} ref={scroller} tabIndex={0} role="region" aria-label={t("home.title", { team: team.name })}>
+      <div className={`scroller ${flow ? "flow" : ""}`} ref={scroller} tabIndex={flow ? 0 : undefined} role="region" aria-label={t("home.title", { team: team.name })}>
         {team.optimal.order.map((hitter, slot) => (
           <BatterScreen
             key={slot}
@@ -221,7 +255,7 @@ function Screens(props: {
       {!flow && (
         <nav className={`rail ${railLeft ? "left" : ""}`} aria-label={t("home.rail")}>
           {hitters.map((h, s) => (
-            <button key={s} aria-current={progress === s ? "step" : undefined} aria-label={h.name} title={h.name} onClick={() => jump(s)}>
+            <button key={s} aria-current={progress === s ? "step" : undefined} aria-label={`${ordinal(s + 1, lang)}, ${h.name}`} title={h.name} onClick={() => jump(s)}>
               <span />
             </button>
           ))}

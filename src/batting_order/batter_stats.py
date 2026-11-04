@@ -17,6 +17,8 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Protocol
 
+from batting_order.data.statsapi import starting_position
+
 MIN_PA = 200
 """A batter joins the percentile pool at this many plate appearances."""
 MIN_POOL = 100
@@ -31,6 +33,8 @@ class HittingApi(Protocol):
     def get(
         self, path: str, params: dict[str, str] | None = None, refresh: bool = False
     ) -> dict[str, Any]: ...
+
+    def boxscore(self, game_pk: int, refresh: bool = False) -> dict[str, Any]: ...
 
 
 def hitting_params(season: int, end: date) -> dict[str, str]:
@@ -139,8 +143,18 @@ def batting_line(
     return {"pa": pa, "small_sample": pa < MIN_PA, "rates": rates, "pct": pct}
 
 
+def _starting_positions(box: dict[str, Any], side: str) -> dict[int, str]:
+    """Position at first pitch per player. Published snapshots may hold the position at the end of
+    the game, and they are not rewritten, so Home takes this from the box score."""
+    players = box["teams"][side]["players"].values()
+    return {int(p["person"]["id"]): starting_position(p) for p in players}
+
+
 def _team(
-    team: dict[str, Any], rows: dict[int, dict[str, Any]], pool: list[dict[str, Any]]
+    team: dict[str, Any],
+    rows: dict[int, dict[str, Any]],
+    pool: list[dict[str, Any]],
+    positions: dict[int, str],
 ) -> dict[str, Any]:
     u = team["uncertainty"]
     opt = team["optimal"]
@@ -152,7 +166,7 @@ def _team(
             {
                 "id": h["id"],
                 "name": h["name"],
-                "pos": h["pos"],
+                "pos": positions.get(int(h["id"]), h["pos"]),
                 "slot": h["slot"],
                 "probs_starter": h["probs_starter"],
                 "probs_bullpen": h["probs_bullpen"],
@@ -177,6 +191,7 @@ def build_home(snapshot: dict[str, Any], api: HittingApi) -> dict[str, Any]:
     """Home-page data of one game, from its snapshot and the official hitting lines."""
     game = snapshot["game"]
     rows, pool, meta = hitting_window(api, date.fromisoformat(game["date"]))
+    box = api.boxscore(int(game["game_pk"]))
     return {
         "schema_version": HOME_SCHEMA_VERSION,
         "game": {
@@ -195,7 +210,10 @@ def build_home(snapshot: dict[str, Any], api: HittingApi) -> dict[str, Any]:
             )
         },
         "hitting": meta,
-        "teams": {side: _team(snapshot["teams"][side], rows, pool) for side in ("away", "home")},
+        "teams": {
+            side: _team(snapshot["teams"][side], rows, pool, _starting_positions(box, side))
+            for side in ("away", "home")
+        },
     }
 
 
