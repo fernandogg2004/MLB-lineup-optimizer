@@ -57,15 +57,15 @@ test.describe("front page", () => {
     const first = page.locator('.screen[data-screen="0"]');
     await expect(first.locator(".kicker, .intro, .ors__orbit")).toHaveCount(0);
     await expect(first.locator(".rings .caption")).toHaveCount(0);
-    await expect(first.locator(".outcome-title")).toHaveText("Expected outcome against:");
+    await expect(first.locator(".outcome-title")).toHaveCount(0);
     await expect(first.getByRole("radio", { name: "Starting pitcher: Drew Rasmussen" })).toBeChecked();
   });
 
   test("the options explain themselves, and stay on screen", async ({ page }) => {
     for (const [lang, w, h, hints] of [
-      ["en", 1440, 900, ["Drew Rasmussen, who begins the game for the other team.", "The relief pitchers who take over after him."]],
-      ["en", 390, 664, ["Drew Rasmussen, who begins the game for the other team.", "The relief pitchers who take over after him."]],
-      ["es", 390, 664, ["Drew Rasmussen, quien empieza el partido por el otro equipo.", "Los relevistas que entran después de él."]],
+      ["en", 1440, 900, ["Expected outcome against the starting pitcher", "Expected outcome against the relief pitchers"]],
+      ["en", 390, 664, ["Expected outcome against the starting pitcher", "Expected outcome against the relief pitchers"]],
+      ["es", 390, 664, ["Resultado esperado contra el abridor", "Resultado esperado contra los relevistas"]],
     ] as const) {
       await page.setViewportSize({ width: w, height: h });
       await page.goto(`/?lang=${lang}`);
@@ -107,16 +107,13 @@ test.describe("front page", () => {
     expect(nameOnTop).toBe(true);
   });
 
-  test("the title sits above the card, with the selector centred in it", async ({ page, isMobile }) => {
+  test("the selector is centred in the card", async ({ page }) => {
     await page.goto("/?lang=en");
     await ready(page);
     const first = page.locator('.screen[data-screen="0"]');
-    const title = (await first.locator(".outcome-title").boundingBox())!;
     const card = (await first.locator(".outcome-card").boundingBox())!;
     const selector = (await first.locator(".vs").boundingBox())!;
-    expect(title.y + title.height).toBeLessThanOrEqual(card.y + 1);
     expect(Math.abs(selector.x + selector.width / 2 - (card.x + card.width / 2))).toBeLessThanOrEqual(2);
-    expect(isMobile || title.x < card.x + 12).toBe(true);
   });
 
   test("the neck is drawn beneath the shirt and arms", async ({ page }) => {
@@ -221,28 +218,43 @@ test.describe("the lock", () => {
     expect(await position(page)).toBe(2);
   });
 
-  test("a new gesture counts straight away, even during the last one's coast or move", async ({ page, isMobile }) => {
+  test("a long scroll moves one screen, however its speed varies", async ({ page, isMobile }) => {
     test.skip(isMobile, "wheel");
     await page.goto("/?lang=en");
     await ready(page);
     await page.mouse.move(700, 450);
-    // A flick coasting down, then a second flick before the coast has ended.
+    // Three seconds of continuous scrolling that keeps speeding up and slowing down.
     const events: Promise<void>[] = [];
-    const flick = async (n: number) => {
-      for (let i = 0; i < n; i++) {
-        events.push(page.mouse.wheel(0, Math.max(1, Math.round(150 * 0.93 ** i))));
-        await new Promise((r) => setTimeout(r, 25));
-      }
-    };
-    await flick(24);
-    await flick(24);
+    for (let i = 0; i < 120; i++) {
+      events.push(page.mouse.wheel(0, Math.round(70 + 60 * Math.sin(i / 4) + (i % 15 === 0 ? 150 : 0))));
+      await new Promise((r) => setTimeout(r, 25));
+    }
     await Promise.all(events);
+    await settled(page);
+    expect(await position(page)).toBe(1);
+  });
+
+  test("a coasting flick is one scroll, and input during a move is not saved up", async ({ page, isMobile }) => {
+    test.skip(isMobile, "wheel");
+    await page.goto("/?lang=en");
+    await ready(page);
+    await page.mouse.move(700, 450);
+    await page.mouse.wheel(0, 100);
+    await page.waitForTimeout(350); // a separate tick, in the middle of the move
+    await page.mouse.wheel(0, 100);
+    await settled(page);
+    expect(await position(page)).toBe(1);
+  });
+
+  test("the next scroll works while the rings are still revealing", async ({ page, isMobile }) => {
+    test.skip(isMobile, "wheel");
+    await page.goto("/?lang=en");
+    await ready(page);
+    await page.mouse.move(700, 450);
+    await page.mouse.wheel(0, 100);
+    await page.waitForTimeout(1000); // landed; the rings take over a second to fill
+    await page.mouse.wheel(0, 100);
     await expect.poll(() => position(page), { timeout: 6000 }).toBe(2);
-    // Separate gestures while the rings are still revealing also register.
-    await page.mouse.wheel(0, 100);
-    await page.waitForTimeout(1000); // landed, rings still turning up
-    await page.mouse.wheel(0, 100);
-    await expect.poll(() => position(page), { timeout: 6000 }).toBe(4);
   });
 
   test("the end of the page holds", async ({ page, isMobile }) => {
@@ -297,6 +309,22 @@ test.describe("the lock", () => {
     expect(await position(page)).toBe(1);
     await flick();
     expect(await position(page)).toBe(2);
+  });
+
+  test("the page never rests between two screens", async ({ page }) => {
+    await page.goto("/?lang=en");
+    await ready(page);
+    for (const [from, expected] of [[0.7, 1], [1.3, 1], [2.6, 3]] as const) {
+      await page.evaluate((y) => {
+        const s = document.querySelector<HTMLElement>(".scroller");
+        const h = s?.querySelector<HTMLElement>(".screen")?.offsetHeight ?? 1;
+        if (!s) return;
+        s.style.scrollSnapType = "none"; // as if the browser's snapping had stopped short
+        s.scrollTop = y * h;
+      }, from);
+      await expect.poll(() => position(page), { timeout: 5000 }).toBe(expected);
+      await expect(page.locator(`.screen[data-screen="${expected}"] .ors`)).toHaveAttribute("data-on", "true");
+    }
   });
 
   test("rings reveal only on the locked screen", async ({ page }) => {

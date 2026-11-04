@@ -43,10 +43,10 @@ figure does not show the hitter's real batting side.
 
 **The lock is explicit on wheel and keyboard, native on touch.** Browser snapping alone does not hold:
 in testing, one large wheel delta skipped three screens and a small one bounced back. One gesture moves
-one screen; a pause of 240 ms between wheel events, read from their timestamps, ends a gesture, so a
-busy page cannot split one into several. A trackpad keeps sending events while it coasts after a flick, so
-wheel input that picks up again also counts as a new gesture, and a gesture made during a move runs when it
-lands. Viewports under 600 px tall (landscape phones) use normal
+one screen. A scroll is one continuous stretch of wheel input, ended by a pause of 200 ms read from the
+events' timestamps, so a busy page cannot split it. Trying to detect a new scroll from changes in speed made
+long scrolls skip a batter, so it was removed: input during a move is ignored, and only a pause starts the next
+scroll. On a trackpad, touching it stops the coasting, which provides that pause. Viewports under 600 px tall (landscape phones) use normal
 scrolling, because snapping there would make content unreachable. Rings sit four in a row on phones
 under 800 px tall, where a 2 x 2 grid does not fit.
 
@@ -70,8 +70,8 @@ widths and made some screens overflow on Linux. Layout tests now match what visi
 above the name, no fielding position, no orbiting words and no caption above the rings, whose explanation now
 appears on hover, focus or tap. This reverses the review's fixes for C-01 and part of C-02 and C-10: the page
 no longer says in words what it is, apart from the site name, and the rings are not labelled as past results
-on screen. Ring explanations state only what the statistic measures, and the selector reads as a sentence,
-"Expected outcome against: Starting pitcher / Bullpen", with each option explained on hover. The forecast card follows the owner's reference image. The rail stays on the
+on screen. Ring explanations state only what the statistic measures, and the selector is explained only by its
+hover label, "Expected outcome against the starting pitcher" or "the relief pitchers". The forecast card follows the owner's reference image. The rail stays on the
 right, and the menu is white in Day.
 
 ## Consequences

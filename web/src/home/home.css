@@ -32,9 +32,8 @@
 .data { display: flex; flex-direction: column; justify-content: center; gap: 6px; min-height: 0; min-width: 0; }
 .caption { text-align: center; font-size: 0.82rem; color: var(--ink-3); letter-spacing: 0.02em; }
 /* The forecast card: almost invisible, with its title and selector along the top. */
-/* A quiet title above an almost invisible card, which holds the selector and the chart. */
+/* An almost invisible card, which holds the selector and the chart. */
 .outcome { position: relative; display: flex; flex-direction: column; gap: 5px; min-height: 0; flex: 1 1 0; max-height: 425px; margin-top: clamp(4px, 1.4vh, 14px); }
-.outcome-title { flex: none; padding-left: 4px; font-size: 0.86rem; font-weight: 500; color: var(--soft); }
 .outcome-card { display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; padding: 10px clamp(10px, 1.2vw, 18px) 8px; border-radius: 18px; background: var(--card); border: 1px solid var(--card-line); }
 .outcome-head { position: relative; display: flex; justify-content: center; }
 .pie-wrap { flex: 1 1 0; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
@@ -105,7 +104,6 @@
   .caption { font-size: 0.72rem; }
   .data { justify-content: flex-start; gap: 3px; }
   .outcome { margin-top: 4px; gap: 3px; max-height: none; }
-  .outcome-title { font-size: 0.78rem; }
   .outcome-card { padding: 7px 8px 4px; }
   .vs { font-size: 0.78rem; }
   .vs label span { padding: 4px 12px; }

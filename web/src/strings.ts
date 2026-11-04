@@ -1,8 +1,8 @@
 export type Lang = "en" | "es";
 
 const en = {
-  "home.bullpen_hint": "The relief pitchers who take over after him.",
-  "home.starter_hint": "{name}, who begins the game for the other team.",
+  "home.bullpen_hint": "Expected outcome against the relief pitchers",
+  "home.starter_hint": "Expected outcome against the starting pitcher",
   "stat.ops_def": "On-base plus slugging, a single overall measure.",
   "stat.slg_def": "Bases per at-bat; longer hits count for more.",
   "stat.obp_def": "How often he reaches base.",
@@ -296,8 +296,8 @@ const en = {
 type Dict = Record<keyof typeof en, string>;
 
 const es: Dict = {
-  "home.bullpen_hint": "Los relevistas que entran después de él.",
-  "home.starter_hint": "{name}, quien empieza el partido por el otro equipo.",
+  "home.bullpen_hint": "Resultado esperado contra los relevistas",
+  "home.starter_hint": "Resultado esperado contra el abridor",
   "stat.ops_def": "Embasarse más slugging, una medida global.",
   "stat.slg_def": "Bases por turno oficial; los batazos largos cuentan más.",
   "stat.obp_def": "Con qué frecuencia llega a base.",

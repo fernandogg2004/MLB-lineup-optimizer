@@ -12,9 +12,10 @@ import { SummaryScreen } from "./SummaryScreen";
 import "./home.css";
 
 const MOVE_MS = 850;
-const GESTURE_GAP_MS = 240;
-/** How long after landing a steady, undiminished stream counts as asking for the next screen. */
-const SETTLE_MS = 250;
+/** Wheel input with no pause this long is one scroll, however long it lasts or however it varies. */
+const GESTURE_GAP_MS = 200;
+/** After this long with no scrolling and no finger down, the page must be resting on a screen. */
+const SETTLE_AFTER_MS = 180;
 
 function Screens(props: {
   data: HomeData;
@@ -35,7 +36,7 @@ function Screens(props: {
   const [progress, setProgress] = useState(target.screen);
   const [nearSummary, setNearSummary] = useState(false);
   const [vsBullpen, setVsBullpen] = useState(false);
-  const anim = useRef({ running: false, lastWheel: -Infinity, armed: true, raf: 0, pending: 0, landedAt: -Infinity, recent: [] as { size: number; at: number }[], steady: 0 });
+  const anim = useRef({ running: false, lastWheel: -Infinity, armed: true, raf: 0 });
   const menuRef = useRef(menuOpen);
   useEffect(() => {
     menuRef.current = menuOpen;
@@ -173,11 +174,6 @@ function Screens(props: {
         else {
           el.style.removeProperty("scroll-snap-type");
           a.running = false;
-          a.landedAt = now;
-          // A gesture made during the move is honoured as soon as it lands.
-          const next = a.pending;
-          a.pending = 0;
-          if (next) start(i + next);
         }
       };
       a.raf = requestAnimationFrame(step);
@@ -196,41 +192,15 @@ function Screens(props: {
     const onWheel = (e: WheelEvent) => {
       if (e.ctrlKey) return; // browser zoom
       e.preventDefault();
-      // One gesture moves one screen. A trackpad keeps sending events while it coasts after a flick,
-      // so a new gesture is recognised by a pause, or by the stream picking up again. The event's own
-      // timestamp is used because a busy page delivers events late, which would look like pauses.
-      const size = Math.abs(e.deltaY);
-      const paused = e.timeStamp - a.lastWheel > GESTURE_GAP_MS;
+      // One scroll moves one screen. A scroll is one continuous stretch of wheel input, including a
+      // trackpad's coasting: only a pause starts the next one, however long it lasts or however its
+      // speed varies. Input during a move is ignored but still counts as the same scroll. The event's
+      // own timestamp is used because a busy page delivers events late, which would look like pauses.
+      if (e.timeStamp - a.lastWheel > GESTURE_GAP_MS) a.armed = true;
       a.lastWheel = e.timeStamp;
-      const sample = { size, at: e.timeStamp };
-      a.recent = paused ? [sample] : [...a.recent, sample].slice(-8);
-      if (paused) {
-        a.armed = true;
-        a.steady = 0;
-      } else if (!a.armed && a.recent.length === 8) {
-        // Size and speed must agree. A browser merges events during a slow frame, which makes single
-        // events bigger without speeding up; uneven delivery changes speed without bigger events.
-        const window = (from: number, to: number) => {
-          const part = a.recent.slice(from, to + 1);
-          const total = part.reduce((sum, r) => sum + r.size, 0);
-          return { size: total / part.length, speed: total / Math.max(1, part[part.length - 1].at - part[0].at) };
-        };
-        const older = window(0, 3);
-        const newer = window(4, 7);
-        const pickedUp = newer.size > older.size * 1.3 && newer.speed > older.speed * 1.3 && newer.size >= 8;
-        // Coasting fades away; a steady stream long after landing is a wheel still being turned.
-        const settled = !a.running && e.timeStamp - a.landedAt > SETTLE_MS;
-        const holding = newer.size >= older.size && newer.speed >= older.speed && newer.size >= 30;
-        a.steady = settled && holding ? a.steady + 1 : 0;
-        if (pickedUp || a.steady >= 4) a.armed = true;
-      }
-      if (!a.armed || size < 4) return;
+      if (a.running || !a.armed || Math.abs(e.deltaY) < 4) return;
       a.armed = false;
-      a.recent = [];
-      a.steady = 0;
-      const dir = Math.sign(e.deltaY);
-      if (a.running) a.pending = dir;
-      else jump(current() + dir);
+      jump(current() + Math.sign(e.deltaY));
     };
     const onKey = (e: KeyboardEvent) => {
       if (menuRef.current || e.ctrlKey || e.altKey || e.metaKey) return;
@@ -239,29 +209,50 @@ function Screens(props: {
       if (e.key === " " && target.closest?.("a, button")) return;
       if (e.key === "Home" || e.key === "End") {
         e.preventDefault();
-        a.pending = 0;
         jump(e.key === "Home" ? 0 : SUMMARY_SCREEN);
         return;
       }
       const dir = ({ ArrowDown: 1, PageDown: 1, " ": e.shiftKey ? -1 : 1, ArrowUp: -1, PageUp: -1 } as Record<string, number>)[e.key];
       if (!dir) return;
       e.preventDefault();
-      if (a.running) a.pending = dir;
-      else jump(current() + dir);
+      if (!a.running) jump(current() + dir);
     };
     // A finger takes over from any move in progress.
+    let touching = false;
     const onTouch = () => {
+      touching = true;
       cancelAnimationFrame(a.raf);
       a.running = false;
-      a.pending = 0;
       el.style.removeProperty("scroll-snap-type");
+    };
+    // Nothing may ever rest between two screens, even if the browser's own snapping stops short.
+    let settleTimer = 0;
+    const settleSoon = () => {
+      window.clearTimeout(settleTimer);
+      settleTimer = window.setTimeout(() => {
+        if (touching || a.running) return;
+        const y = el.scrollTop / screenHeight();
+        const nearest = Math.round(y);
+        if (Math.abs(y - nearest) > 0.002) jump(nearest);
+      }, SETTLE_AFTER_MS);
+    };
+    const onTouchEnd = () => {
+      touching = false;
+      settleSoon();
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     el.addEventListener("touchstart", onTouch, { passive: true });
+    el.addEventListener("touchend", onTouchEnd, { passive: true });
+    el.addEventListener("touchcancel", onTouchEnd, { passive: true });
+    el.addEventListener("scroll", settleSoon, { passive: true });
     window.addEventListener("keydown", onKey);
     return () => {
       el.removeEventListener("wheel", onWheel);
       el.removeEventListener("touchstart", onTouch);
+      el.removeEventListener("touchend", onTouchEnd);
+      el.removeEventListener("touchcancel", onTouchEnd);
+      el.removeEventListener("scroll", settleSoon);
+      window.clearTimeout(settleTimer);
       window.removeEventListener("keydown", onKey);
     };
   }, [flow, jump]);

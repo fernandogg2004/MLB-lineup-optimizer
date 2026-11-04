@@ -100,7 +100,6 @@ export function BatterScreen(props: {
           <OrbitRingStats rings={rings} active={active} label={seasonLabel} orbiting={false} theme={theme === "day" ? "paper" : "night"} />
         </div>
         <div className="layer outcome" data-depth="0.08">
-          <p className="outcome-title">{t("home.each")}</p>
           <div className="outcome-card">
           <div className="outcome-head">
             <fieldset className="vs">
@@ -108,7 +107,7 @@ export function BatterScreen(props: {
               <label>
                 <input type="radio" name={`vs-${slot}`} aria-label={starterNamed} checked={!vsBullpen} onChange={() => setVsBullpen(false)} />
                 <span>{t("home.starter")}</span>
-                <em className="vs-hint">{t("home.starter_hint", { name: team.opponent_starter.name })}</em>
+                <em className="vs-hint">{t("home.starter_hint")}</em>
               </label>
               <label>
                 <input type="radio" name={`vs-${slot}`} checked={vsBullpen} onChange={() => setVsBullpen(true)} />
