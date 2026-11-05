@@ -49,13 +49,15 @@ The browser loads MLB's own version for dark backgrounds from `www.mlbstatic.com
 security policy for images only and with no referrer sent. If one fails, a badge in the team's colours
 shows. The owner approved showing them (2026-11-05): this is a personal, non-commercial project.
 
-**Summary as cards (owner's design).** A title, two key numbers (expected runs with the gap to the worst
-order; how often the optimized order beats the real one) and two charts (expected runs of both orders; the
-chance of 0 to 4 and 5+ runs as one segmented bar in the pie's colours, whole percents totalling 100).
-The title's adjective follows runs over 162 games: under 1 tiny, under 3 small, under 6 modest, under 10
-solid, else big. The beat count is a whole number out of 100 and shows "99+" rather than 100. It counts
-re-estimates of player ability, not simulated games, so the card says "simulations of player ability"; a
-reader could otherwise take it as games won, which would be far from the truth.
+**Summary as cards (owner's design).** A title, two key numbers (expected runs, noted as the best of all
+possible orders; how often the optimized order beats the real one, with the batter moved furthest beside it
+on wide screens) and two charts (expected runs of both orders with the gain; the chance of 0 to 4 and 5+
+runs as a bar chart in the pie's colours, whole percents totalling 100). The title's adjective follows runs
+over 162 games: under 1 tiny, under 3 small, under 6 modest, under 10 solid, else big. The beat count is a
+whole number out of 100. The owner chose to show 100/100 when it rounds there, as an exception to the
+site's rule against showing 100 for a model estimate, because the screen says its numbers are model
+estimates. It counts re-estimates of player ability, not simulated games, so the card says "simulations of
+player ability"; a reader could otherwise take it as games won, which would be far from the truth.
 
 **The batter always faces the statistics.** The owner's choice. Direction follows the layout, so the
 figure does not show the hitter's real batting side.
