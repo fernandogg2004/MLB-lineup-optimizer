@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { stubLogos } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
+  await stubLogos(page);
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
@@ -16,11 +18,12 @@ test("reference game loads with both teams and the actual score", async ({ page 
   await expect(page.getByText("Reference game", { exact: true })).toBeVisible();
   await expect(page.getByText("Historical fact", { exact: true })).toBeVisible();
   const teamPicker = page.getByRole("combobox", { name: "Team", exact: true });
+  await teamPicker.click();
   for (const team of ["Milwaukee Brewers", "Tampa Bay Rays"]) {
-    await expect(teamPicker.getByRole("option", { name: team, exact: true })).toBeAttached();
+    await expect(page.getByRole("option", { name: team, exact: true })).toBeVisible();
   }
-  await teamPicker.selectOption({ label: "Tampa Bay Rays" });
-  await expect(teamPicker).toHaveValue("TB");
+  await page.getByRole("option", { name: "Tampa Bay Rays", exact: true }).click();
+  await expect(teamPicker).toHaveAttribute("data-value", "TB");
   await expect(page.getByText("Ben Williamson").first()).toBeVisible();
   await expect(page.getByText("Ryan Vilade").first()).toBeVisible();
 });
@@ -71,7 +74,7 @@ test("addresses from the previous site still work", async ({ page }) => {
   await expect(page).toHaveURL(/#\/statistics\/method$/);
   await page.goto("/?lang=en#/game/849802");
   await expect(page.getByText("Historical fact", { exact: true })).toBeVisible();
-  await expect(page.getByRole("combobox", { name: "Game", exact: true })).toHaveValue("849802");
+  await expect(page.getByRole("combobox", { name: "Game", exact: true })).toHaveAttribute("data-value", "849802");
 });
 
 test("statistics page keeps the paper, code and season definitions", async ({ page }) => {

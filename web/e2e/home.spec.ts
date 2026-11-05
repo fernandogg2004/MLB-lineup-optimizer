@@ -1,7 +1,9 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { pick, stubLogos } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
+  await stubLogos(page);
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
@@ -514,7 +516,7 @@ test.describe("navigation", () => {
     await ready(page);
     const shirt = () => page.locator('.screen[data-screen="0"] .bf').evaluate((e) => (e as SVGElement).style.getPropertyValue("--bf-team"));
     expect(await shirt()).toBe("#12284b");
-    await page.getByRole("combobox", { name: "Team", exact: true }).selectOption("TB");
+    await pick(page, "Team", "TB");
     await expect(page.locator('.screen[data-screen="0"] .who')).toHaveText("1st. Liam Hicks");
     expect(await position(page)).toBe(0);
     expect(await shirt()).toBe("#8fbce6");
@@ -523,11 +525,11 @@ test.describe("navigation", () => {
   test("changing match goes back to batter 1 and keeps the team when it played", async ({ page }) => {
     await page.goto("/?lang=en#/g/849799/TB/4");
     await ready(page);
-    await page.getByRole("combobox", { name: "Game", exact: true }).selectOption("849802");
+    await pick(page, "Game", "849802");
     await expect(page).toHaveURL(/#\/g\/849802\/TB\/1$/);
     await expect(page.locator('.screen[data-screen="0"]')).toBeVisible();
     expect(await position(page)).toBe(0);
-    await expect(page.getByRole("combobox", { name: "Team", exact: true })).toHaveValue("TB");
+    await expect(page.getByRole("combobox", { name: "Team", exact: true })).toHaveAttribute("data-value", "TB");
   });
 
   test("deep links open the right screen, and the back button works", async ({ page }) => {
@@ -536,10 +538,10 @@ test.describe("navigation", () => {
     expect(await position(page)).toBe(2);
     await toScreen(page, 4);
     await expect(page).toHaveURL(/#\/g\/849799\/TB\/5$/); // shareable, without filling the history
-    await page.getByRole("combobox", { name: "Team", exact: true }).selectOption("MIL");
+    await pick(page, "Team", "MIL");
     await expect(page).toHaveURL(/#\/g\/849799\/MIL\/1$/);
     await page.goBack();
-    await expect(page.getByRole("combobox", { name: "Team", exact: true })).toHaveValue("TB");
+    await expect(page.getByRole("combobox", { name: "Team", exact: true })).toHaveAttribute("data-value", "TB");
     await expect(page.locator('.screen[data-screen="4"]')).toBeVisible();
     expect(await position(page)).toBe(4);
   });

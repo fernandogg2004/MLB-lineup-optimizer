@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Baseball, TeamLogo } from "./components/BarIcons";
 import { Menu } from "./components/Menu";
 import { MenuIcon } from "./components/MenuIcon";
+import { Picker } from "./components/Picker";
 import { fetchJson } from "./data";
 import type { GameIndex, IndexEntry } from "./data";
-import { useNarrow } from "./home/format";
 import { HomeView } from "./home/HomeView";
 import { I18nProvider } from "./i18n";
 import { useI18n } from "./i18n-context";
@@ -12,6 +13,8 @@ import type { Route } from "./route";
 import { applyTheme, clearThemeOverride, initialTheme } from "./theme";
 import type { Theme } from "./theme";
 import { StatisticsView } from "./views/StatisticsView";
+
+const WORLD_SERIES = "W";
 
 function Stadium() {
   return (
@@ -38,7 +41,6 @@ function matchLabel(g: IndexEntry, short: boolean, t: ReturnType<typeof useI18n>
 
 function Shell() {
   const { t, series, date } = useI18n();
-  const narrow = useNarrow();
   const [route, setRoute] = useState<Route>(() => parseHash(window.location.hash));
   const [index, setIndex] = useState<GameIndex | null>(null);
   const [indexError, setIndexError] = useState(false);
@@ -153,23 +155,37 @@ function Shell() {
             <MenuIcon />
           </button>
           <span className="brand">{t("app.name")}</span>
+          <span className="bar-mark" aria-hidden="true">
+            <i />
+            <i />
+          </span>
           {showPickers && entry && (
             <div className="pickers">
-              <select aria-label={t("game.picker")} value={entry.game_pk} onChange={(e) => {
-                const pk = Number(e.target.value);
-                const g = index?.games.find((x) => x.game_pk === pk);
-                select(pk, g && (team === g.home_abbr || team === g.away_abbr) ? team : (g?.away_abbr ?? team));
-              }}>
-                {index?.games.map((g) => (
-                  <option key={g.game_pk} value={g.game_pk}>
-                    {matchLabel(g, narrow, t, series, date)}
-                  </option>
-                ))}
-              </select>
-              <select aria-label={t("team.select")} value={team} onChange={(e) => select(entry.game_pk, e.target.value)}>
-                <option value={entry.away_abbr}>{entry.away}</option>
-                <option value={entry.home_abbr}>{entry.home}</option>
-              </select>
+              <Picker
+                label={t("game.picker")}
+                className="picker-game"
+                value={entry.game_pk}
+                options={(index?.games ?? []).map((g) => ({
+                  value: g.game_pk,
+                  label: matchLabel(g, false, t, series, date),
+                  short: matchLabel(g, true, t, series, date),
+                  icon: <Baseball gold={g.game_type === WORLD_SERIES} />,
+                }))}
+                onChange={(pk) => {
+                  const g = index?.games.find((x) => x.game_pk === pk);
+                  select(pk, g && (team === g.home_abbr || team === g.away_abbr) ? team : (g?.away_abbr ?? team));
+                }}
+              />
+              <Picker
+                label={t("team.select")}
+                className="picker-team"
+                value={team}
+                options={[
+                  { value: entry.away_abbr, label: entry.away, short: entry.away_abbr, icon: <TeamLogo team={entry.away_abbr} /> },
+                  { value: entry.home_abbr, label: entry.home, short: entry.home_abbr, icon: <TeamLogo team={entry.home_abbr} /> },
+                ]}
+                onChange={(next) => select(entry.game_pk, next)}
+              />
             </div>
           )}
         </header>

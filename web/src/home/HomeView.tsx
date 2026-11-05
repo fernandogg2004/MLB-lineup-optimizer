@@ -203,7 +203,7 @@ function Screens(props: {
     const onKey = (e: KeyboardEvent) => {
       if (menuRef.current || e.ctrlKey || e.altKey || e.metaKey) return;
       const target = e.target as HTMLElement;
-      if (target.closest?.("select, input, textarea, .menu")) return;
+      if (target.closest?.("select, input, textarea, .menu, .picker")) return;
       if (e.key === " " && target.closest?.("a, button")) return;
       if (e.key === "Home" || e.key === "End") {
         e.preventDefault();

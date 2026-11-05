@@ -51,6 +51,19 @@ export function kitFor(team: string): Kit {
   return TEAM_KITS[team] ?? DEFAULT_KIT;
 }
 
+/** MLB Stats API team ids (statsapi.mlb.com/api/v1/teams?sportId=1, checked 2026-11-05). */
+const TEAM_IDS: Record<string, number> = {
+  ATH: 133, ATL: 144, AZ: 109, BAL: 110, BOS: 111, CHC: 112, CIN: 113, CLE: 114, COL: 115, CWS: 145,
+  DET: 116, HOU: 117, KC: 118, LAA: 108, LAD: 119, MIA: 146, MIL: 158, MIN: 142, NYM: 121, NYY: 147,
+  PHI: 143, PIT: 134, SD: 135, SEA: 136, SF: 137, STL: 138, TB: 139, TEX: 140, TOR: 141, WSH: 120,
+};
+
+/** MLB's own version of the logo for dark backgrounds, which suits the navy bar. */
+export function logoUrl(team: string): string | null {
+  const id = TEAM_IDS[team];
+  return id ? `https://www.mlbstatic.com/team-logos/team-cap-on-dark/${id}.svg` : null;
+}
+
 function luminance(hex: string): number {
   const channel = (i: number) => {
     const v = parseInt(hex.slice(i, i + 2), 16) / 255;

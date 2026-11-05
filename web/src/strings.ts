@@ -248,7 +248,7 @@ const en = {
   "method.pct": "Median rank of the order actually used: better than {p} of all possible orders.",
   "method.unavailable": "Validation results are not available.",
   "footer.data":
-    "Data: MLB Statcast and MLB Stats API (© MLB Advanced Media), used for non-commercial research. Not affiliated with MLB.",
+    "Data: MLB Statcast and MLB Stats API (© MLB Advanced Media), used for non-commercial research. Team logos are trademarks of their clubs and load from MLB. Not affiliated with MLB.",
   "footer.disclaimer": "Estimates are model-based and uncertain; they are not betting advice.",
   "hero.verdict": "Nearly. Both orders were in the top {top} of all 362,880 possible orders.",
   "lineup.stability": "Many orders are practically tied. When every player's ability is re-estimated from its uncertainty, this exact order comes out best in {p} of re-estimates, and its leadoff hitter leads off in {lead}. Read the arrows as a direction (who should bat more often), not as the one correct lineup.",
@@ -543,7 +543,7 @@ const es: Dict = {
   "method.pct": "Posición mediana del orden realmente usado: mejor que el {p} de todos los órdenes posibles.",
   "method.unavailable": "Los resultados de validación no están disponibles.",
   "footer.data":
-    "Datos: MLB Statcast y MLB Stats API (© MLB Advanced Media), usados para investigación no comercial. Sin afiliación con MLB.",
+    "Datos: MLB Statcast y MLB Stats API (© MLB Advanced Media), usados para investigación no comercial. Los logos de los equipos son marcas de sus clubes y se cargan desde MLB. Sin afiliación con MLB.",
   "footer.disclaimer": "Las estimaciones provienen de un modelo y son inciertas; no son consejos de apuestas.",
   "hero.verdict": "Casi. Ambos órdenes estaban entre el {top} mejor de los 362.880 órdenes posibles.",
   "lineup.stability": "Muchos órdenes están prácticamente empatados. Al volver a estimar la habilidad de cada jugador según su incertidumbre, este orden exacto resulta el mejor en el {p} de los casos, y su primer bateador abre el partido en el {lead}. Lee las flechas como una dirección (quién debería batear más veces), no como la única alineación correcta.",

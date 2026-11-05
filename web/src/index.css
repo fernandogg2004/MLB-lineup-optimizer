@@ -280,22 +280,68 @@ summary::-webkit-details-marker { color: var(--text-muted); }
 :root[data-theme="day"] .bg-field { background: linear-gradient(0deg, rgb(92 150 72 / .55), transparent); }
 
 /* ---- Top bar ---------------------------------------------------------------------------- */
-.bar { position: fixed; z-index: 20; top: 0; left: 0; right: 0; height: var(--bar-h); display: flex; align-items: center; gap: 16px; padding: 0 18px;
-  background: linear-gradient(180deg, rgb(6 8 12 / .94), rgb(6 8 12 / .8)); box-shadow: 0 1px 0 rgb(255 255 255 / .09); }
-:root[data-theme="day"] .bar { background: linear-gradient(180deg, rgb(255 255 255 / .94), rgb(255 255 255 / .82)); box-shadow: 0 1px 0 rgb(13 27 42 / .14); }
+/* Navy with a gold accent in both appearances, so its own colours are set here and not by the theme. */
+.bar { --ink: #ffffff; --hover: rgb(255 255 255 / .12); --focus: #ffd65c; --gold: #f4b923; --bar-navy: #0a1f40;
+  position: fixed; z-index: 20; top: 0; left: 0; right: 0; height: var(--bar-h); display: flex; align-items: center; gap: 14px; padding: 0 18px;
+  background: linear-gradient(180deg, #12305e, var(--bar-navy)); box-shadow: 0 1px 0 rgb(255 255 255 / .1), 0 2px 10px rgb(0 0 0 / .28); }
 .burger { width: 40px; height: 40px; flex: none; display: flex; align-items: center; justify-content: center; border-radius: 8px; cursor: pointer; color: var(--ink); }
 .burger:hover { background: var(--hover); }
 .menu-icon { display: block; }
 .menu-icon line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
-.brand { display: none; }
-@media (min-width: 1000px) {
-  .brand { display: block; position: absolute; left: 50%; transform: translateX(-50%); font-weight: 700; font-size: .95rem; letter-spacing: -.01em; color: var(--ink); white-space: nowrap; pointer-events: none; }
+.brand, .bar-mark { display: none; }
+.pickers { flex: 1; min-width: 0; display: flex; justify-content: flex-end; gap: 12px; margin-left: auto; }
+
+/* Two gold strokes after the title, running the height of the bar. */
+@media (min-width: 761px) {
+  .brand { display: block; flex: none; font-weight: 700; font-size: 1.02rem; letter-spacing: -.01em; color: var(--ink); white-space: nowrap; }
+  .bar-mark { display: flex; flex: none; align-self: stretch; gap: 5px; overflow: hidden; padding: 0 12px; }
+  .bar-mark i { display: block; height: 100%; transform: skewX(-30deg); background: var(--gold); }
+  .bar-mark i:first-child { width: 5px; }
+  .bar-mark i:last-child { width: 2px; }
 }
-.pickers { flex: 1; min-width: 0; display: flex; justify-content: space-between; gap: 12px; max-width: min(1000px, 100%); margin: 0 auto; }
-.pickers select { min-width: 0; max-width: 100%; font: inherit; font-size: .9rem; color: var(--ink); background: rgb(255 255 255 / .07); border: 1px solid rgb(255 255 255 / .2); border-radius: 8px; padding: 7px 10px; }
-.pickers select option { background: #11161d; }
-:root[data-theme="day"] .pickers select { background: rgb(255 255 255 / .6); border-color: rgb(13 27 42 / .3); }
-:root[data-theme="day"] .pickers select option { background: #fff; }
+
+/* Match and team selectors */
+.picker { position: relative; min-width: 0; flex: 0 1 auto; }
+.picker-button { display: flex; align-items: center; gap: 9px; width: 100%; min-width: 0; height: 38px; padding: 0 12px 0 10px; border: 1.5px solid var(--gold); border-radius: 10px; background: rgb(6 19 41 / .55); color: #fff; font-size: .88rem; font-weight: 600; cursor: pointer; transition: background .15s; }
+.picker-button:hover, .picker[data-open] .picker-button { background: rgb(255 255 255 / .1); }
+.picker-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.picker-short { display: none; }
+.picker-icon { flex: none; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; }
+.picker-chevron { flex: none; margin-left: auto; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s; }
+.picker[data-open] .picker-chevron { transform: rotate(180deg); }
+.picker-list { position: absolute; z-index: 1; top: calc(100% + 6px); right: 0; min-width: 100%; width: max-content; max-width: calc(100vw - 24px); max-height: min(60vh, 340px); overflow-y: auto; overscroll-behavior: contain; margin: 0; padding: 5px; list-style: none; border: 1.5px solid var(--gold); border-radius: 12px; background: var(--bar-navy); color: #fff; box-shadow: 0 10px 28px rgb(0 0 0 / .45); }
+.picker-game .picker-list { left: 0; right: auto; max-width: min(calc(100vw - 100px), 460px); }
+.picker-list .picker-text { white-space: normal; }
+.picker-list[hidden] { display: none; }
+.picker-option { display: flex; align-items: center; gap: 9px; min-height: 40px; padding: 6px 10px; border-radius: 8px; font-size: .88rem; font-weight: 500; cursor: pointer; }
+.picker-option[data-active] { background: rgb(255 255 255 / .13); }
+.picker-option[aria-selected="true"] { color: #ffd65c; font-weight: 700; box-shadow: inset 3px 0 0 var(--gold); }
+.team-logo { display: block; width: 24px; height: 24px; object-fit: contain; }
+.team-badge { display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; font-size: .56rem; font-weight: 700; letter-spacing: -.02em; box-shadow: 0 0 0 1px rgb(255 255 255 / .45); }
+.ball { display: block; }
+.ball-skin { stroke-width: .8; }
+.ball-seam, .ball-stitch { fill: none; stroke-linecap: round; }
+.ball-seam { stroke-width: .9; }
+.ball-stitch { stroke-width: 1; }
+.ball-white .ball-skin { fill: #ffffff; stroke: #c9d2dc; }
+.ball-white .ball-seam, .ball-white .ball-stitch { stroke: #d33a2c; }
+.ball-gold .ball-skin { fill: #f4b923; stroke: #ffe08a; }
+.ball-gold .ball-seam, .ball-gold .ball-stitch { stroke: #ffffff; }
+@media (max-width: 560px) {
+  .bar { padding: 0 10px 0 6px; gap: 6px; }
+  .pickers { gap: 8px; }
+  .picker-long { display: none; }
+  .picker-short { display: block; }
+  .picker-button { padding: 0 8px 0 6px; gap: 6px; font-size: .8rem; }
+  .picker-team { flex: none; }
+  /* Hangs from the bar itself, which is the only thing wide enough on a phone. */
+  .picker { position: static; }
+  .picker-list, .picker-game .picker-list { left: 10px; right: 10px; width: auto; min-width: 0; max-width: none; }
+}
+@media (forced-colors: active) {
+  .bar-mark i { background: CanvasText; }
+  .picker-option[data-active] { outline: 2px solid Highlight; outline-offset: -2px; }
+}
 
 /* ---- Menu: near-black at night, white by day -------------------------------------------- */
 .menu { position: fixed; z-index: 30; inset: 0; visibility: hidden; transition: visibility 0s .28s; }

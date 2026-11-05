@@ -1,4 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
+import { pick, stubLogos } from "./helpers";
+
+test.beforeEach(({ page }) => stubLogos(page));
 
 // A full audit of the Home page: every screen, in every size, language, appearance and team.
 // Includes real phone browser heights, which are much shorter than the phones' screens.
@@ -91,7 +94,7 @@ for (const [w, h] of SIZES) {
       for (const theme of ["night", "day"]) {
         await page.goto(`/?lang=${lang}&theme=${theme}#/g/849799/MIL/1`);
         for (const team of ["MIL", "TB"]) {
-          await page.getByRole("combobox", { name: lang === "en" ? "Team" : "Equipo", exact: true }).selectOption(team);
+          await pick(page, lang === "en" ? "Team" : "Equipo", team);
           await expect(page.locator('.screen[data-screen="0"]')).toBeVisible();
           await page.waitForTimeout(300);
           for (let i = 0; i < 10; i++) {
