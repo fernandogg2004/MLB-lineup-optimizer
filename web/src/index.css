@@ -289,16 +289,14 @@ summary::-webkit-details-marker { color: var(--text-muted); }
 .menu-icon { display: block; }
 .menu-icon line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
 .brand, .bar-mark { display: none; }
-/* Two columns of equal width, as wide as the longest text allows, shrinking together if the screen is short of room. */
-.pickers { flex: 0 1 auto; min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; margin-left: auto; }
-
-/* A baseball's seam after the title, running the height of the bar. */
+/* Two gold strokes after the title, as in the owner's design: a bright one and a dim one beside it,
+   leaning at 41 degrees and running the full height of the bar. */
 @media (min-width: 861px) {
   .brand { display: block; flex: none; font-weight: 700; font-size: 1.3rem; letter-spacing: -.015em; color: var(--ink); white-space: nowrap; }
-  .bar-mark { display: block; flex: none; align-self: stretch; width: 42px; margin-left: 4px; }
-  .seam { display: block; width: 100%; height: 100%; fill: none; stroke-linecap: round; stroke-linejoin: round; }
-  .seam-line { stroke: #e8503f; stroke-opacity: .55; stroke-width: 1.2; }
-  .seam-stitch { stroke: #e8503f; stroke-width: 2; }
+  .bar-mark { display: flex; flex: none; align-self: stretch; align-items: stretch; justify-content: center; gap: 3px; width: 68px; margin-left: 6px; overflow: hidden; }
+  .bar-mark i { display: block; transform: skewX(-41deg); }
+  .bar-mark i:first-child { width: 6px; background: var(--gold); }
+  .bar-mark i:last-child { width: 5px; background: rgb(244 185 35 / .35); }
 }
 
 /* Match and team selectors */
@@ -315,7 +313,6 @@ summary::-webkit-details-marker { color: var(--text-muted); }
 .picker-chevron { position: absolute; right: 12px; top: calc(50% - 4px); fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s; }
 .picker[data-open] .picker-chevron { transform: rotate(180deg); }
 .picker-list { position: absolute; z-index: 1; top: calc(100% + 6px); right: 0; min-width: 100%; width: max-content; max-width: calc(100vw - 24px); max-height: min(60vh, 340px); overflow-y: auto; overscroll-behavior: contain; margin: 0; padding: 5px; list-style: none; border: 1.5px solid var(--gold); border-radius: 12px; background: var(--bar-navy); color: #fff; box-shadow: 0 10px 28px rgb(0 0 0 / .45); }
-.picker-game .picker-list { left: 0; right: auto; max-width: min(calc(100vw - 100px), 460px); }
 .picker-list .picker-text { white-space: normal; }
 .picker-list[hidden] { display: none; }
 .picker-option { display: flex; align-items: center; gap: 9px; min-height: 40px; padding: 6px 10px; border-radius: 8px; font-size: .88rem; font-weight: 500; cursor: pointer; }
@@ -332,33 +329,46 @@ summary::-webkit-details-marker { color: var(--text-muted); }
 .ball-white .ball-seam, .ball-white .ball-stitch { stroke: #d33a2c; }
 .ball-gold .ball-skin { fill: #f4b923; stroke: #ffe08a; }
 .ball-gold .ball-seam, .ball-gold .ball-stitch { stroke: #ffffff; }
-/* The full match text needs more room than these widths have. */
-@media (max-width: 1100px) {
-  .picker-game .picker-long { display: none; }
-  .picker-game .picker-short { display: block; }
-}
+/* The match: a small scoreboard in the middle of the bar, which opens the list of games. */
+.picker-game { position: absolute; top: 0; bottom: 0; left: 0; right: 0; width: max-content; margin: 0 auto; }
+.picker-game .picker-button { display: flex; justify-content: center; height: 100%; padding: 0 16px; border: 0; border-radius: 0; background: none; }
+.picker-game .picker-button:hover, .picker-game[data-open] .picker-button { background: rgb(255 255 255 / .06); }
+.picker-game .picker-list { top: 100%; left: 50%; right: auto; transform: translateX(-50%); max-width: min(calc(100vw - 24px), 460px); }
+.score { display: flex; flex-direction: column; align-items: center; gap: 4px; line-height: 1; }
+.score-top { display: flex; align-items: center; gap: 6px; font-size: .72rem; font-weight: 500; letter-spacing: .03em; text-transform: uppercase; color: #bac5d7; white-space: pre; }
+.score-top .picker-chevron { position: static; width: 10px; height: 7px; }
+.score-line { display: flex; align-items: baseline; gap: 14px; white-space: nowrap; }
+.score-line b { font-size: 1.02rem; font-weight: 700; }
+.score-line em { font-style: normal; font-size: 1.5rem; font-weight: 600; color: var(--gold); font-variant-numeric: tabular-nums; }
+.picker-team { flex: none; margin-left: auto; }
+.picker-team .picker-button { font-weight: 500; }
 @media (max-width: 860px), (max-height: 599px) {
   :root { --bar-h: 52px; }
 }
+/* Without the title, the scoreboard fills the room between the menu icon and the team. */
+@media (max-width: 860px) {
+  .picker-game { position: relative; inset: auto; flex: 1 1 auto; width: auto; min-width: 0; height: 100%; margin: 0; }
+  .picker-game .picker-button { width: 100%; padding: 0 4px; }
+  .picker-team { margin-left: 0; }
+}
 @media (max-width: 600px) {
   .bar { padding: 0 10px 0 8px; gap: 6px; }
-  /* A phone cannot fit two equal columns: each keeps a fixed width, the match taking the larger share. */
-  .pickers { flex: 1; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 10px; }
   .picker-long { display: none; }
   .picker-short { display: block; }
-  .picker-button { padding: 0 22px 0 6px; font-size: .8rem; }
+  .score-top .score-series { display: none; }
+  .score-top { font-size: .66rem; }
+  .score-line { gap: 9px; }
+  .score-line b { font-size: .9rem; }
+  .score-line em { font-size: 1.2rem; }
+  .picker-team .picker-button { padding: 0 22px 0 6px; font-size: .8rem; }
   .picker-face { gap: 5px; }
   .picker-sizes { padding-left: 29px; }
-  .picker-chevron { right: 7px; }
-  /* Hangs from the bar itself, which is the only thing wide enough on a phone. */
-  .picker { position: static; }
-  .picker-list, .picker-game .picker-list { left: 10px; right: 10px; width: auto; min-width: 0; max-width: none; }
-}
-@media (max-width: 400px) {
-  .pickers { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+  .picker-team .picker-chevron { right: 7px; }
+  /* Lists hang from the bar itself, which is the only thing wide enough on a phone. */
+  .picker-list, .picker-game .picker-list { position: fixed; top: calc(var(--bar-h) + 6px); left: 10px; right: 10px; width: auto; min-width: 0; max-width: none; transform: none; }
 }
 @media (forced-colors: active) {
-  .seam-line, .seam-stitch { stroke: CanvasText; }
+  .bar-mark i { background: CanvasText; }
   .picker-option[data-active] { outline: 2px solid Highlight; outline-offset: -2px; }
 }
 

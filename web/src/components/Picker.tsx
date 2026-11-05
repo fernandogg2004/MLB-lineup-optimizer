@@ -11,6 +11,14 @@ export interface PickerOption<V> {
 
 const TYPE_AHEAD_MS = 600;
 
+export function Chevron() {
+  return (
+    <svg className="picker-chevron" viewBox="0 0 12 8" width="12" height="8" aria-hidden="true">
+      <path d="M1.5 1.5 6 6l4.5-4.5" />
+    </svg>
+  );
+}
+
 /** A selector with icons, which a native select cannot show. Keyboard follows the WAI-ARIA select-only combobox. */
 export function Picker<V extends string | number>(props: {
   label: string;
@@ -20,8 +28,10 @@ export function Picker<V extends string | number>(props: {
   onChange: (value: V) => void;
   /** Every text this selector can ever show, when that is more than the current options. */
   sizing?: { label: string; short?: string }[];
+  /** Draws the closed selector's content in place of the icon and text. */
+  face?: (selected: PickerOption<V>) => ReactNode;
 }) {
-  const { label, className = "", value, options, onChange, sizing } = props;
+  const { label, className = "", value, options, onChange, sizing, face } = props;
   const id = useId();
   const root = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLUListElement>(null);
@@ -126,23 +136,27 @@ export function Picker<V extends string | number>(props: {
         onClick={() => (open ? setOpen(false) : show())}
         onKeyDown={onKeyDown}
       >
-        <span className="picker-face">
-          <span className="picker-icon">{selected?.icon}</span>
-          <span className="picker-text picker-long">{selected?.label}</span>
-          <span className="picker-text picker-short">{selected?.short ?? selected?.label}</span>
-        </span>
-        {/* Invisible: holds the button at the width of its longest possible text. */}
-        <span className="picker-sizes" aria-hidden="true">
-          {(sizing ?? options).map((o) => (
-            <span key={o.label}>
-              <span className="picker-long">{o.label}</span>
-              <span className="picker-short">{o.short ?? o.label}</span>
+        {face && selected ? (
+          face(selected)
+        ) : (
+          <>
+            <span className="picker-face">
+              <span className="picker-icon">{selected?.icon}</span>
+              <span className="picker-text picker-long">{selected?.label}</span>
+              <span className="picker-text picker-short">{selected?.short ?? selected?.label}</span>
             </span>
-          ))}
-        </span>
-        <svg className="picker-chevron" viewBox="0 0 12 8" width="12" height="8" aria-hidden="true">
-          <path d="M1.5 1.5 6 6l4.5-4.5" />
-        </svg>
+            {/* Invisible: holds the button at the width of its longest possible text. */}
+            <span className="picker-sizes" aria-hidden="true">
+              {(sizing ?? options).map((o) => (
+                <span key={o.label}>
+                  <span className="picker-long">{o.label}</span>
+                  <span className="picker-short">{o.short ?? o.label}</span>
+                </span>
+              ))}
+            </span>
+            <Chevron />
+          </>
+        )}
       </button>
       <ul
         ref={list}

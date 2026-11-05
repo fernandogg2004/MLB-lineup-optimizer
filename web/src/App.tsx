@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Baseball, SeamMark, TeamLogo } from "./components/BarIcons";
+import { Baseball, TeamLogo } from "./components/BarIcons";
 import { Menu } from "./components/Menu";
 import { MenuIcon } from "./components/MenuIcon";
-import { Picker } from "./components/Picker";
+import { Chevron, Picker } from "./components/Picker";
 import { fetchJson } from "./data";
 import type { GameIndex, IndexEntry } from "./data";
 import { HomeView } from "./home/HomeView";
@@ -155,15 +155,38 @@ function Shell() {
             <MenuIcon />
           </button>
           <span className="brand">{t("app.name")}</span>
-          <span className="bar-mark">
-            <SeamMark />
+          <span className="bar-mark" aria-hidden="true">
+            <i />
+            <i />
           </span>
           {showPickers && entry && (
-            <div className="pickers">
+            <>
               <Picker
                 label={t("game.picker")}
                 className="picker-game"
                 value={entry.game_pk}
+                face={(o) => {
+                  const g = index?.games.find((x) => x.game_pk === o.value) ?? entry;
+                  const played = g.away_runs !== null && g.home_runs !== null;
+                  const top = g.series_description && g.series_game_number ? series(g.series_description) : date(g.date);
+                  const n = g.series_game_number ? t("game.number", { n: g.series_game_number }) : null;
+                  return (
+                    <span className="score">
+                      <span className="score-top">
+                        <span>
+                          <span className={n ? "score-series" : undefined}>{n ? `${top} · ` : top}</span>
+                          {n}
+                        </span>
+                        <Chevron />
+                      </span>
+                      <span className="score-line">
+                        <b>{g.away_abbr}</b>
+                        <em>{played ? `${g.away_runs}–${g.home_runs}` : "–"}</em>
+                        <b>{g.home_abbr}</b>
+                      </span>
+                    </span>
+                  );
+                }}
                 options={(index?.games ?? []).map((g) => ({
                   value: g.game_pk,
                   label: matchLabel(g, false, t, series, date),
@@ -189,7 +212,7 @@ function Shell() {
                 ]}
                 onChange={(next) => select(entry.game_pk, next)}
               />
-            </div>
+            </>
           )}
         </header>
         <main id="main" tabIndex={-1}>

@@ -1,27 +1,6 @@
 import { useState } from "react";
 import { contrast, kitFor, logoUrl } from "../home/teams";
 
-const SEAM = { from: [30, -2], bend: [4, 29], to: [30, 60] };
-const seamAt = (t: number, a: number[], b: number[], c: number[], i: number) => (1 - t) ** 2 * a[i] + 2 * (1 - t) * t * b[i] + t ** 2 * c[i];
-const STITCHES = [0.12, 0.31, 0.5, 0.69, 0.88].map((t) => {
-  const { from, bend, to } = SEAM;
-  const dx = 2 * (1 - t) * (bend[0] - from[0]) + 2 * t * (to[0] - bend[0]);
-  const dy = 2 * (1 - t) * (bend[1] - from[1]) + 2 * t * (to[1] - bend[1]);
-  return { x: seamAt(t, from, bend, to, 0), y: seamAt(t, from, bend, to, 1), angle: (Math.atan2(dy, dx) * 180) / Math.PI - 90 };
-});
-
-/** A baseball's seam after the title: a curved line crossed by red stitches. */
-export function SeamMark() {
-  return (
-    <svg className="seam" viewBox="0 0 36 58" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-      <path className="seam-line" d={`M${SEAM.from} Q${SEAM.bend} ${SEAM.to}`} />
-      {STITCHES.map((s) => (
-        <path key={s.y} className="seam-stitch" d="M-6 3.5 0-1 6 3.5" transform={`translate(${s.x.toFixed(2)} ${s.y.toFixed(2)}) rotate(${s.angle.toFixed(1)})`} />
-      ))}
-    </svg>
-  );
-}
-
 /** World Series games get a gold ball, all others a white one. */
 export function Baseball({ gold }: { gold: boolean }) {
   return (

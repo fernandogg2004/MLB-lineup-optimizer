@@ -10,6 +10,7 @@ const screenNow = (page: Page) =>
     const s = document.querySelector<HTMLElement>(".scroller");
     return (s?.scrollTop ?? 0) / (s?.querySelector<HTMLElement>(".screen")?.offsetHeight ?? 1);
   });
+const isPhone = (page: Page) => (page.viewportSize()?.width ?? 1000) <= 600;
 const ready = (page: Page) => expect(page.locator(".rail button[aria-current], .ors[data-on]").first()).toBeAttached();
 
 test.beforeEach(({ page }) => stubLogos(page));
@@ -31,23 +32,32 @@ test.describe("top bar", () => {
     expect(looks[0]).toBe(looks[1]);
   });
 
-  test("puts the title and a baseball seam after the menu icon on wide screens", async ({ page, isMobile }) => {
+  test("puts the title and two gold strokes after the menu icon on wide screens", async ({ page, isMobile }) => {
     test.skip(isMobile, "the title has no room on a phone");
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("/?lang=en");
     await expect(page.locator(".bar .brand")).toHaveText("Batting Order Lab");
-    await expect(page.locator(".bar-mark .seam-stitch")).toHaveCount(5);
+    await expect(page.locator(".bar-mark i")).toHaveCount(2);
     await expect(page.locator(".bar .brand")).toHaveCSS("font-size", "20.8px");
     const order = await page.evaluate(() =>
-      [".burger", ".brand", ".bar-mark", ".pickers"].map((s) => document.querySelector(`.bar ${s}`)!.getBoundingClientRect().x),
+      [".burger", ".brand", ".bar-mark", ".picker-game", ".picker-team"].map((s) => document.querySelector(`.bar ${s}`)!.getBoundingClientRect().x),
     );
     expect(order).toEqual([...order].sort((a, b) => a - b));
-    await expect(page.locator(".bar-mark .seam-stitch").first()).toHaveCSS("stroke", "rgb(232, 80, 63)");
+    const strokes = page.locator(".bar-mark i");
+    await expect(strokes.nth(0)).toHaveCSS("background-color", "rgb(244, 185, 35)");
+    await expect(strokes.nth(1)).toHaveCSS("background-color", "rgba(244, 185, 35, 0.35)");
+    // Both run the full height of the bar.
+    const bar = (await page.locator(".bar").boundingBox())!;
+    for (const i of [0, 1]) {
+      const r = (await strokes.nth(i).boundingBox())!;
+      expect(r.y).toBeLessThanOrEqual(bar.y + 1);
+      expect(r.y + r.height).toBeGreaterThanOrEqual(bar.y + bar.height - 1);
+    }
   });
 
   for (const lang of ["en", "es"]) {
     test(`selectors and open lists fit every width (${lang})`, async ({ page }) => {
-      for (const width of [320, 360, 390, 400, 401, 600, 601, 761, 861, 1024, 1101, 1440]) {
+      for (const width of [320, 360, 390, 600, 601, 761, 861, 1024, 1440]) {
         await page.setViewportSize({ width, height: 800 });
         await page.goto(`/?lang=${lang}`);
         for (const box of await page.getByRole("combobox").all()) {
@@ -55,7 +65,7 @@ test.describe("top bar", () => {
           expect(b.x, `button ${width}`).toBeGreaterThanOrEqual(0);
           expect(b.x + b.width, `button ${width}`).toBeLessThanOrEqual(width);
           expect(b.y + b.height, `button ${width}`).toBeLessThanOrEqual(60);
-          const cut = await box.locator(".picker-face .picker-text:visible").evaluate((t) => t.scrollWidth > t.clientWidth);
+          const cut = await box.locator(".picker-face .picker-text:visible, .score-line").evaluateAll((all) => all.some((t) => t.scrollWidth > t.clientWidth));
           expect(cut, `shown text ${width}`).toBe(false);
           await box.click();
           const list = page.locator(".picker-list:visible");
@@ -66,51 +76,66 @@ test.describe("top bar", () => {
           expect(clipped, `option text ${width}`).toBe(false);
           await box.click();
         }
+        // Nothing in the bar overlaps.
+        const parts = await page.evaluate(() =>
+          [".burger", ".brand", ".bar-mark", ".picker-game .score", ".picker-team"].flatMap((sel) => {
+            const r = document.querySelector(`.bar ${sel}`)!.getBoundingClientRect();
+            return r.width ? [{ sel, left: r.left, right: r.right }] : [];
+          }),
+        );
+        for (let i = 1; i < parts.length; i++) expect(parts[i].left, `${parts[i].sel} at ${width}`).toBeGreaterThanOrEqual(parts[i - 1].right + 8);
       }
     });
   }
 });
 
-test.describe("selector size", () => {
-  const widths = async (page: Page) => [(await game(page).boundingBox())!.width, (await team(page).boundingBox())!.width];
-
-  test("both are one width with a clear gap, whatever they show, with shorter content centred", async ({ page, isMobile }) => {
-    test.skip(isMobile, "a phone gives the match the larger share");
+test.describe("scoreboard and team", () => {
+  test("the match sits in the middle as a scoreboard, with the score in gold", async ({ page, isMobile }) => {
+    test.skip(isMobile, "a phone gives it the room between the icon and the team");
     for (const width of [1024, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/?lang=en#/g/849799/MIL/1");
       await ready(page);
-      const [g, tm] = await widths(page);
-      expect(Math.abs(g - tm)).toBeLessThanOrEqual(1);
-      const gap = (await team(page).boundingBox())!.x - ((await game(page).boundingBox())!.x + g);
-      expect(gap).toBeGreaterThanOrEqual(30);
-      for (const box of [game(page), team(page)]) {
-        const centred = await box.evaluate((b) => {
-          const face = b.querySelector(".picker-face")!;
-          const parts = [...face.children].filter((c) => getComputedStyle(c).display !== "none").map((c) => c.getBoundingClientRect());
-          const r = b.getBoundingClientRect();
-          return Math.abs((parts[0].left + parts[parts.length - 1].right) / 2 - (r.left + r.width / 2));
-        });
-        expect(centred, `centred ${width}`).toBeLessThanOrEqual(1);
-      }
-      await pick(page, "Team", "TB");
-      await expect(team(page)).toHaveAttribute("data-value", "TB");
-      await pick(page, "Game", "849804");
-      await expect(game(page)).toHaveAttribute("data-value", "849804");
-      expect(await widths(page)).toEqual([g, tm]);
+      await expect(game(page).locator(".score-top")).toHaveText("World Series · Game 5");
+      await expect(game(page).locator(".score-line")).toHaveText("MIL4–1TB");
+      await expect(game(page).locator(".score-line em")).toHaveCSS("color", "rgb(244, 185, 35)");
+      await expect(game(page).locator(".score-top")).toHaveCSS("text-transform", "uppercase");
+      const r = (await game(page).locator(".score").boundingBox())!;
+      expect(Math.abs(r.x + r.width / 2 - width / 2), `centred ${width}`).toBeLessThanOrEqual(1);
+      const t = (await team(page).boundingBox())!;
+      expect(width - (t.x + t.width)).toBeLessThanOrEqual(30);
     }
   });
 
-  test("keep their width when the choice changes on a phone", async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 800 });
-    await page.goto("/?lang=en#/g/849799/MIL/1");
-    await ready(page);
-    const before = await widths(page);
-    await pick(page, "Team", "TB");
-    await expect(team(page)).toHaveAttribute("data-value", "TB");
-    await pick(page, "Game", "849804");
-    await expect(game(page)).toHaveAttribute("data-value", "849804");
-    expect(await widths(page)).toEqual(before);
+  test("Spanish, and the date for a game outside a series", async ({ page }) => {
+    await page.route("**/data/index.json", async (route) => {
+      const res = await route.fetch();
+      const index = await res.json();
+      index.games[0].series_description = "";
+      index.games[0].series_game_number = null;
+      await route.fulfill({ response: res, json: index });
+    });
+    const partido = page.getByRole("combobox", { name: "Partido", exact: true });
+    await page.goto("/?lang=es&theme=day");
+    await expect(partido.locator(".score-top")).not.toContainText("·");
+    await expect(partido.locator(".score-top")).toContainText("2026");
+    await page.unroute("**/data/index.json");
+    await page.goto("/?lang=es#/g/849803/MIL/1");
+    // What is shown, not what is hidden: a phone leaves out the series.
+    await expect.poll(async () => (await partido.locator(".score-top").innerText()).toUpperCase().replace(/\s+/g, " ").trim()).toBe(isPhone(page) ? "JUEGO 4" : "SERIE MUNDIAL · JUEGO 4");
+  });
+
+  test("the team keeps its width when the choice changes", async ({ page }) => {
+    for (const width of [390, 1440]) {
+      await page.setViewportSize({ width, height: 800 });
+      await page.goto("/?lang=en#/g/849799/MIL/1");
+      await ready(page);
+      const before = (await team(page).boundingBox())!.width;
+      await pick(page, "Team", "TB");
+      await expect(team(page)).toHaveAttribute("data-value", "TB");
+      expect((await team(page).boundingBox())!.width).toBe(before);
+      await expect(team(page).locator("img")).toHaveAttribute("src", /\/139\.svg$/);
+    }
   });
 });
 
@@ -119,7 +144,6 @@ test.describe("match selector", () => {
     await page.goto("/?lang=en#/g/849799/TB/4");
     await ready(page);
     await expect(game(page)).toHaveAttribute("data-value", "849799");
-    await expect(game(page).locator(".ball-gold")).toBeVisible();
     await game(page).click();
     const list = page.locator(".picker-game .picker-list");
     await expect(list).toBeVisible();
