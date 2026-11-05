@@ -26,8 +26,7 @@
 
 .summary { display: flex; align-items: center; justify-content: center; color: var(--ink); }
 .sum-inner { position: relative; width: min(1140px, 100%); display: flex; flex-direction: column; align-items: center; gap: clamp(8px, 1.7vh, 18px); text-align: center; }
-/* The ball hangs just before the title, wherever the title starts. */
-.sum-title { position: relative; display: inline-block; max-width: 100%; margin: 0 0 clamp(0px, 0.8vh, 8px); font-size: clamp(1.9rem, 3.4vw, 2.9rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.08; }
+.sum-title { margin: 0 0 clamp(0px, 0.8vh, 8px); font-size: clamp(1.9rem, 3.4vw, 2.9rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.08; }
 
 /* The cards sit close together: rows and columns share one smaller gap. */
 .sum-top { display: grid; grid-template-columns: repeat(2, minmax(0, 450px)); justify-content: center; gap: 14px; width: 100%; }
@@ -45,11 +44,14 @@
 .sum-icon .ring, .trophy-handle { fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
 .sum-stat { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
 .sum-label { font-size: 1.08rem; font-weight: 700; }
+/* Expected runs: label and number centred between the icon and the green box. */
+.sum-runs .sum-stat { align-items: center; text-align: center; }
 .sum-number { color: var(--sum-blue); font-size: clamp(2.1rem, 3.6vw, 3rem); font-weight: 800; line-height: 1.05; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .sum-of { margin-left: 2px; font-size: 0.55em; font-weight: 700; }
 .sum-label-after { color: var(--ink-2); font-size: 0.95rem; }
-.sum-good { position: relative; z-index: 1; flex: none; margin: 0; padding: 8px 12px; border-radius: 12px; background: var(--sum-green-bg); color: var(--ink); font-size: 0.82rem; line-height: 1.3; text-align: center; }
-.sum-good strong { color: var(--sum-green); font-size: 1.05rem; font-weight: 800; }
+/* Kept quieter than the main figure. */
+.sum-good { position: relative; z-index: 1; flex: none; margin: 0; padding: 7px 11px; border-radius: 12px; background: var(--sum-green-bg); color: var(--ink-2); font-size: 0.74rem; line-height: 1.3; text-align: center; }
+.sum-good strong { color: var(--sum-green); font-size: 0.92rem; font-weight: 800; }
 
 /* The batter the model moves furthest, in the room to the right of the count. */
 .sum-move { flex: none; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; max-width: 42%; padding-left: 16px; border-left: 1px solid var(--line); }
@@ -102,29 +104,37 @@
 .sum-link .link { color: var(--glow-text); }
 :root[data-theme="day"] .sum-link .link { color: #06315f; }
 
-/* A ball thrown in on a parabola: steady across, slowing as it rises, so it stops at the top of its
-   arc in mid-air. The speed lines draw in behind it towards the end, never touching it. */
-.fly { position: absolute; top: 50%; right: calc(100% + 14px); margin-top: -31px; width: 140px; height: 58px; pointer-events: none; opacity: 0; }
+/* A ball thrown in on a parabola, which stops in mid-air while still climbing at about 30 degrees, so it
+   reads as a diagonal flight. Across 420 px at a steady pace and up 320 px while slowing (x = t,
+   y = 1.2t - 0.2t^2): it leaves at 42 degrees and ends at 31. The speed lines ride with the ball, turned
+   along its path. On wide screens it hangs in the margin beside the first card, below the title. */
+.fly { position: absolute; top: calc(clamp(1.9rem, 3.4vw, 2.9rem) * 1.08 + clamp(8px, 1.7vh, 18px) + 18px); left: calc(50% - 457px - 70px); width: 48px; height: 48px; pointer-events: none; opacity: 0; }
 .fly.fly-on { opacity: 1; }
-.fly-x { position: absolute; top: 4px; right: 0; width: 48px; height: 48px; }
-.fly-y, .fly-ball { display: block; width: 100%; height: 100%; }
+.fly-x, .fly-y, .fly-ball { display: block; width: 100%; height: 100%; }
+.fly-trail { position: absolute; inset: 0; transform: rotate(-31deg); }
+.fly-ball { position: relative; }
 .fly-ball svg { width: 100%; height: 100%; filter: drop-shadow(0 4px 6px rgb(0 0 0 / 0.25)); }
-.fly-lines { position: absolute; top: 13px; right: 60px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; filter: drop-shadow(0 0 1px rgb(13 27 42 / 0.35)); }
+.fly-lines { position: absolute; top: 50%; right: calc(100% + 10px); display: flex; flex-direction: column; align-items: flex-end; gap: 7px; transform: translateY(-50%); filter: drop-shadow(0 0 1px rgb(13 27 42 / 0.35)); }
 .fly-lines i { display: block; height: 3px; border-radius: 2px; background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.95)); transform-origin: right; }
-.fly-lines i:nth-child(1) { width: 46px; margin-right: 4px; }
-.fly-lines i:nth-child(2) { width: 70px; }
-.fly-lines i:nth-child(3) { width: 40px; margin-right: 4px; }
+.fly-lines i:nth-child(1) { width: 40px; margin-right: 4px; }
+.fly-lines i:nth-child(2) { width: 64px; }
+.fly-lines i:nth-child(3) { width: 34px; margin-right: 4px; }
 .fly-on .fly-x { animation: fly-x 1s linear both; }
-.fly-on .fly-y { animation: fly-y 1s cubic-bezier(0.333, 0.667, 0.667, 1) both; }
+.fly-on .fly-y { animation: fly-y 1s cubic-bezier(0.333, 0.4, 0.667, 0.733) both; }
+.fly-on .fly-trail { animation: fly-turn 1s linear both; }
 .fly-on .fly-ball { animation: fly-spin 1s ease-out both; }
-.fly-on .fly-lines i { animation: lines-in 0.5s ease-out both; }
-.fly-on .fly-lines i:nth-child(1) { animation-delay: 0.55s; }
-.fly-on .fly-lines i:nth-child(2) { animation-delay: 0.62s; }
-.fly-on .fly-lines i:nth-child(3) { animation-delay: 0.69s; }
-@keyframes fly-x { from { transform: translateX(-46vw); } to { transform: none; } }
-@keyframes fly-y { from { transform: translateY(38vh); } to { transform: none; } }
+.fly-on .fly-lines i { animation: lines-in 0.22s ease-out both; }
+.fly-on .fly-lines i:nth-child(2) { animation-delay: 0.04s; }
+.fly-on .fly-lines i:nth-child(3) { animation-delay: 0.08s; }
+@keyframes fly-x { from { transform: translateX(-420px); } to { transform: none; } }
+@keyframes fly-y { from { transform: translateY(320px); } to { transform: none; } }
+@keyframes fly-turn { from { transform: rotate(-42deg); } to { transform: rotate(-31deg); } }
 @keyframes fly-spin { from { transform: rotate(-760deg); } to { transform: rotate(-20deg); } }
-@keyframes lines-in { from { opacity: 0; transform: scaleX(0); } to { opacity: 1; transform: none; } }
+@keyframes lines-in { from { opacity: 0; transform: scaleX(0.3); } to { opacity: 1; transform: none; } }
+/* Without a margin beside the cards, it hangs in the top corner instead. */
+@media (max-width: 1199px) {
+  .fly { top: 6px; left: 34px; transform: scale(0.72); transform-origin: left top; }
+}
 
 /* Tablets and phones */
 @media (max-width: 860px), (max-height: 700px) {
@@ -137,7 +147,7 @@
 }
 @media (max-width: 600px) {
   .sum-inner { gap: 7px; }
-  .sum-title { display: block; margin: 0; padding: 0 50px; font-size: 1.3rem; }
+  .sum-title { margin: 0; padding: 0 50px; font-size: 1.3rem; }
   .sum-top { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .sum-bottom { grid-template-columns: minmax(0, 1fr); gap: 8px; }
   .sum-top + .sum-bottom { margin-top: 1px; }
@@ -170,7 +180,7 @@
   .dist-axis { font-size: 0.66rem; }
   .sum-foot { font-size: 0.7rem; }
   .sum-link { margin: -4px 0 0; font-size: 0.66rem; }
-  .fly { top: -4px; right: auto; left: -4px; margin: 0; transform: scale(0.42); transform-origin: left top; }
+  .fly { top: -14px; left: 10px; transform: scale(0.42); transform-origin: left top; }
 }
 @media (max-width: 380px) {
   .sum-title { font-size: 1.16rem; }
@@ -183,5 +193,5 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .fly-x, .fly-y, .fly-ball, .fly-lines i { animation: none; }
+  .fly-x, .fly-y, .fly-trail, .fly-ball, .fly-lines i { animation: none; }
 }

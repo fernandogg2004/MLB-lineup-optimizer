@@ -93,7 +93,7 @@ const Icon = {
 /** Colours from the pie, from the worst situation (no runs) to the best (five or more). */
 const GROUP_COLOURS = ["var(--pie-k)", "var(--pie-gb)", "var(--pie-air)", "var(--pie-xbh)", "var(--pie-single)", "var(--pie-hr)"];
 
-/** A ball thrown in on a parabola each time the screen is reached; it stops at the top of its arc. */
+/** A ball thrown in on a parabola each time the screen is reached; it stops in mid-air, still climbing. */
 function FlyingBall({ on }: { on: boolean }) {
   const [throws, setThrows] = useState(0);
   useEffect(() => {
@@ -101,14 +101,17 @@ function FlyingBall({ on }: { on: boolean }) {
   }, [on]);
   return (
     <div className={`fly ${on ? "fly-on" : ""}`} key={throws} aria-hidden="true">
-      <span className="fly-lines">
-        <i />
-        <i />
-        <i />
-      </span>
-      {/* Across at a steady pace, up while slowing: together, a parabola whose top is where it stops. */}
+      {/* Across at a steady pace, up while slowing: together, a parabola. The speed lines travel with the
+          ball, turned along its path, so they are part of the throw from the start. */}
       <span className="fly-x">
         <span className="fly-y">
+          <span className="fly-trail">
+            <span className="fly-lines">
+              <i />
+              <i />
+              <i />
+            </span>
+          </span>
           <span className="fly-ball">
             <Baseball gold={false} />
           </span>
@@ -138,8 +141,8 @@ export function SummaryScreen({ team, on, spinning }: { data: HomeData; team: Ho
   return (
     <section className="screen summary" data-screen={9} data-on={on || undefined} aria-label={t("sum.head")}>
       <div className="layer sum-inner" data-depth="0.16">
+        <FlyingBall on={on} />
         <h2 className="sum-title">
-          <FlyingBall on={on} />
           {size === "none" ? t("sum.title_none") : t("sum.title", { adj: t(`sum.adj_${size}` as Key) })}
         </h2>
 

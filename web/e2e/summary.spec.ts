@@ -32,12 +32,12 @@ test.describe("summary content", () => {
     const runs = s.locator(".sum-runs");
     await expect(runs.locator(".sum-label")).toHaveText("Expected runs");
     await expect(runs.locator(".sum-number")).toHaveText("3.36", { timeout: 5000 });
-    await expect(runs.locator(".sum-good")).toHaveText("Best of362,880possible batting orders");
+    await expect(runs.locator(".sum-good")).toHaveText("Best of362,880batting orders");
     await expect(runs.locator(".sum-mark, .mark-seam")).toHaveCount(0);
     const beats = s.locator(".sum-beats");
     await expect(beats.locator(".sum-label")).toHaveText("Beats actual lineup in");
     await expect(beats.locator(".sum-number")).toHaveText("100/100", { timeout: 5000 });
-    await expect(beats.locator(".sum-label-after")).toHaveText("simulations of player ability");
+    await expect(beats.locator(".sum-label-after")).toHaveText("simulations");
     await expect(beats.locator(".icon-gold")).toHaveCSS("color", "rgb(244, 185, 35)");
     await expect(s.locator(".sum-compare figcaption")).toHaveText("Comparison of expected runs");
     await expect(s.locator(".cmp-label")).toHaveText(["Optimized lineup", "Actual lineup"]);
@@ -80,8 +80,8 @@ test.describe("summary content", () => {
     const s = summary(page);
     await expect(s.locator("h2")).toHaveText("Esta alineación es una mejora pequeña");
     await expect(s.locator(".sum-runs .sum-number")).toHaveText("3,84", { timeout: 5000 });
-    await expect(s.locator(".sum-good").first()).toHaveText("La mejor de362.880órdenes al bate posibles");
-    await expect(s.locator(".sum-beats .sum-label-after")).toHaveText("simulaciones de la habilidad de los jugadores");
+    await expect(s.locator(".sum-good").first()).toHaveText("La mejor de362.880órdenes al bate");
+    await expect(s.locator(".sum-beats .sum-label-after")).toHaveText("simulaciones");
     await expect(s.locator(".dist-pct").first()).toHaveText("8 %", { timeout: 5000 });
     await expect(s.locator(".sum-foot")).toHaveText("Todas las cifras anteriores son estimaciones del modelo.");
   });
@@ -131,12 +131,19 @@ test.describe("summary motion", () => {
     // The ball stops in mid-air and stays there, with its speed lines clear of it.
     await expect(page.locator(".fly")).toHaveClass(/fly-on/);
     await expect.poll(() => page.locator(".fly").evaluate((e) => e.getAnimations({ subtree: true }).every((a) => a.playState === "finished"))).toBe(true);
-    const gap = await page.evaluate(() => {
-      const ball = document.querySelector(".fly-ball")!.getBoundingClientRect();
-      const lines = [...document.querySelectorAll(".fly-lines i")].map((l) => l.getBoundingClientRect().right);
-      return ball.left - Math.max(...lines);
+    const touching = await page.evaluate(() => {
+      // The ball's circle against each line's two ends, which sit along the turned path.
+      const r = document.querySelector(".fly-ball svg")!.getBoundingClientRect();
+      const c = { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+      const radius = (r.width / 2) * (10.5 / 12);
+      return [...document.querySelectorAll(".fly-lines i")].some((l) => {
+        const b = l.getBoundingClientRect();
+        const near = { x: Math.max(b.left, Math.min(c.x, b.right)), y: Math.max(b.top, Math.min(c.y, b.bottom)) };
+        return Math.hypot(near.x - c.x, near.y - c.y) < radius + 3;
+      });
     });
-    expect(gap).toBeGreaterThanOrEqual(4);
+    expect(touching).toBe(false);
+    // The lines are already there while the ball is still flying (checked in the next test's samples).
     const rest = await page.locator(".fly-ball").boundingBox();
     await page.waitForTimeout(500);
     expect(await page.locator(".fly-ball").boundingBox()).toEqual(rest);
@@ -155,9 +162,15 @@ test.describe("summary motion", () => {
     test.skip(isMobile, "the same code; one project is enough");
     await page.goto("/?lang=en#/g/849799/TB/1");
     await toSummary(page);
-    const path: { x: number; y: number }[] = [];
+    const path: { x: number; y: number; lines: number }[] = [];
     for (let k = 0; k < 18; k++) {
-      path.push(await page.locator(".fly-ball").evaluate((e) => { const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; }));
+      path.push(
+        await page.locator(".fly-ball").evaluate((e) => {
+          const r = e.getBoundingClientRect();
+          const lines = Number(getComputedStyle(document.querySelector(".fly-lines i")!).opacity);
+          return { x: r.x + r.width / 2, y: r.y + r.height / 2, lines };
+        }),
+      );
       await page.waitForTimeout(50);
     }
     // Only the samples taken in flight.
@@ -167,7 +180,14 @@ test.describe("summary motion", () => {
     for (let k = 1; k < flight.length; k++) expect(flight[k].y).toBeLessThanOrEqual(flight[k - 1].y + 0.5);
     // Its climb flattens out: a curve, not a straight line.
     const slope = (a: { x: number; y: number }, b: { x: number; y: number }) => (a.y - b.y) / (b.x - a.x);
-    expect(slope(flight[0], flight[2])).toBeGreaterThan(slope(flight.at(-3)!, flight.at(-1)!) * 1.5);
+    expect(slope(flight[0], flight[2])).toBeGreaterThan(slope(flight.at(-3)!, flight.at(-1)!) * 1.15);
+    // It stops while still climbing: a diagonal, not a flat flight.
+    expect(slope(flight.at(-3)!, flight.at(-1)!)).toBeGreaterThan(0.35);
+    // The speed lines are part of the throw: visible while the ball is still on its way.
+    // They fade in over the first quarter second, so they are showing from the first sample in flight and
+    // fully there from mid-flight on.
+    expect(flight[0].lines).toBeGreaterThan(0);
+    expect(flight.slice(Math.floor(flight.length / 2), -1).every((p) => p.lines > 0.9)).toBe(true);
   });
 
   test("the count out of 100 never shows more than 100 on the way", async ({ page, isMobile }) => {
@@ -231,6 +251,10 @@ test.describe("summary layout", () => {
             range.setEndAfter(words.at(-1)!);
             const text = range.getBoundingClientRect();
             if (ball.right > text.left + 0.5 && ball.bottom > text.top && text.bottom > ball.top) out.push("ball covers the title");
+            for (const card of s.querySelectorAll(".sum-card")) {
+              const c = card.getBoundingClientRect();
+              if (ball.right > c.left + 0.5 && c.right > ball.left + 0.5 && ball.bottom > c.top + 0.5 && c.bottom > ball.top + 0.5) out.push("ball covers a card");
+            }
             return [...new Set(out)];
           });
           expect(bad, `${lang} ${theme} ${club}`).toEqual([]);

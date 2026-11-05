@@ -56,8 +56,8 @@ runs as a bar chart in the pie's colours, whole percents totalling 100). The tit
 over 162 games: under 1 tiny, under 3 small, under 6 modest, under 10 solid, else big. The beat count is a
 whole number out of 100. The owner chose to show 100/100 when it rounds there, as an exception to the
 site's rule against showing 100 for a model estimate, because the screen says its numbers are model
-estimates. It counts re-estimates of player ability, not simulated games, so the card says "simulations of
-player ability"; a reader could otherwise take it as games won, which would be far from the truth.
+estimates. It counts re-estimates of player ability, not simulated games. The card first said "simulations of
+player ability" so it would not read as games won; the owner chose the shorter "simulations".
 
 **The batter always faces the statistics.** The owner's choice. Direction follows the layout, so the
 figure does not show the hitter's real batting side.
