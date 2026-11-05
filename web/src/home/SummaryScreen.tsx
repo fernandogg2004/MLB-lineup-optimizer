@@ -3,27 +3,33 @@ import { Baseball } from "../components/BarIcons";
 import type { HomeData, HomeTeam } from "../data";
 import { useI18n } from "../i18n-context";
 import type { Key } from "../strings";
-import { bestToWorstGap, runSpread, runsGained } from "./derive";
+import { biggestMove, ordinal, runsGained } from "./derive";
 import { percentText, prefersReducedMotion } from "./format";
 import { beatsOutOf100, runGroups, upgradeSize } from "./summary";
 import "./summary.css";
 
-/** Digits spin while the screen approaches and land on the true value at the lock. */
-function Roll({ value, on, spinning, className = "roll" }: { value: string; on: boolean; spinning: boolean; className?: string }) {
+/**
+ * Digits spin while the screen approaches and land on the true value at the lock. With `count`, a whole
+ * number counts up from 0 instead, so a count out of 100 never shows more than its total on the way.
+ */
+function Roll({ value, on, spinning, className = "roll", count = false }: { value: string; on: boolean; spinning: boolean; className?: string; count?: boolean }) {
   const [shown, setShown] = useState(value);
   // Without motion, or away from this screen, the true value is simply on display.
   const resting = prefersReducedMotion() || (!on && !spinning);
   useEffect(() => {
     if (resting) return;
     let id = 0;
+    const target = Number(value);
     const scramble = (settled: number) =>
-      value
+      count
+        ? String(Math.round(target * (settled / value.length)))
+        : value
         .split("")
         .map((c, i) => (i < settled || !/\d/.test(c) ? c : String(Math.floor(Math.random() * 10))))
         .join("");
     if (!on) {
       const spin = () => {
-        setShown(scramble(0));
+        setShown(count ? "0" : scramble(0));
         id = window.setTimeout(spin, 70);
       };
       spin();
@@ -34,13 +40,13 @@ function Roll({ value, on, spinning, className = "roll" }: { value: string; on: 
     const tick = () => {
       const k = Math.min(1, (performance.now() - start) / duration);
       const eased = 1 - (1 - k) ** 3;
-      setShown(scramble(Math.floor(eased * value.length)));
+      setShown(count ? String(Math.round(target * eased)) : scramble(Math.floor(eased * value.length)));
       if (k < 1) id = window.setTimeout(tick, 40 + 130 * k);
       else setShown(value);
     };
     tick();
     return () => window.clearTimeout(id);
-  }, [on, resting, value]);
+  }, [on, resting, value, count]);
   return <span className={className}>{resting ? value : shown}</span>;
 }
 
@@ -67,11 +73,19 @@ const Icon = {
       <path className="ring" d="M15 17 27.5 4.5M23.5 3.5l4 1 1 4" />
     </svg>
   ),
-  segments: (
+  columns: (
     <svg viewBox="0 0 32 32" aria-hidden="true">
-      <rect x="2" y="11" width="7" height="10" rx="2" opacity=".45" />
-      <rect x="10.5" y="11" width="11" height="10" rx="2" />
-      <rect x="23" y="11" width="7" height="10" rx="2" opacity=".7" />
+      <rect x="3" y="18" width="5" height="10" rx="1.2" opacity=".55" />
+      <rect x="10" y="8" width="5" height="20" rx="1.2" />
+      <rect x="17" y="12" width="5" height="16" rx="1.2" opacity=".8" />
+      <rect x="24" y="20" width="5" height="8" rx="1.2" opacity=".55" />
+      <rect x="1" y="29" width="30" height="1.6" rx=".8" />
+    </svg>
+  ),
+  rise: (
+    <svg className="rise" viewBox="0 0 32 32" aria-hidden="true">
+      <path d="M3 24 12 15l5 5 11-12" />
+      <path d="M20 8h8v8" />
     </svg>
   ),
 };
@@ -79,7 +93,7 @@ const Icon = {
 /** Colours from the pie, from the worst situation (no runs) to the best (five or more). */
 const GROUP_COLOURS = ["var(--pie-k)", "var(--pie-gb)", "var(--pie-air)", "var(--pie-xbh)", "var(--pie-single)", "var(--pie-hr)"];
 
-/** A ball that flies in from the left each time the screen is reached, then hangs in mid-air. */
+/** A ball thrown in on a parabola each time the screen is reached; it stops at the top of its arc. */
 function FlyingBall({ on }: { on: boolean }) {
   const [throws, setThrows] = useState(0);
   useEffect(() => {
@@ -92,20 +106,26 @@ function FlyingBall({ on }: { on: boolean }) {
         <i />
         <i />
       </span>
-      <span className="fly-ball">
-        <Baseball gold={false} />
+      {/* Across at a steady pace, up while slowing: together, a parabola whose top is where it stops. */}
+      <span className="fly-x">
+        <span className="fly-y">
+          <span className="fly-ball">
+            <Baseball gold={false} />
+          </span>
+        </span>
       </span>
     </div>
   );
 }
 
 export function SummaryScreen({ team, on, spinning }: { data: HomeData; team: HomeTeam; on: boolean; spinning: boolean }) {
-  const { t, lang, fmt, signed } = useI18n();
+  const { t, lang, fmt, signed, int } = useI18n();
   const size = upgradeSize(team);
   const gain = runsGained(team);
   const gainText = gain < 0.005 ? `<${signed(0.01, 2)}` : signed(gain, 2);
   const beats = beatsOutOf100(team.uncertainty.p_opt_better);
   const groups = runGroups(team.optimal.run_distribution);
+  const tallest = Math.max(...groups.map((g) => g.value));
   const max = Math.max(team.optimal.er9, team.actual.er9);
   const bars = [
     { key: "opt", label: t("sum.optimized"), value: team.optimal.er9 },
@@ -113,14 +133,15 @@ export function SummaryScreen({ team, on, spinning }: { data: HomeData; team: Ho
   ];
   const pct = (n: number) => percentText(n, lang);
   const runs = fmt(team.optimal.er9, 2);
-  const worstGap = fmt(bestToWorstGap(team), 2);
+  const move = biggestMove(team.optimal.order);
 
   return (
     <section className="screen summary" data-screen={9} data-on={on || undefined} aria-label={t("sum.head")}>
       <div className="layer sum-inner" data-depth="0.16">
-        <FlyingBall on={on} />
-        <h2 className="sum-title">{size === "none" ? t("sum.title_none") : t("sum.title", { adj: t(`sum.adj_${size}` as Key) })}</h2>
-        <p className="sum-sub">{t("sum.sub", { team: team.name })}</p>
+        <h2 className="sum-title">
+          <FlyingBall on={on} />
+          {size === "none" ? t("sum.title_none") : t("sum.title", { adj: t(`sum.adj_${size}` as Key) })}
+        </h2>
 
         <div className="sum-top">
           <div className="sum-card sum-runs">
@@ -130,30 +151,33 @@ export function SummaryScreen({ team, on, spinning }: { data: HomeData; team: Ho
               <Roll className="sum-number" value={runs} on={on} spinning={spinning} />
             </div>
             <p className="sum-good">
-              {t("sum.worst_1")}
+              {t("sum.best_1")}
               <br />
-              <strong>{t("sum.worst_2", { n: worstGap })}</strong>
+              <strong>{int(team.all_orders.count)}</strong>
               <br />
-              {t("sum.worst_3")}
+              {t("sum.best_3")}
             </p>
-            <svg className="sum-mark mark-seam" viewBox="0 0 60 120" aria-hidden="true">
-              <path d="M52 -4C22 30 22 90 52 124" />
-              <path className="stitch" d="M33 14l-9-4m6 16-9-2m7 14-9 0m8 14-9 2m10 12-8 4m10 10-7 6" />
-            </svg>
           </div>
           <div className="sum-card sum-beats">
             <span className="sum-icon icon-gold">{Icon.trophy}</span>
             <div className="sum-stat">
               <span className="sum-label">{t("sum.beats_1")}</span>
               <span className="sum-number">
-                <Roll value={beats} on={on} spinning={spinning} className="" />
+                <Roll value={beats} on={on} spinning={spinning} className="" count />
                 <span className="sum-of">/100</span>
               </span>
               <span className="sum-label-after">{t("sum.beats_3")}</span>
             </div>
-            <svg className="sum-mark mark-trophy" viewBox="0 0 32 32" aria-hidden="true">
-              <path d="M9 4h14v7a7 7 0 0 1-14 0zM14 17.6h4l.8 5.4h-5.6zM10.5 23.5h11a1 1 0 0 1 1 1V28h-13v-3.5a1 1 0 0 1 1-1z" />
-            </svg>
+            {move && (
+              <div className="sum-move">
+                <span className="sum-move-head">{t("sum.move")}</span>
+                <span className="sum-move-name">{team.hitters[move.hitter].name}</span>
+                <span className="sum-move-slots">
+                  {ordinal(move.from + 1, lang)} <span aria-hidden="true">→</span>{" "}
+                  <span className="sr-only">{t("sum.move_to")}</span> <b>{ordinal(move.to + 1, lang)}</b>
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -176,9 +200,11 @@ export function SummaryScreen({ team, on, spinning }: { data: HomeData; team: Ho
                   </div>
                 ))}
               </div>
-              <p className="sum-good cmp-diff">
-                <strong>{gainText}</strong>
-                <br />
+              <p className="cmp-diff">
+                <span className="cmp-gain">
+                  {Icon.rise}
+                  <strong>{gainText}</strong>
+                </span>
                 {t("sum.per_game")}
               </p>
             </div>
@@ -186,39 +212,34 @@ export function SummaryScreen({ team, on, spinning }: { data: HomeData; team: Ho
 
           <figure className="sum-card sum-dist">
             <figcaption className="sum-card-title">
-              <span className="sum-icon icon-blue small">{Icon.segments}</span>
+              <span className="sum-icon icon-blue small">{Icon.columns}</span>
               {t("sum.dist")}
             </figcaption>
             <div
-              className="seg"
+              className="dist"
               role="img"
               aria-label={t("sum.dist_aria", { list: groups.map((g) => t("sum.runs_n", { n: g.label, p: pct(g.percent) })).join(", ") })}
             >
-              <div className="seg-bar">
+              <div className="dist-cols" aria-hidden="true">
                 {groups.map((g, i) => (
-                  <span
-                    key={g.label}
-                    className="seg-part"
-                    style={{ "--w": `${g.value * 100}%`, "--c": GROUP_COLOURS[i], "--delay": `${200 + i * 120}ms` } as CSSProperties}
-                  />
+                  <div key={g.label} className="dist-col" style={{ "--hk": (g.value / tallest).toFixed(4), "--c": GROUP_COLOURS[i], "--delay": `${200 + i * 110}ms` } as CSSProperties}>
+                    <span className="dist-plot">
+                      <span className="dist-bar">
+                        <Roll value={pct(g.percent)} on={on} spinning={spinning} className="dist-pct" />
+                      </span>
+                    </span>
+                    <b className="dist-run">{g.label}</b>
+                  </div>
                 ))}
               </div>
-              <div className="seg-labels" aria-hidden="true" style={{ gridTemplateColumns: groups.map((g) => `minmax(2.7em, ${Math.max(g.value, 0.001).toFixed(4)}fr)`).join(" ") }}>
-                {groups.map((g, i) => (
-                  <span key={g.label} className="seg-label" style={{ "--delay": `${450 + i * 120}ms` } as CSSProperties}>
-                    <b>{g.label}</b>
-                    <Roll value={pct(g.percent)} on={on} spinning={spinning} className="seg-pct" />
-                  </span>
-                ))}
-              </div>
-              <p className="seg-axis" aria-hidden="true">
+              <p className="dist-axis" aria-hidden="true">
                 {t("sum.dist_axis")}
               </p>
             </div>
           </figure>
         </div>
 
-        <p className="sum-foot">{t("sum.note", { sd: fmt(runSpread(team), 1) })}</p>
+        <p className="sum-foot">{t("sum.note")}</p>
         <p className="sum-link">
           <a className="link" href="#/statistics">
             {t("sum.link")}

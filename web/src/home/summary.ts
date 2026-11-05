@@ -1,5 +1,5 @@
 import type { HomeTeam } from "../data";
-import { roundTo100, runsGained, sameOrder, wholePercent } from "./derive";
+import { roundTo100, runsGained, sameOrder } from "./derive";
 
 export type Upgrade = "none" | "tiny" | "small" | "modest" | "solid" | "big";
 
@@ -18,12 +18,13 @@ export function upgradeSize(team: HomeTeam): Upgrade {
   return "big";
 }
 
-/** The chance of the optimized order beating the real one, as a whole number out of 100; never "100". */
+/**
+ * How many of 100 re-estimates of player ability the optimized order wins, as a whole number. The owner
+ * chose to show 100 when it rounds to 100: the screen says these are model estimates. A tiny epsilon keeps
+ * floating point from turning 99.5 (398 of 400) into 99.4999… and rounding it down.
+ */
 export function beatsOutOf100(p: number): string {
-  const w = wholePercent(p);
-  if (w.kind === "more") return "99+";
-  if (w.kind === "less") return "<1";
-  return String(w.n);
+  return String(Math.round(Math.min(1, Math.max(0, p)) * 100 + 1e-9));
 }
 
 export const RUN_GROUPS = ["0", "1", "2", "3", "4", "5+"] as const;

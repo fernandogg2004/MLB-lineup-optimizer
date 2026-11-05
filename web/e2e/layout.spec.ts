@@ -34,7 +34,7 @@ async function audit(page: Page, screen: number): Promise<Finding[]> {
     const scr = document.querySelector(`.screen[data-screen="${screen}"]`);
     if (!scr) return ["screen missing"];
     const bad: string[] = [];
-    const sel = ".pie-label,.vs,.vs input,.ors__dial,.ors__label,.ors__note,.who,.pos,.figure,.outcome,.outcome-card,.sum-title,.sum-card,.seg-label,.sum-foot,.sum-link,h2,.caption,.pie";
+    const sel = ".pie-label,.vs,.vs input,.ors__dial,.ors__label,.ors__note,.who,.pos,.figure,.outcome,.outcome-card,.sum-title,.sum-card,.dist-col,.sum-foot,.sum-link,h2,.caption,.pie";
     const items = [...scr.querySelectorAll(sel)].map((e) => ({ c: e.getAttribute("class") ?? e.tagName, r: e.getBoundingClientRect() }));
     const top = 40;
     for (const o of items) {

@@ -19,12 +19,13 @@ describe("upgrade size", () => {
 });
 
 describe("beats out of 100", () => {
-  it("is a whole number and never 100", () => {
+  it("is a whole number, and 100 when it rounds there", () => {
     expect(beatsOutOf100(0.9125)).toBe("91");
     expect(beatsOutOf100(0.87)).toBe("87");
-    expect(beatsOutOf100(0.995)).toBe("99+");
-    expect(beatsOutOf100(1)).toBe("99+");
-    expect(beatsOutOf100(0.004)).toBe("<1");
+    expect(beatsOutOf100(398 / 400)).toBe("100");
+    expect(beatsOutOf100(0.994)).toBe("99");
+    expect(beatsOutOf100(1)).toBe("100");
+    expect(beatsOutOf100(0.004)).toBe("0");
     expect(beatsOutOf100(0)).toBe("0");
   });
 });

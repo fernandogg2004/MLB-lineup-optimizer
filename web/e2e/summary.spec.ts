@@ -15,6 +15,7 @@ test.afterEach(async ({ page }) => {
 
 const summary = (page: Page) => page.locator(".summary");
 const toSummary = async (page: Page) => {
+  await expect(page.locator(".screen")).toHaveCount(10);
   await page.evaluate(() => {
     const s = document.querySelector<HTMLElement>(".scroller")!;
     s.scrollTop = 9 * s.querySelector<HTMLElement>(".screen")!.offsetHeight;
@@ -26,50 +27,69 @@ test.describe("summary content", () => {
   test("Tampa Bay: title, key numbers and charts", async ({ page }) => {
     await page.goto("/?lang=en#/g/849799/TB/summary");
     const s = summary(page);
-    await expect(s.locator("h2")).toHaveText("This is a modest upgrade");
-    await expect(s.locator(".sum-sub")).toHaveText("What the model expects from the Tampa Bay Rays with their optimized batting order in this game.");
+    await expect(s.locator("h2")).toHaveText("This lineup is a modest upgrade");
+    await expect(s.locator(".sum-sub")).toHaveCount(0);
     const runs = s.locator(".sum-runs");
     await expect(runs.locator(".sum-label")).toHaveText("Expected runs");
     await expect(runs.locator(".sum-number")).toHaveText("3.36", { timeout: 5000 });
-    await expect(runs.locator(".sum-good")).toHaveText("That's0.11 runs betterthan the worst lineup");
+    await expect(runs.locator(".sum-good")).toHaveText("Best of362,880possible batting orders");
+    await expect(runs.locator(".sum-mark, .mark-seam")).toHaveCount(0);
     const beats = s.locator(".sum-beats");
     await expect(beats.locator(".sum-label")).toHaveText("Beats actual lineup in");
-    await expect(beats.locator(".sum-number")).toHaveText("99+/100", { timeout: 5000 });
+    await expect(beats.locator(".sum-number")).toHaveText("100/100", { timeout: 5000 });
     await expect(beats.locator(".sum-label-after")).toHaveText("simulations of player ability");
     await expect(beats.locator(".icon-gold")).toHaveCSS("color", "rgb(244, 185, 35)");
     await expect(s.locator(".sum-compare figcaption")).toHaveText("Comparison of expected runs");
     await expect(s.locator(".cmp-label")).toHaveText(["Optimized lineup", "Actual lineup"]);
     await expect(s.locator(".cmp-value")).toHaveText(["3.36", "3.34"]);
     await expect(s.locator(".cmp-diff")).toHaveText("+0.02runs per game");
+    await expect(s.locator(".cmp-gain")).toHaveCSS("color", "rgb(126, 226, 160)");
+    await expect(s.locator(".cmp-diff")).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+    await expect(s.locator(".cmp-gain .rise")).toBeVisible();
     await expect(s.locator(".sum-dist figcaption")).toHaveText("Probability of scoring n runs");
-    await expect(s.locator(".seg-label b")).toHaveText(["0", "1", "2", "3", "4", "5+"]);
-    await expect(s.locator(".seg-pct")).toHaveText(["11%", "16%", "17%", "15%", "13%", "28%"], { timeout: 5000 });
-    await expect(s.locator(".seg")).toHaveAttribute("aria-label", "Chance of each number of runs: 0 runs: 11%, 1 runs: 16%, 2 runs: 17%, 3 runs: 15%, 4 runs: 13%, 5+ runs: 28%.");
-    await expect(s.locator(".sum-foot")).toContainText("All numbers above are model estimates.");
+    await expect(s.locator(".dist-run")).toHaveText(["0", "1", "2", "3", "4", "5+"]);
+    await expect(s.locator(".dist-pct")).toHaveText(["11%", "16%", "17%", "15%", "13%", "28%"], { timeout: 5000 });
+    await expect(s.locator(".dist")).toHaveAttribute("aria-label", "Chance of each number of runs: 0 runs: 11%, 1 runs: 16%, 2 runs: 17%, 3 runs: 15%, 4 runs: 13%, 5+ runs: 28%.");
+    await expect(s.locator(".sum-foot")).toHaveText("All numbers above are model estimates.");
+    await expect(s.locator(".sum-link")).toHaveText("See the full analysis");
+    const foot = await s.locator(".sum-foot").evaluate((e) => parseFloat(getComputedStyle(e).fontSize));
+    const link = await s.locator(".sum-link").evaluate((e) => parseFloat(getComputedStyle(e).fontSize));
+    expect(link).toBeLessThan(foot);
+  });
+
+  test("the batter moved furthest sits beside the count on wide screens", async ({ page, isMobile }) => {
+    test.skip(isMobile, "phones have no room for it");
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/?lang=en#/g/849799/MIL/summary");
+    const move = summary(page).locator(".sum-move");
+    await expect(move).toBeVisible();
+    await expect(move.locator(".sum-move-head")).toHaveText("Biggest change");
+    await expect(move.locator(".sum-move-name")).toHaveText("Brice Turang");
+    await expect(move.locator(".sum-move-slots")).toHaveText("5th → moves to 1st");
   });
 
   test("Milwaukee: a smaller gain and a whole number of simulations", async ({ page }) => {
     await page.goto("/?lang=en#/g/849799/MIL/summary");
-    await expect(summary(page).locator("h2")).toHaveText("This is a small upgrade");
+    await expect(summary(page).locator("h2")).toHaveText("This lineup is a small upgrade");
     await expect(summary(page).locator(".sum-beats .sum-number")).toHaveText("91/100", { timeout: 5000 });
-    await expect(summary(page).locator(".cmp-diff strong")).toHaveText("+0.01");
+    await expect(summary(page).locator(".cmp-gain strong")).toHaveText("+0.01");
   });
 
   test("Spanish, with its own number format", async ({ page }) => {
     await page.goto("/?lang=es#/g/849799/MIL/summary");
     const s = summary(page);
-    await expect(s.locator("h2")).toHaveText("Es una mejora pequeña");
+    await expect(s.locator("h2")).toHaveText("Esta alineación es una mejora pequeña");
     await expect(s.locator(".sum-runs .sum-number")).toHaveText("3,84", { timeout: 5000 });
-    await expect(s.locator(".sum-good").first()).toHaveText("Son0,05 carreras másque la peor alineación");
+    await expect(s.locator(".sum-good").first()).toHaveText("La mejor de362.880órdenes al bate posibles");
     await expect(s.locator(".sum-beats .sum-label-after")).toHaveText("simulaciones de la habilidad de los jugadores");
-    await expect(s.locator(".seg-pct").first()).toHaveText("8 %", { timeout: 5000 });
+    await expect(s.locator(".dist-pct").first()).toHaveText("8 %", { timeout: 5000 });
+    await expect(s.locator(".sum-foot")).toHaveText("Todas las cifras anteriores son estimaciones del modelo.");
   });
 
   test("each run group uses the pie's colours, and the groups total 100", async ({ page }) => {
     await page.goto("/?lang=en#/g/849799/TB/summary");
-    await expect(page.locator(".seg-part")).toHaveCount(6);
-    await expect(page.locator(".seg-pct").first()).toHaveText("11%", { timeout: 5000 });
-    const parts = await page.locator(".seg-part").evaluateAll((all) => all.map((p) => getComputedStyle(p).backgroundColor));
+    await expect(page.locator(".dist-bar")).toHaveCount(6);
+    const bars = await page.locator(".dist-bar").evaluateAll((all) => all.map((p) => getComputedStyle(p).backgroundColor));
     const pie = await page.evaluate(() =>
       ["--pie-k", "--pie-gb", "--pie-air", "--pie-xbh", "--pie-single", "--pie-hr"].map((v) => {
         const probe = document.createElement("span");
@@ -80,9 +100,14 @@ test.describe("summary content", () => {
         return c;
       }),
     );
-    expect(parts).toEqual(pie);
+    expect(bars).toEqual(pie);
     // The percentages roll before they land, so wait for all of them to settle.
-    await expect.poll(async () => (await page.locator(".seg-pct").allTextContents()).map((p) => Number(p.replace("%", ""))).reduce((a, b) => a + b, 0), { timeout: 6000 }).toBe(100);
+    await expect.poll(async () => (await page.locator(".dist-pct").allTextContents()).map((p) => Number(p.replace("%", ""))).reduce((a, b) => a + b, 0), { timeout: 6000 }).toBe(100);
+    // Heights follow the chances: the tallest bar is the most likely group.
+    await expect.poll(() => page.locator(".dist-bar").evaluateAll((all) => all.map((b) => Math.round(b.getBoundingClientRect().height))), { timeout: 4000 })
+      .toEqual(expect.arrayContaining([expect.any(Number)]));
+    const heights = await page.locator(".dist-bar").evaluateAll((all) => all.map((b) => b.getBoundingClientRect().height));
+    expect(heights.indexOf(Math.max(...heights))).toBe(5);
   });
 });
 
@@ -99,12 +124,19 @@ test.describe("summary motion", () => {
     const track = await page.locator(".cmp-opt .cmp-track").evaluate((e) => e.getBoundingClientRect().width);
     expect(early).toBeLessThan(track * 0.9);
     await expect.poll(() => fill.evaluate((e) => e.getBoundingClientRect().width), { timeout: 4000 }).toBeGreaterThan(track - 4);
-    // The run groups fill the whole bar once grown.
-    await expect.poll(() => page.locator(".seg-part").evaluateAll((all) => all.reduce((a, p) => a + p.getBoundingClientRect().width, 0)), { timeout: 4000 })
-      .toBeGreaterThan(await page.locator(".seg-bar").evaluate((e) => e.getBoundingClientRect().width - 2));
-    // The ball stops in mid-air and stays there.
+    // The run columns grow; the tallest reaches the top of its plot.
+    const tallest = page.locator(".dist-col").last();
+    await expect.poll(() => tallest.locator(".dist-bar").evaluate((e) => e.getBoundingClientRect().height), { timeout: 4000 })
+      .toBeGreaterThan(await tallest.locator(".dist-plot").evaluate((e) => e.getBoundingClientRect().height - 26));
+    // The ball stops in mid-air and stays there, with its speed lines clear of it.
     await expect(page.locator(".fly")).toHaveClass(/fly-on/);
-    await expect.poll(() => page.locator(".fly-ball").evaluate((e) => e.getAnimations().every((a) => a.playState === "finished"))).toBe(true);
+    await expect.poll(() => page.locator(".fly").evaluate((e) => e.getAnimations({ subtree: true }).every((a) => a.playState === "finished"))).toBe(true);
+    const gap = await page.evaluate(() => {
+      const ball = document.querySelector(".fly-ball")!.getBoundingClientRect();
+      const lines = [...document.querySelectorAll(".fly-lines i")].map((l) => l.getBoundingClientRect().right);
+      return ball.left - Math.max(...lines);
+    });
+    expect(gap).toBeGreaterThanOrEqual(4);
     const rest = await page.locator(".fly-ball").boundingBox();
     await page.waitForTimeout(500);
     expect(await page.locator(".fly-ball").boundingBox()).toEqual(rest);
@@ -119,13 +151,46 @@ test.describe("summary motion", () => {
     expect(await page.locator(".fly-ball").evaluate((e) => e.getAnimations().some((a) => a.playState === "running"))).toBe(true);
   });
 
+  test("the ball's path is a parabola that tops out where it stops", async ({ page, isMobile }) => {
+    test.skip(isMobile, "the same code; one project is enough");
+    await page.goto("/?lang=en#/g/849799/TB/1");
+    await toSummary(page);
+    const path: { x: number; y: number }[] = [];
+    for (let k = 0; k < 18; k++) {
+      path.push(await page.locator(".fly-ball").evaluate((e) => { const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; }));
+      await page.waitForTimeout(50);
+    }
+    // Only the samples taken in flight.
+    const flight = path.filter((p, k) => k > 0 && p.x > path[k - 1].x + 0.5);
+    expect(flight.length).toBeGreaterThanOrEqual(6);
+    // Moving right and rising throughout, never dipping: the top of the arc is where it stops.
+    for (let k = 1; k < flight.length; k++) expect(flight[k].y).toBeLessThanOrEqual(flight[k - 1].y + 0.5);
+    // Its climb flattens out: a curve, not a straight line.
+    const slope = (a: { x: number; y: number }, b: { x: number; y: number }) => (a.y - b.y) / (b.x - a.x);
+    expect(slope(flight[0], flight[2])).toBeGreaterThan(slope(flight.at(-3)!, flight.at(-1)!) * 1.5);
+  });
+
+  test("the count out of 100 never shows more than 100 on the way", async ({ page, isMobile }) => {
+    test.skip(isMobile, "the same code; one project is enough");
+    await page.goto("/?lang=en#/g/849799/TB/1");
+    await toSummary(page);
+    const seen: number[] = [];
+    for (let k = 0; k < 25; k++) {
+      seen.push(Number((await page.locator(".sum-beats .sum-number").innerText()).split("/")[0]));
+      await page.waitForTimeout(50);
+    }
+    expect(Math.max(...seen)).toBeLessThanOrEqual(100);
+    expect(seen.at(-1)).toBe(100);
+  });
+
   test("reduced motion shows everything at once", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/?lang=en#/g/849799/TB/summary");
     await expect(summary(page).locator(".sum-runs .sum-number")).toHaveText("3.36");
     const track = await page.locator(".cmp-opt .cmp-track").evaluate((e) => e.getBoundingClientRect().width);
     expect(await page.locator(".cmp-opt .cmp-fill").evaluate((e) => e.getBoundingClientRect().width)).toBeGreaterThan(track - 4);
-    expect(await page.locator(".fly-ball").evaluate((e) => e.getAnimations().length)).toBe(0);
+    expect(await page.locator(".fly").evaluate((e) => e.getAnimations({ subtree: true }).length)).toBe(0);
+    await expect(summary(page).locator(".sum-beats .sum-number")).toHaveText("100/100");
   });
 });
 
@@ -145,23 +210,25 @@ test.describe("summary layout", () => {
             const s = document.querySelector(".summary")!;
             if (s.scrollHeight - s.clientHeight > 1) out.push(`overflow ${s.scrollHeight - s.clientHeight}`);
             const bar = document.querySelector(".bar")!.getBoundingClientRect().bottom;
-            for (const e of s.querySelectorAll(".sum-title, .sum-card, .sum-foot, .sum-link, .seg-label, .cmp-label, .sum-good")) {
+            for (const e of s.querySelectorAll(".sum-title, .sum-card, .sum-foot, .sum-link, .dist-pct, .dist-run, .cmp-label, .sum-good, .sum-move")) {
               const r = e.getBoundingClientRect();
               if (r.width === 0) continue;
               if (r.left < -0.5 || r.right > innerWidth + 0.5 || r.top < bar - 0.5 || r.bottom > innerHeight + 0.5) out.push(`${e.className} outside`);
             }
             for (const e of s.querySelectorAll(".sum-card *")) {
               const t = e as HTMLElement;
-              if (t.children.length === 0 && t.textContent && t.scrollWidth > t.clientWidth + 1 && getComputedStyle(t).overflow !== "visible") out.push(`${t.className} cut`);
+              if (t.children.length === 0 && t.textContent && !t.classList.contains("sr-only") && t.scrollWidth > t.clientWidth + 1 && getComputedStyle(t).overflow !== "visible") out.push(`${t.className} cut`);
             }
-            const labels = [...s.querySelectorAll(".seg-label")].map((l) => [...l.children].map((c) => c.getBoundingClientRect()));
-            for (let i = 1; i < labels.length; i++) {
-              for (const a of labels[i - 1]) for (const b of labels[i]) if (a.right > b.left + 0.5 && a.bottom > b.top && b.bottom > a.top) out.push(`run labels ${i - 1} and ${i} overlap`);
-            }
+            const pcts = [...s.querySelectorAll(".dist-pct")].map((l) => l.getBoundingClientRect());
+            for (let i = 1; i < pcts.length; i++) if (pcts[i - 1].right > pcts[i].left + 0.5 && pcts[i - 1].bottom > pcts[i].top && pcts[i].bottom > pcts[i - 1].top) out.push(`run percentages ${i - 1} and ${i} overlap`);
+            const cardTitle = s.querySelector(".sum-dist .sum-card-title")!.getBoundingClientRect();
+            for (const p of pcts) if (p.top < cardTitle.bottom) out.push("a percentage reaches the card title");
             const ball = s.querySelector(".fly-ball")!.getBoundingClientRect();
             const title = s.querySelector(".sum-title")!;
             const range = document.createRange();
-            range.selectNodeContents(title);
+            const words = [...title.childNodes].filter((n) => n.nodeType === Node.TEXT_NODE && n.textContent!.trim());
+            range.setStartBefore(words[0]);
+            range.setEndAfter(words.at(-1)!);
             const text = range.getBoundingClientRect();
             if (ball.right > text.left + 0.5 && ball.bottom > text.top && text.bottom > ball.top) out.push("ball covers the title");
             return [...new Set(out)];

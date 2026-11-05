@@ -60,6 +60,8 @@ test.describe("top bar", () => {
       for (const width of [320, 360, 390, 600, 601, 761, 861, 1024, 1440]) {
         await page.setViewportSize({ width, height: 800 });
         await page.goto(`/?lang=${lang}`);
+        // Both selectors appear once the list of games has loaded.
+        await expect(page.getByRole("combobox")).toHaveCount(2);
         for (const box of await page.getByRole("combobox").all()) {
           const b = (await box.boundingBox())!;
           expect(b.x, `button ${width}`).toBeGreaterThanOrEqual(0);
