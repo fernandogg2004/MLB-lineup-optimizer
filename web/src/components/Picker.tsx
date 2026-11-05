@@ -18,8 +18,10 @@ export function Picker<V extends string | number>(props: {
   value: V;
   options: PickerOption<V>[];
   onChange: (value: V) => void;
+  /** Every text this selector can ever show, when that is more than the current options. */
+  sizing?: { label: string; short?: string }[];
 }) {
-  const { label, className = "", value, options, onChange } = props;
+  const { label, className = "", value, options, onChange, sizing } = props;
   const id = useId();
   const root = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLUListElement>(null);
@@ -124,9 +126,20 @@ export function Picker<V extends string | number>(props: {
         onClick={() => (open ? setOpen(false) : show())}
         onKeyDown={onKeyDown}
       >
-        <span className="picker-icon">{selected?.icon}</span>
-        <span className="picker-text picker-long">{selected?.label}</span>
-        <span className="picker-text picker-short">{selected?.short ?? selected?.label}</span>
+        <span className="picker-face">
+          <span className="picker-icon">{selected?.icon}</span>
+          <span className="picker-text picker-long">{selected?.label}</span>
+          <span className="picker-text picker-short">{selected?.short ?? selected?.label}</span>
+        </span>
+        {/* Invisible: holds the button at the width of its longest possible text. */}
+        <span className="picker-sizes" aria-hidden="true">
+          {(sizing ?? options).map((o) => (
+            <span key={o.label}>
+              <span className="picker-long">{o.label}</span>
+              <span className="picker-short">{o.short ?? o.label}</span>
+            </span>
+          ))}
+        </span>
         <svg className="picker-chevron" viewBox="0 0 12 8" width="12" height="8" aria-hidden="true">
           <path d="M1.5 1.5 6 6l4.5-4.5" />
         </svg>

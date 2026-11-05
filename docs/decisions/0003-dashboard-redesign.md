@@ -38,15 +38,15 @@ accessories, chosen from the player id so each player keeps his look. These are 
 no reliable source for what a player really wears, and the Statistics page says so. Licensed photos can be added through
 `web/public/players/manifest.json`, and a test fails if an image has no licence entry.
 
-**Navy top bar with custom selectors.** The owner's design: navy and gold in both appearances, two gold
-strokes after the title, a gold ball for World Series games and a white one for the rest. A native
+**Navy top bar with custom selectors.** The owner's design: navy and gold in both appearances, a baseball
+seam after the title, a gold ball for World Series games and a white one for the rest. A native
 select cannot show icons, so `components/Picker.tsx` follows the WAI-ARIA select-only combobox.
 
 **Team logos load from MLB; none is stored here.** The owner asked for club logos. They are trademarks and
 no licence is recorded, so committing them would break the rule against unauthorized proprietary assets.
 The browser loads MLB's own version for dark backgrounds from `www.mlbstatic.com`, allowed in the site's
 security policy for images only and with no referrer sent. If one fails, a badge in the team's colours
-shows. Displaying them publicly remains an owner decision to take before production.
+shows. The owner approved showing them (2026-11-05): this is a personal, non-commercial project.
 
 **The batter always faces the statistics.** The owner's choice. Direction follows the layout, so the
 figure does not show the hitter's real batting side.

@@ -5,7 +5,7 @@
    Night is the default appearance; Day is selected with data-theme on the root element. */
 :root {
   color-scheme: dark;
-  --bar-h: 52px;
+  --bar-h: 60px;
   --ink: #f4f6f8;
   --ink-2: #dfe4ea;
   --ink-3: #aeb6c2;
@@ -282,32 +282,37 @@ summary::-webkit-details-marker { color: var(--text-muted); }
 /* ---- Top bar ---------------------------------------------------------------------------- */
 /* Navy with a gold accent in both appearances, so its own colours are set here and not by the theme. */
 .bar { --ink: #ffffff; --hover: rgb(255 255 255 / .12); --focus: #ffd65c; --gold: #f4b923; --bar-navy: #0a1f40;
-  position: fixed; z-index: 20; top: 0; left: 0; right: 0; height: var(--bar-h); display: flex; align-items: center; gap: 14px; padding: 0 18px;
+  position: fixed; z-index: 20; top: 0; left: 0; right: 0; height: var(--bar-h); display: flex; align-items: center; gap: 12px; padding: 0 24px 0 8px;
   background: linear-gradient(180deg, #12305e, var(--bar-navy)); box-shadow: 0 1px 0 rgb(255 255 255 / .1), 0 2px 10px rgb(0 0 0 / .28); }
 .burger { width: 40px; height: 40px; flex: none; display: flex; align-items: center; justify-content: center; border-radius: 8px; cursor: pointer; color: var(--ink); }
 .burger:hover { background: var(--hover); }
 .menu-icon { display: block; }
 .menu-icon line { stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
 .brand, .bar-mark { display: none; }
-.pickers { flex: 1; min-width: 0; display: flex; justify-content: flex-end; gap: 12px; margin-left: auto; }
+/* Two columns of equal width, as wide as the longest text allows, shrinking together if the screen is short of room. */
+.pickers { flex: 0 1 auto; min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; margin-left: auto; }
 
-/* Two gold strokes after the title, running the height of the bar. */
-@media (min-width: 761px) {
-  .brand { display: block; flex: none; font-weight: 700; font-size: 1.02rem; letter-spacing: -.01em; color: var(--ink); white-space: nowrap; }
-  .bar-mark { display: flex; flex: none; align-self: stretch; gap: 5px; overflow: hidden; padding: 0 12px; }
-  .bar-mark i { display: block; height: 100%; transform: skewX(-30deg); background: var(--gold); }
-  .bar-mark i:first-child { width: 5px; }
-  .bar-mark i:last-child { width: 2px; }
+/* A baseball's seam after the title, running the height of the bar. */
+@media (min-width: 861px) {
+  .brand { display: block; flex: none; font-weight: 700; font-size: 1.3rem; letter-spacing: -.015em; color: var(--ink); white-space: nowrap; }
+  .bar-mark { display: block; flex: none; align-self: stretch; width: 42px; margin-left: 4px; }
+  .seam { display: block; width: 100%; height: 100%; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .seam-line { stroke: #e8503f; stroke-opacity: .55; stroke-width: 1.2; }
+  .seam-stitch { stroke: #e8503f; stroke-width: 2; }
 }
 
 /* Match and team selectors */
-.picker { position: relative; min-width: 0; flex: 0 1 auto; }
-.picker-button { display: flex; align-items: center; gap: 9px; width: 100%; min-width: 0; height: 38px; padding: 0 12px 0 10px; border: 1.5px solid var(--gold); border-radius: 10px; background: rgb(6 19 41 / .55); color: #fff; font-size: .88rem; font-weight: 600; cursor: pointer; transition: background .15s; }
+.picker { position: relative; min-width: 0; }
+.picker-button { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; width: 100%; min-width: 0; height: 40px; padding: 0 34px; border: 1.5px solid var(--gold); border-radius: 10px; background: rgb(6 19 41 / .55); color: #fff; font-size: .88rem; font-weight: 600; cursor: pointer; transition: background .15s; }
 .picker-button:hover, .picker[data-open] .picker-button { background: rgb(255 255 255 / .1); }
 .picker-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .picker-short { display: none; }
+/* Icon and text are centred together; the arrow keeps its place at the edge. */
+.picker-face { grid-area: 1 / 1; display: flex; align-items: center; justify-content: center; gap: 9px; min-width: 0; }
+.picker-sizes { grid-area: 1 / 1; display: block; height: 0; overflow: hidden; visibility: hidden; padding-left: 33px; white-space: nowrap; }
+.picker-sizes > span { display: block; }
 .picker-icon { flex: none; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; }
-.picker-chevron { flex: none; margin-left: auto; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s; }
+.picker-chevron { position: absolute; right: 12px; top: calc(50% - 4px); fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s; }
 .picker[data-open] .picker-chevron { transform: rotate(180deg); }
 .picker-list { position: absolute; z-index: 1; top: calc(100% + 6px); right: 0; min-width: 100%; width: max-content; max-width: calc(100vw - 24px); max-height: min(60vh, 340px); overflow-y: auto; overscroll-behavior: contain; margin: 0; padding: 5px; list-style: none; border: 1.5px solid var(--gold); border-radius: 12px; background: var(--bar-navy); color: #fff; box-shadow: 0 10px 28px rgb(0 0 0 / .45); }
 .picker-game .picker-list { left: 0; right: auto; max-width: min(calc(100vw - 100px), 460px); }
@@ -327,19 +332,33 @@ summary::-webkit-details-marker { color: var(--text-muted); }
 .ball-white .ball-seam, .ball-white .ball-stitch { stroke: #d33a2c; }
 .ball-gold .ball-skin { fill: #f4b923; stroke: #ffe08a; }
 .ball-gold .ball-seam, .ball-gold .ball-stitch { stroke: #ffffff; }
-@media (max-width: 560px) {
-  .bar { padding: 0 10px 0 6px; gap: 6px; }
-  .pickers { gap: 8px; }
+/* The full match text needs more room than these widths have. */
+@media (max-width: 1100px) {
+  .picker-game .picker-long { display: none; }
+  .picker-game .picker-short { display: block; }
+}
+@media (max-width: 860px), (max-height: 599px) {
+  :root { --bar-h: 52px; }
+}
+@media (max-width: 600px) {
+  .bar { padding: 0 10px 0 8px; gap: 6px; }
+  /* A phone cannot fit two equal columns: each keeps a fixed width, the match taking the larger share. */
+  .pickers { flex: 1; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 10px; }
   .picker-long { display: none; }
   .picker-short { display: block; }
-  .picker-button { padding: 0 8px 0 6px; gap: 6px; font-size: .8rem; }
-  .picker-team { flex: none; }
+  .picker-button { padding: 0 22px 0 6px; font-size: .8rem; }
+  .picker-face { gap: 5px; }
+  .picker-sizes { padding-left: 29px; }
+  .picker-chevron { right: 7px; }
   /* Hangs from the bar itself, which is the only thing wide enough on a phone. */
   .picker { position: static; }
   .picker-list, .picker-game .picker-list { left: 10px; right: 10px; width: auto; min-width: 0; max-width: none; }
 }
+@media (max-width: 400px) {
+  .pickers { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+}
 @media (forced-colors: active) {
-  .bar-mark i { background: CanvasText; }
+  .seam-line, .seam-stitch { stroke: CanvasText; }
   .picker-option[data-active] { outline: 2px solid Highlight; outline-offset: -2px; }
 }
 
@@ -349,9 +368,9 @@ summary::-webkit-details-marker { color: var(--text-muted); }
 .menu-scrim { position: absolute; inset: 0; width: 100%; height: 100%; cursor: default; }
 .menu-panel { position: absolute; top: 0; bottom: 0; left: 0; width: min(320px, 85vw); padding: 72px 18px 22px; display: flex; flex-direction: column; justify-content: space-between; background: var(--menu-bg); color: var(--menu-ink); backdrop-filter: blur(7px); transform: translateX(-100%); transition: transform .28s cubic-bezier(.2, .8, .2, 1); }
 .menu.open .menu-panel { transform: none; }
-.menu-close { position: absolute; top: 6px; left: 18px; }
+.menu-close { position: absolute; top: calc((var(--bar-h) - 40px) / 2); left: 8px; }
 .menu-panel .burger { color: var(--menu-ink); }
-.menu-name { position: absolute; top: 15px; left: 72px; color: var(--menu-ink); font-weight: 700; font-size: .95rem; }
+.menu-name { position: absolute; top: calc((var(--bar-h) - 1.6rem) / 2); left: 60px; color: var(--menu-ink); font-weight: 700; font-size: 1.3rem; line-height: 1.6rem; letter-spacing: -.015em; }
 html.stats { scrollbar-gutter: stable; }
 html.menu-locked { overflow: hidden; }
 .menu-items { position: relative; display: flex; flex-direction: column; }

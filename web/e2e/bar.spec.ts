@@ -31,29 +31,32 @@ test.describe("top bar", () => {
     expect(looks[0]).toBe(looks[1]);
   });
 
-  test("puts the title and two gold strokes after the menu icon on wide screens", async ({ page, isMobile }) => {
+  test("puts the title and a baseball seam after the menu icon on wide screens", async ({ page, isMobile }) => {
     test.skip(isMobile, "the title has no room on a phone");
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("/?lang=en");
     await expect(page.locator(".bar .brand")).toHaveText("Batting Order Lab");
-    await expect(page.locator(".bar-mark i")).toHaveCount(2);
+    await expect(page.locator(".bar-mark .seam-stitch")).toHaveCount(5);
+    await expect(page.locator(".bar .brand")).toHaveCSS("font-size", "20.8px");
     const order = await page.evaluate(() =>
       [".burger", ".brand", ".bar-mark", ".pickers"].map((s) => document.querySelector(`.bar ${s}`)!.getBoundingClientRect().x),
     );
     expect(order).toEqual([...order].sort((a, b) => a - b));
-    await expect(page.locator(".bar-mark i").first()).toHaveCSS("background-color", "rgb(244, 185, 35)");
+    await expect(page.locator(".bar-mark .seam-stitch").first()).toHaveCSS("stroke", "rgb(232, 80, 63)");
   });
 
   for (const lang of ["en", "es"]) {
     test(`selectors and open lists fit every width (${lang})`, async ({ page }) => {
-      for (const width of [320, 390, 600, 761, 1024, 1440]) {
+      for (const width of [320, 360, 390, 400, 401, 600, 601, 761, 861, 1024, 1101, 1440]) {
         await page.setViewportSize({ width, height: 800 });
         await page.goto(`/?lang=${lang}`);
         for (const box of await page.getByRole("combobox").all()) {
           const b = (await box.boundingBox())!;
           expect(b.x, `button ${width}`).toBeGreaterThanOrEqual(0);
           expect(b.x + b.width, `button ${width}`).toBeLessThanOrEqual(width);
-          expect(b.y + b.height, `button ${width}`).toBeLessThanOrEqual(52);
+          expect(b.y + b.height, `button ${width}`).toBeLessThanOrEqual(60);
+          const cut = await box.locator(".picker-face .picker-text:visible").evaluate((t) => t.scrollWidth > t.clientWidth);
+          expect(cut, `shown text ${width}`).toBe(false);
           await box.click();
           const list = page.locator(".picker-list:visible");
           const l = (await list.boundingBox())!;
@@ -66,6 +69,49 @@ test.describe("top bar", () => {
       }
     });
   }
+});
+
+test.describe("selector size", () => {
+  const widths = async (page: Page) => [(await game(page).boundingBox())!.width, (await team(page).boundingBox())!.width];
+
+  test("both are one width with a clear gap, whatever they show, with shorter content centred", async ({ page, isMobile }) => {
+    test.skip(isMobile, "a phone gives the match the larger share");
+    for (const width of [1024, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/?lang=en#/g/849799/MIL/1");
+      await ready(page);
+      const [g, tm] = await widths(page);
+      expect(Math.abs(g - tm)).toBeLessThanOrEqual(1);
+      const gap = (await team(page).boundingBox())!.x - ((await game(page).boundingBox())!.x + g);
+      expect(gap).toBeGreaterThanOrEqual(30);
+      for (const box of [game(page), team(page)]) {
+        const centred = await box.evaluate((b) => {
+          const face = b.querySelector(".picker-face")!;
+          const parts = [...face.children].filter((c) => getComputedStyle(c).display !== "none").map((c) => c.getBoundingClientRect());
+          const r = b.getBoundingClientRect();
+          return Math.abs((parts[0].left + parts[parts.length - 1].right) / 2 - (r.left + r.width / 2));
+        });
+        expect(centred, `centred ${width}`).toBeLessThanOrEqual(1);
+      }
+      await pick(page, "Team", "TB");
+      await expect(team(page)).toHaveAttribute("data-value", "TB");
+      await pick(page, "Game", "849804");
+      await expect(game(page)).toHaveAttribute("data-value", "849804");
+      expect(await widths(page)).toEqual([g, tm]);
+    }
+  });
+
+  test("keep their width when the choice changes on a phone", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 800 });
+    await page.goto("/?lang=en#/g/849799/MIL/1");
+    await ready(page);
+    const before = await widths(page);
+    await pick(page, "Team", "TB");
+    await expect(team(page)).toHaveAttribute("data-value", "TB");
+    await pick(page, "Game", "849804");
+    await expect(game(page)).toHaveAttribute("data-value", "849804");
+    expect(await widths(page)).toEqual(before);
+  });
 });
 
 test.describe("match selector", () => {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Baseball, TeamLogo } from "./components/BarIcons";
+import { Baseball, SeamMark, TeamLogo } from "./components/BarIcons";
 import { Menu } from "./components/Menu";
 import { MenuIcon } from "./components/MenuIcon";
 import { Picker } from "./components/Picker";
@@ -155,9 +155,8 @@ function Shell() {
             <MenuIcon />
           </button>
           <span className="brand">{t("app.name")}</span>
-          <span className="bar-mark" aria-hidden="true">
-            <i />
-            <i />
+          <span className="bar-mark">
+            <SeamMark />
           </span>
           {showPickers && entry && (
             <div className="pickers">
@@ -180,6 +179,10 @@ function Shell() {
                 label={t("team.select")}
                 className="picker-team"
                 value={team}
+                sizing={(index?.games ?? []).flatMap((g) => [
+                  { label: g.away, short: g.away_abbr },
+                  { label: g.home, short: g.home_abbr },
+                ]).filter((o, i, all) => all.findIndex((x) => x.label === o.label) === i)}
                 options={[
                   { value: entry.away_abbr, label: entry.away, short: entry.away_abbr, icon: <TeamLogo team={entry.away_abbr} /> },
                   { value: entry.home_abbr, label: entry.home, short: entry.home_abbr, icon: <TeamLogo team={entry.home_abbr} /> },
