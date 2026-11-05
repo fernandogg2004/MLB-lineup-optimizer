@@ -90,6 +90,13 @@ class TeamLineup:
     runs: int | None
 
 
+def starting_position(player: dict[str, Any]) -> str:
+    """Position at first pitch. ``position`` is where a player ended the game, which differs after
+    a mid-game switch; ``allPositions`` lists them in the order played."""
+    played = player.get("allPositions") or [player.get("position", {})]
+    return str(played[0].get("abbreviation", ""))
+
+
 def official_lineups(box: dict[str, Any]) -> dict[str, TeamLineup]:
     """Starting batting orders from a boxscore (slot codes ``100, 200, …, 900``).
 
@@ -107,7 +114,7 @@ def official_lineups(box: dict[str, Any]) -> dict[str, TeamLineup]:
                     Hitter(
                         player_id=int(p["person"]["id"]),
                         name=p["person"]["fullName"],
-                        position=p.get("position", {}).get("abbreviation", ""),
+                        position=starting_position(p),
                         slot=int(code) // 100,
                     )
                 )

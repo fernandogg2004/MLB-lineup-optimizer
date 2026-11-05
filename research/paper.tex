@@ -88,17 +88,16 @@ application of Markov chains and simulation in operations research
 received wisdom from that literature, popularized by \citet{tango2007}, is that the order matters,
 but only modestly: a sensible order is worth only a few runs per season less than the best one.
 
-This paper re-derives that conclusion with three ingredients that we found missing from the
-software system it replaces:
+This paper re-examines that conclusion with three ingredients:
 \begin{enumerate}[leftmargin=*]
 \item \textbf{A precisely defined objective.} We maximize $\E[R_9\mid\pi,\cI]$, the expected runs
 in nine offensive innings for a fixed pregame order $\pi$ given the information $\cI$ available
 before first pitch. We do \emph{not} optimize win probability, which at the level of a single game
 is close to a coin flip and depends on the opponent's offense as well.
-\item \textbf{Exact evaluation and exhaustive search.} The predecessor system ranked orders by
-Monte Carlo estimates inside a genetic algorithm. Because selection among noisy estimates is
-biased upward (the ``optimizer's curse'' \cite{smith2006}), it could not certify that its output
-was optimal, and it overstated the gain of the selected order. We evaluate expected runs exactly
+\item \textbf{Exact evaluation and exhaustive search.} A common approach ranks orders by Monte
+Carlo estimates inside a stochastic search. Because selection among noisy estimates is biased
+upward (the ``optimizer's curse'' \cite{smith2006}), such a search cannot certify that its output
+is optimal, and it overstates the gain of the selected order. We evaluate expected runs exactly
 (\cref{sec:model}) and search all orders exhaustively (\cref{sec:optimization}).
 \item \textbf{Leakage-free, falsifiable validation.} All estimates for a game on date $d$ use only
 plate appearances before $d$. We validate the plate-appearance model on held-out seasons, check
@@ -529,9 +528,9 @@ We compare exhaustive search with (i) three heuristics without search: the guide
 \citet{tango2007} (best three hitters in slots 1, 2 and 4, next two in 3 and 5, the rest in
 decreasing run value), sorting by run value, and sorting by on-base probability; (ii) best-improvement
 2-swap local search from the actual order, and from the actual order plus nine random starts; (iii) simulated annealing
-with swap moves; and (iv) a genetic algorithm with the operators and parameters of the predecessor
-system (ordered crossover, swap mutation, tournament selection, elitism), run both with the exact
-objective and, as in the original, with a 4{,}000-game Monte Carlo objective.
+with swap moves; and (iv) a genetic algorithm (ordered crossover, swap mutation, tournament
+selection, elitism), run both with the exact objective and with a 4{,}000-game Monte Carlo
+objective, the usual simulation-based approach.
 
 None of the heuristic or stochastic methods has an optimality guarantee. For the Monte Carlo
 variant, the reported value of the chosen order is biased upward. For any fixed set of orders with
@@ -638,7 +637,7 @@ between orders is an observed effect.
 \section{Reproducibility}\label{app:repro}
 
 \begin{verbatim}
-pip install -e ".[ingest,compare,figures,dev]"
+pip install -e ".[compare,figures,dev]"
 batting-order ingest 2021 2022 2023 2024 2025 2026   # Baseball Savant, resumable
 batting-order build  2021 2022 2023 2024 2025 2026
 batting-order experiments                             # writes outputs/*.json

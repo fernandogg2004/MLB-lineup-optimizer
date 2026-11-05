@@ -43,12 +43,15 @@ research/*.out
 research/*.toc
 research/*.synctex.gz
 
-# Airflow runtime
-orchestration/airflow/logs/
-airflow.db
-
 # IDE / OS
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Local assistant configuration (not part of the project)
+/CLAUDE.md
+/.claude/
+
+# Local design notes and mockups (not part of the project)
+/docs/prompts/

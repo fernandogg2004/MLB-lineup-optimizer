@@ -34,7 +34,7 @@ run accounting of *past* transitions) are never used as features.
 | E4a | Do search methods find the optimum? | 200 random 2026 team-games | optimality gap vs exhaustive, evaluations, runtime |
 | E4b | How far are actual orders from the model optimum? | all 2025–2026 team-games | `Δ`, percentile of actual order among 9! |
 | E4c | Is the recommendation robust to parameter uncertainty? | random subset + reference game | posterior draws of multipliers: distribution of `Δ`, P(Δ>0), stability of the optimal order |
-| E4d | Noisy-search pathology of the original method | 30 instances | GA with 4,000-simulation fitness vs exact optimum (gap, winner's-curse bias) |
+| E4d | Does a noisy (Monte Carlo) search overstate its pick? | 30 instances | GA with 4,000-simulation fitness vs exact optimum (gap, winner's-curse bias) |
 | E5 | Reference game | 2026 WS G5, both teams | everything above for two lineups |
 
 ## Candidate PA models (E2)
@@ -44,8 +44,6 @@ run accounting of *past* transitions) are never used as features.
 - M2: M1 × pitcher multiplier (log5 / odds-ratio combination) — tuned.
 - M3: gradient-boosted multinomial model (LightGBM) on the M2 inputs (log multipliers,
   league probabilities, handedness, sample sizes), trained on rolling 2023–2024 snapshots.
-- Legacy: the original project's LightGBM (51 features) on the PAs where its stored
-  features exist (2026-03-25 … 2026-06-11), compared on the common 7-class taxonomy.
 
 Selection rule: the simplest model whose test log-loss is not significantly worse
 (95% bootstrap CI of the difference includes 0 or favours it) than the best.
@@ -76,9 +74,9 @@ quantities on 120 and 20 test team-games, to debug the code. The grid extension 
 solely by the 2024 boundary result; no model structure was changed after those smoke tests. `outputs/e2_tuning.json` records whether the
 final selection lies on the grid boundary.
 
-## Amendment 2 (2026-11-02, after the round-1 audit)
+## Amendment 2 (2026-11-02)
 
-Auditors noted (B-4, D-20) that the selected half-life lay on the lower edge of the final grid and
+An independent review noted that the selected half-life lay on the lower edge of the final grid and
 that the first grid's output (which contained 180 days) had been overwritten. The half-life grid
 was extended to {180, 270, 365, 730, 1095} days and tuning was re-run on 2024 only. All tuning
 outputs are now kept in `outputs/e2_tuning.json`, including a per-parameter boundary flag that the

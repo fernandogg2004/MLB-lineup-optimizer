@@ -46,6 +46,24 @@ batting-order ingest 2024 2025 2026 && batting-order build 2024 2025 2026
 The reference game (2026 World Series Game 5, gamePk 849799) is never overwritten by `update`:
 existing snapshots are skipped.
 
+## Home page data
+
+`web/public/data/home/{game_pk}.json` holds what the Home page shows: official season hitting lines
+from the MLB Stats API, percentiles computed against hitters with at least 200 PA, and a light copy of
+the snapshot fields Home needs. `snapshot` and `update` write it automatically. To regenerate it by hand,
+for example after experiment E5 rewrites the reference snapshot:
+
+```bash
+batting-order home                # every snapshot present
+batting-order home 849799         # one game
+```
+
+Responses are cached in `data/raw/statsapi`, so a rebuild from the cache is identical. New clubs or
+abbreviations go in `web/src/home/teams.ts`; an unknown club falls back to a neutral colour.
+
+Optional licensed player photos go in `web/public/players/`, each with a `manifest.json` entry
+(`id`, `file`, `author`, `source`, `license`). A test fails if an image has no entry.
+
 ## Deploying to Vercel (Hobby)
 
 The Vercel project `batting-order-lab` was created with the Vercel CLI. Note that the CLI uploads
@@ -63,27 +81,13 @@ E2E_BASE_URL=https://batting-order-lab.vercel.app npx playwright test
 
 A brand-new Vercel project assigns its first deployment to production even without `--prod`.
 
-## Optional automation
-
-`orchestration/airflow/` contains a disabled-by-default DAG that runs `batting-order update`
-on a schedule you choose. It does not commit or deploy. See its README.
-
 ## Data rights
 
 Statcast and Stats API data are © MLB Advanced Media and are used here for non-commercial research.
 Bulk data are not redistributed in this repository: they are downloaded on demand, and
 `batting-order verify <seasons>` compares them with the SHA-256 checksums published in
-`data_manifest/` (Savant occasionally revises recent games, so a mismatch is reported, not fixed); the site shows player names, lineups, final scores and model-derived
-numbers only.
-
-## Reproducing the legacy comparison (experiment E2b)
-
-E2b scores the original project's model on its own stored features. It needs the baseline commit
-and its Git LFS artifacts, so it is optional and is skipped (with a warning) when its input is absent:
-
-```bash
-GIT_LFS_SKIP_SMUDGE=0 git worktree add ../mlb-baseline-wt baseline/pre-rebuild
-# in an environment with the original requirements (see that worktree's README):
-python scripts/legacy_pa_predictions.py ../mlb-baseline-wt     ../mlb-baseline-wt/data/gold/features_train_v3.parquet     ../mlb-baseline-wt/models/at_bat_predictor.pkl work/legacy_2026.parquet
-batting-order experiments --only e2b
-```
+`data_manifest/` (Savant occasionally revises recent games, so a mismatch is reported, not fixed). The
+site shows player names, lineups, final scores, official season hitting lines (credited on the Statistics
+page) and model-derived numbers. Player illustrations are original; no MLB or agency photos are used. Club logos in the team selector
+load at runtime from MLB's own address and no logo file is stored in this repository (ADR 0003); no
+licence for them is recorded.

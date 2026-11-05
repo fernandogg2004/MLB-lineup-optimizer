@@ -1,11 +1,15 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { GameSnapshot, Team } from "../data";
 import { useI18n } from "../i18n-context";
 import type { Key } from "../strings";
 import { ChartCard, Histogram, IntervalBar, PairedBars, PmfChart } from "../components/charts";
-import { Simulator } from "./Simulator";
 
 const OUTCOMES = ["K", "BB", "1B", "2B", "3B", "HR", "GB", "AIR"] as const;
+
+/** A re-estimate count cannot prove certainty, so it never reads as 100%. */
+function certainty(p: number, pct: (v: number) => string, t: (k: Key, v?: Record<string, string | number>) => string): string {
+  return p > 0.99 ? t("cap.more", { n: pct(0.99) }) : pct(p);
+}
 
 function sd(p: number[]): number {
   const m = p.reduce((a, v, i) => a + v * i, 0);
@@ -16,10 +20,9 @@ function gameSd(snap: GameSnapshot): number {
   return (sd(snap.teams.away.actual.run_distribution) + sd(snap.teams.home.actual.run_distribution)) / 2;
 }
 
-export function GameView({ snap }: { snap: GameSnapshot }) {
+export function GameView({ snap, side }: { snap: GameSnapshot; side: "away" | "home" }) {
   const { t, fmt, signed, pct, date, series } = useI18n();
   const g = snap.game;
-  const [side, setSide] = useState<"away" | "home">("away");
   const team = snap.teams[side];
   const ua = snap.teams.away.optimal.er9 - snap.teams.away.actual.er9;
   const ub = snap.teams.home.optimal.er9 - snap.teams.home.actual.er9;
@@ -78,19 +81,6 @@ export function GameView({ snap }: { snap: GameSnapshot }) {
         <p className="text-sm text-muted mt-2">{t("hero.cutoff", { date: date(g.date) })}</p>
       </header>
 
-      <div role="group" aria-label={t("team.select")} className="segmented">
-        {(["away", "home"] as const).map((s) => (
-          <button
-            key={s}
-            aria-pressed={side === s}
-            className={side === s ? "seg seg-on" : "seg"}
-            onClick={() => setSide(s)}
-          >
-            {snap.teams[s].name}
-          </button>
-        ))}
-      </div>
-
       <TeamPanel snap={snap} team={team} />
     </div>
   );
@@ -120,7 +110,7 @@ function TeamPanel({ snap, team }: { snap: GameSnapshot; team: Team }) {
           label={t("kpi.uplift")}
           value={signed(uplift, 3)}
           sub={t("kpi.uplift_sub", { lo: signed(u.diff_q05, 3), hi: signed(u.diff_q95, 3) })}
-          extra={t("kpi.prob", { p: pct(u.p_opt_better) })}
+          extra={t("kpi.prob", { p: certainty(u.p_opt_better, pct, t) })}
         />
         <Stat
           label={t("kpi.rank")}
@@ -226,7 +216,7 @@ function TeamPanel({ snap, team }: { snap: GameSnapshot; team: Team }) {
           </div>
           <div className="mini">
             <dt className="text-muted">{t("unc.prob")}</dt>
-            <dd className="mini-val">{pct(u.p_opt_better)}</dd>
+            <dd className="mini-val">{certainty(u.p_opt_better, pct, t)}</dd>
           </div>
           <div className="mini">
             <dt className="text-muted">{t("unc.stable")}</dt>
@@ -235,7 +225,6 @@ function TeamPanel({ snap, team }: { snap: GameSnapshot; team: Team }) {
         </dl>
       </ChartCard>
 
-      <Simulator key={`${snap.game.game_pk}-${team.team}`} snap={snap} team={team} />
       <Technical snap={snap} team={team} />
     </section>
   );

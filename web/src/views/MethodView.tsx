@@ -8,7 +8,6 @@ import { niceTicks } from "../components/ticks";
 type Diff = { mean: number; ci_low: number; ci_high: number };
 interface Validation {
   e2?: { by_season: Record<string, { n_pa: number; models: Record<string, { log_loss: number; diff_vs_M2: Diff }> }> };
-  e2b?: { window: string[]; n_pa_matched: number; models: Record<string, { log_loss: number; diff_vs_M2: Diff }> };
   e3?: { by_decile: { decile: number; pred: number; obs: number; obs_se: number }[]; calibration_slope: number; bias_obs_minus_pred: number; n_team_games: number };
   e4a?: { methods: Record<string, { n: number; mean_gap: number; share_optimal: number; mean_evaluations: number }>; noisy_ga?: { n: number; mean_winners_curse: number; mean_gap_to_opt: number; actual_mean_gap_same_instances?: number } };
   e4b?: { n_team_games?: number; uplift_opt_vs_actual: { mean: number; per_162_games: number }; actual_percentile: { median: number } };
@@ -22,7 +21,7 @@ function Takeaway({ children }: { children: string }) {
 }
 
 export function MethodView() {
-  const { t, fmt, pct, signed, int, date } = useI18n();
+  const { t, fmt, pct, signed, int } = useI18n();
   const [v, setV] = useState<Validation | null | "error">(null);
   useEffect(() => {
     fetchJson<Validation>("validation.json").then(setV, () => setV("error"));
@@ -85,41 +84,6 @@ export function MethodView() {
                 <Takeaway>{t("method.pa_take")}</Takeaway>
               </ChartCard>
             )}
-            {v.e2b && (
-              <ChartCard
-                title={t("method.legacy")}
-                subtitle={`${date(v.e2b.window[0])} – ${date(v.e2b.window[1])} · ${int(v.e2b.n_pa_matched)} ${t("method.n")}`}
-              >
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">{t("method.model")}</th>
-                      <th scope="col" className="num">{t("method.ll_col")}</th>
-                      <th scope="col" className="num">{t("method.diff_col")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(
-                      [
-                        ["legacy_lightgbm_51_features", "model.legacy"],
-                        ["M0_league", "model.M0_league"],
-                        ["M2_batter_pitcher", "model.M2_batter_pitcher"],
-                      ] as const
-                    ).map(([k, label]) => {
-                      const r = v.e2b!.models[k];
-                      return (
-                        <tr key={k}>
-                          <th scope="row" className="text-left font-normal">{t(label)}</th>
-                          <td className="num">{fmt(r.log_loss, 4)}</td>
-                          <td className="num text-xs text-muted">{k === "M2_batter_pitcher" ? "—" : diffCell(r.diff_vs_M2)}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-                <Takeaway>{t("method.legacy_take")}</Takeaway>
-              </ChartCard>
-            )}
             {v.e3 && <Calibration e3={v.e3} />}
             {v.e4a && (
               <ChartCard title={t("method.search")} subtitle={t("method.search_n", { n: int(v.e4a.methods.exhaustive?.n ?? 0) })}>
@@ -139,7 +103,7 @@ export function MethodView() {
                         <tr key={k}>
                           <th scope="row" className="text-left font-normal">
                             {t(`search.${k}` as Key)}
-                            {k === "genetic_mc4000_original" && <sup aria-hidden>†</sup>}
+                            {k === "genetic_mc4000" && <sup aria-hidden>†</sup>}
                           </th>
                           <td className="num">{fmt(r.mean_gap, 4)}</td>
                           <td className="num">{pct(r.share_optimal, 1)}</td>

@@ -136,18 +136,6 @@ def main() -> None:
     if e0:
         m["EzeroN"] = str(e0["n"])
         m["EzeroMatch"] = str(round(e0["share_both_match"] * e0["n"]))
-    e2b = load("e2b_legacy_comparison")
-    if e2b:
-        lm = e2b["models"]
-        m["EtwobN"] = f"{e2b['n_pa_matched']:,}".replace(",", "{,}")
-        m["EtwobWindow"] = f"{e2b['window'][0]} to {e2b['window'][1]}"
-        m["EtwobLegacyLL"] = f(lm["legacy_lightgbm_51_features"]["log_loss"], 4)
-        m["EtwobMtwoLL"] = f(lm["M2_batter_pitcher"]["log_loss"], 4)
-        m["EtwobMzeroLL"] = f(lm["M0_league"]["log_loss"], 4)
-        d = lm["legacy_lightgbm_51_features"]["diff_vs_M2"]
-        m["EtwobDiff"] = f(d["mean"], 4)
-        m["EtwobDiffLo"] = f(d["ci_low"], 4)
-        m["EtwobDiffHi"] = f(d["ci_high"], 4)
     e2c = load("e2c_decision_sensitivity")
     if e2c:
         m["EtwocN"] = str(e2c["n_team_games"])
@@ -347,7 +335,7 @@ def tables(e1: Any, e2: Any, e4a: Any, m: dict[str, str]) -> None:
             "sort_run_value": "Sort by run value",
             "sort_obp": "Sort by on-base probability",
             "actual": "Order actually used",
-            "genetic_mc4000_original": r"Original GA, Monte Carlo fitness$^\dagger$",
+            "genetic_mc4000": r"Genetic algorithm, Monte Carlo fitness$^\dagger$",
         }
         body = "\n".join(
             f"{labels.get(k, k)} & {v['mean_gap']:.4f} & {v['max_gap']:.4f} & "
@@ -545,9 +533,6 @@ def web_validation(e2: Any, e3: Any, e4a: Any, e4b: Any, e4c: Any) -> None:
                 s: {"n_pa": v["n_pa"], "models": v["models"]} for s, v in e2["by_season"].items()
             }
         }
-    e2b = load("e2b_legacy_comparison")
-    if e2b:
-        out["e2b"] = {k: e2b[k] for k in ("window", "n_pa_matched", "models")}
     if e3:
         out["e3"] = {
             k: e3[k]

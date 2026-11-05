@@ -1,13 +1,14 @@
 """Command-line interface: ``batting-order <command>``.
 
 Every command is idempotent and safe to re-run; it is the single entry point used
-locally, by the manual GitHub Action and by the optional Airflow DAG.
+locally and by the manual GitHub Action.
 
     ingest     download raw Statcast for seasons (resumable; skips existing windows)
     verify     compare downloaded raw files with the published checksums (data_manifest/)
     manifest   publish checksums of local raw files to data_manifest/
     build      raw -> processed transitions/lineups for seasons
     snapshot   write dashboard snapshots for given games (+ refresh the index)
+    home       write the Home page data (official hitting lines) for snapshotted games
     update     ingest + build the current season, snapshot newly completed postseason
                games (or the last N completed games) and refresh the index
     experiments  run the paper experiments (E1-E5); see ``batting_order.evaluate.run``
@@ -24,6 +25,7 @@ from typing import Any
 
 import polars as pl
 
+from batting_order.batter_stats import write_home
 from batting_order.config import REFERENCE_GAME, project_root
 from batting_order.data.build import build_season, load_transitions
 from batting_order.data.statcast import download_season, verify_season, write_manifest
@@ -107,10 +109,21 @@ def snapshot_games(game_pks: list[int], season: int, draws: int, force: bool = F
         snap = build_game_snapshot(pk, pa, api, project_root(), n_draws=draws)
         dest = _web_data() / "games" / f"{pk}.json"
         write_snapshot(snap, dest)
+        write_home(_web_data(), pk, api)
         out.append(dest)
         logging.info("snapshot %d -> %s", pk, dest)
     write_index()
     return out
+
+
+def write_home_files(game_pks: list[int] | None = None, only_missing: bool = False) -> list[Path]:
+    """Write Home data for ``game_pks`` (default: every snapshot present)."""
+    web_data = _web_data()
+    pks = game_pks or sorted(int(p.stem) for p in (web_data / "games").glob("*.json"))
+    if only_missing:
+        pks = [pk for pk in pks if not (web_data / "home" / f"{pk}.json").exists()]
+    api = _api()
+    return [write_home(web_data, pk, api) for pk in pks]
 
 
 def write_index() -> Path:
@@ -193,6 +206,7 @@ def cmd_update(a: argparse.Namespace) -> None:
         snapshot_games(todo, season, a.draws)
     else:
         write_index()
+    write_home_files(only_missing=True)
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -223,6 +237,9 @@ def main(argv: list[str] | None = None) -> None:
     s.add_argument("--draws", type=int, default=200)
     s.add_argument("--force", action="store_true", help="allow rewriting the reference game")
     s.set_defaults(fn=cmd_snapshot)
+    hm = sub.add_parser("home", help="write Home page data for snapshotted games")
+    hm.add_argument("games", type=int, nargs="*", help="default: every snapshot present")
+    hm.set_defaults(fn=lambda a: write_home_files(a.games))
     u = sub.add_parser("update", help="refresh current season and snapshot new games")
     u.add_argument("--season", type=int)
     u.add_argument("--last", type=int, default=0, help="snapshot the last N completed games")

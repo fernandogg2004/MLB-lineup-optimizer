@@ -100,6 +100,79 @@ export interface GameSnapshot {
   teams: { away: Team; home: Team };
 }
 
+/** Home page data written by `batting-order home` (`src/batting_order/batter_stats.py`). */
+export type Rate = "avg" | "obp" | "slg" | "ops";
+
+export interface HomeHitter {
+  id: number;
+  name: string;
+  pos: string;
+  slot: number;
+  probs_starter: number[];
+  probs_bullpen: number[];
+  batting: {
+    pa: number;
+    small_sample: boolean;
+    rates: Record<Rate, string | null>;
+    pct: Record<Rate, number | null>;
+  };
+}
+
+export interface HomeTeam {
+  team: string;
+  name: string;
+  opponent_starter: { name: string };
+  hitters: HomeHitter[];
+  actual: { er9: number; percentile: number };
+  optimal: { order: number[]; er9: number; pa_by_slot: number[]; run_distribution: number[] };
+  worst: { er9: number };
+  all_orders: { count: number };
+  uncertainty: { p_opt_better: number; diff_q05: number };
+}
+
+export interface HomeData {
+  schema_version: number;
+  game: {
+    game_pk: number;
+    date: string;
+    series_description: string;
+    series_game_number: number | null;
+    away: string;
+    home: string;
+    away_abbr: string;
+    home_abbr: string;
+    away_runs: number | null;
+    home_runs: number | null;
+  };
+  hitting: {
+    source: string;
+    season: number;
+    start: string;
+    end: string;
+    previous_season: boolean;
+    min_pa: number;
+    pool_size: number;
+  };
+  teams: { away: HomeTeam; home: HomeTeam };
+}
+
+export const SUPPORTED_HOME_SCHEMA = 1;
+
+export function validateHome(d: HomeData): void {
+  if (d.schema_version !== SUPPORTED_HOME_SCHEMA) throw new Error(`unsupported Home schema ${d.schema_version}`);
+  for (const side of ["away", "home"] as const) {
+    const t = d.teams[side];
+    if (t.hitters.length !== 9 || t.optimal.order.length !== 9) throw new Error(`${side}: expected 9 hitters`);
+    if ([...t.optimal.order].sort((a, b) => a - b).some((v, i) => v !== i)) throw new Error(`${side}: invalid order`);
+    for (const h of t.hitters) {
+      for (const p of [h.probs_starter, h.probs_bullpen]) {
+        const sum = p.reduce((a, b) => a + b, 0);
+        if (p.length !== 8 || p.some((v) => v < 0) || Math.abs(sum - 1) > 1e-4) throw new Error(`${side}: invalid probabilities for ${h.name}`);
+      }
+    }
+  }
+}
+
 const BASE = import.meta.env.BASE_URL;
 
 export async function fetchJson<T>(path: string): Promise<T> {

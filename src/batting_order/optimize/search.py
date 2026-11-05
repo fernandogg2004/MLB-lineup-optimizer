@@ -1,9 +1,8 @@
 """Batting-order search methods compared in the paper (Section 6).
 
 All methods maximise the same objective, E[R_9 | order], evaluated either exactly
-(``markov.evaluate``) or, for the noisy baseline that reproduces the original
-project, by Monte Carlo. ``exhaustive`` is the reference: it returns a certified
-global optimum (up to the evaluator's truncation error).
+(``markov.evaluate``) or, for the noisy baseline, by Monte Carlo. ``exhaustive`` is the
+reference: it returns a certified global optimum (up to the evaluator's truncation error).
 """
 
 from __future__ import annotations
@@ -194,7 +193,7 @@ def genetic(
     elite: int = 5,
     seeds: list[IntArr] | None = None,
 ) -> SearchResult:
-    """Generational GA mirroring the original project's operators and defaults.
+    """Generational genetic algorithm with standard operators and defaults.
 
     Ordered crossover, per-gene swap mutation, tournament selection and elitism.
     With a noisy ``f`` the returned value is the noisy estimate of the chosen order.

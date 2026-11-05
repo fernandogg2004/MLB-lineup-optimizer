@@ -1,0 +1,141 @@
+/* Home: one locked screen per batter, then the summary. Shared chrome lives in index.css. */
+
+.scroller { position: fixed; z-index: 1; top: 0; left: 0; right: 0; height: 100svh; overflow-y: auto; scroll-snap-type: y mandatory; scrollbar-width: none; overscroll-behavior: contain; animation: home-in 0.45s ease-out; }
+.scroller::-webkit-scrollbar { display: none; }
+@keyframes home-in { from { opacity: 0; } }
+.screen { position: relative; height: 100svh; scroll-snap-align: start; scroll-snap-stop: always; overflow: hidden; padding: calc(var(--bar-h) + 6px) clamp(36px, 3.5vw, 58px) 12px clamp(16px, 3vw, 54px); }
+.layer { will-change: transform, opacity; }
+
+.batter { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: clamp(10px, 2vw, 34px); }
+.batter.flip { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+.batter.flip .pic { order: 2; }
+
+/* Picture column: text centred above the batter, who starts right below it. */
+.pic { --name-drop: clamp(14px, 5vh, 54px); display: flex; flex-direction: column; min-height: 0; min-width: 0; text-align: center; }
+/* The name sits lower, over the top of the bat, without moving the batter. */
+.pic-text { position: relative; z-index: 2; padding-top: var(--name-drop); }
+/* Above the pie layer, so a ring's explanation is never painted over. */
+.rings { flex: none; position: relative; z-index: 2; }
+.who { font-size: clamp(1.55rem, 2.7vw, 2.5rem); font-weight: 700; line-height: 1.1; letter-spacing: -0.01em; color: var(--ink); }
+.who span { color: var(--glow-text); }
+/* A soft halo keeps the text readable where it crosses the bat, whatever the bat's colour. */
+.pos { margin-top: 6px; font-size: 0.92rem; color: var(--soft); text-shadow: 0 0 3px var(--halo), 0 0 3px var(--halo), 0 0 6px var(--halo); }
+.who { text-shadow: 0 0 5px var(--halo); }
+.figure { position: relative; flex: 1; min-height: 0; margin-top: calc(6px - var(--name-drop)); }
+/* Floodlight behind the batter, so dark team colours still stand out at night. */
+.figure::before { content: ""; position: absolute; left: 50%; top: 4%; width: 104%; aspect-ratio: 1; max-height: 96%; transform: translateX(-50%); border-radius: 50%; background: var(--figure-glow); pointer-events: none; }
+.bf { overflow: visible; }
+.figure svg, .figure img { position: relative; display: block; height: 100%; width: 100%; object-fit: contain; object-position: top; }
+:root:not([data-theme="day"]) .bf polygon, :root:not([data-theme="day"]) .bf path { stroke: rgb(255 255 255 / 0.32); stroke-width: 0.8; stroke-linejoin: round; }
+
+/* Statistics column */
+.data { display: flex; flex-direction: column; justify-content: center; gap: 6px; min-height: 0; min-width: 0; }
+.caption { text-align: center; font-size: 0.82rem; color: var(--ink-3); letter-spacing: 0.02em; }
+/* The forecast card: almost invisible, with its title and selector along the top. */
+/* An almost invisible card, which holds the selector and the chart. */
+.outcome { position: relative; display: flex; flex-direction: column; gap: 5px; min-height: 0; flex: 1 1 0; max-height: 425px; margin-top: clamp(4px, 1.4vh, 14px); }
+.outcome-card { display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; padding: 10px clamp(10px, 1.2vw, 18px) 8px; border-radius: 18px; background: var(--card); border: 1px solid var(--card-line); }
+.outcome-head { position: relative; display: flex; justify-content: center; }
+.pie-wrap { flex: 1 1 0; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.pie { flex: 1; min-height: 0; width: 100%; display: block; overflow: visible; }
+.slice-group { transition: transform 0.18s; }
+.pie-edge { fill: none; stroke: var(--pie-edge); stroke-width: 1.2; pointer-events: none; }
+.slice { stroke: var(--pie-stroke); stroke-width: 1.5; cursor: pointer; outline: none; transition: filter 0.18s; }
+.slice.on { filter: brightness(1.22) drop-shadow(0 0 7px currentColor); }
+.slice:focus-visible { stroke: var(--ink); stroke-width: 2.5; }
+.pie-row { transition: opacity 0.18s; }
+.pie-row.dim { opacity: 0.72; }
+.pie-leader { fill: none; stroke: var(--pie-leader); stroke-width: 1; }
+.pie-label { font-size: 12.5px; fill: var(--ink-2); }
+.pie-label.compact { font-size: 14px; }
+.pie-label.on { font-weight: 600; fill: var(--ink); }
+.pie-pct { font-weight: 700; fill: var(--ink); }
+
+/* Two-button selector */
+.vs { display: inline-flex; flex: none; margin: 0; padding: 3px; gap: 2px; border: 1px solid var(--card-line); border-radius: 999px; background: var(--seg-bg); font-size: 0.84rem; font-weight: 600; color: var(--ink); }
+.vs label { position: relative; display: block; cursor: pointer; }
+.vs label span { display: block; padding: 5px 14px; border-radius: 999px; transition: background 0.18s, color 0.18s; white-space: nowrap; }
+.vs input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.vs input:checked + span { background: var(--seg-on); color: var(--seg-on-ink); }
+.vs input:focus-visible + span { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* What each option means, in the same style as a ring's explanation. */
+.vs-hint { position: absolute; z-index: 3; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); width: max-content; padding: 5px 10px; border-radius: 8px; background: #05070b; color: #fff; font-size: 0.78rem; font-style: normal; font-weight: 400; line-height: 1.25; text-align: center; opacity: 0; visibility: hidden; transition: opacity 0.15s; pointer-events: none; }
+.vs label:hover .vs-hint, .vs input:focus-visible ~ .vs-hint { opacity: 1; visibility: visible; }
+/* The label rises over the rings' layer, so that layer has to come forward while it shows. */
+.outcome:has(.vs label:hover), .outcome:has(.vs input:focus-visible) { z-index: 3; }
+
+/* Progress rail: small dots with a comfortable target */
+.rail { position: fixed; z-index: 15; right: 6px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: center; }
+.rail button { display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; }
+.rail button span { display: block; width: 10px; height: 10px; border-radius: 50%; border: 1px solid var(--rail); transition: background 0.2s, box-shadow 0.2s; }
+.rail button:hover span { background: var(--rail); }
+.rail button[aria-current] span { background: var(--glow-text); border-color: var(--glow-text); box-shadow: 0 0 9px var(--glow-text); }
+.rail .sumdot span { border-radius: 2px; }
+.rail-hint { display: block; width: 9px; height: 9px; margin-top: 6px; border-right: 2px solid var(--rail); border-bottom: 2px solid var(--rail); transform: rotate(45deg); animation: rail-hint 1.6s ease-in-out 4; }
+@keyframes rail-hint { 50% { transform: translateY(4px) rotate(45deg); } }
+
+.home-message { position: fixed; z-index: 1; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--ink); padding: 1rem; text-align: center; }
+
+/* Phones and tablets: stacked, still one screen per batter. */
+@media (max-width: 860px), (max-height: 599px) {
+  .screen { padding: calc(var(--bar-h) + 24px) 12px 8px; }
+  .batter, .batter.flip { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); gap: 6px; }
+  .batter.flip .pic { order: 0; }
+  .pic { --name-drop: 0px; position: relative; min-height: 88px; text-align: left; }
+  .pic-text { padding-right: 88px; }
+  .who { font-size: 1.45rem; }
+  .pos { font-size: 0.8rem; margin-top: 3px; }
+  .figure { position: absolute; right: 0; top: 0; width: 84px; height: 96px; margin: 0; }
+  .ors, .ors--plain { --ors-size: min(21.5vw, 20svh, 140px); }
+  .ors__row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); justify-items: center; gap: 2px 4px; }
+  .ors__item { width: 100%; }
+  .ors__label { font-size: 0.8rem; margin-bottom: 2px; }
+  .ors__note { font-size: 0.7rem; margin-top: 1px; line-height: 1.15; }
+  .caption { font-size: 0.72rem; }
+  .data { justify-content: flex-start; gap: 3px; }
+  .outcome { margin-top: 4px; gap: 3px; max-height: none; }
+  .outcome-card { padding: 7px 8px 4px; }
+  .vs { font-size: 0.78rem; }
+  .vs label span { padding: 4px 12px; }
+  /* The explanation hangs from the whole row, so it always stays on screen. */
+  .vs label { position: static; }
+  .vs input { inset: auto; width: 1px; height: 1px; }
+  .vs-hint { bottom: calc(100% + 4px); max-width: 100%; }
+  /* Progress becomes a row under the top bar, which keeps "skip to summary" within reach. */
+  .rail { top: var(--bar-h); left: 0; right: 0; transform: none; flex-direction: row; justify-content: center; height: 22px; }
+  .rail button { height: 22px; width: 26px; }
+  .rail-hint { display: none; }
+}
+
+/* Explanations stay on screen by opening towards the middle. */
+@media (max-width: 599px) {
+  .ors__item:nth-child(-n + 2) .ors__hint { left: 0; right: auto; transform: none; }
+  .ors__item:nth-child(n + 3) .ors__hint { left: auto; right: 0; transform: none; }
+}
+/* Tall phones have room for a 2 x 2 grid of larger rings. */
+@media (max-width: 599px) and (min-height: 800px) {
+  .ors, .ors--plain { --ors-size: min(28vw, 15svh, 124px); }
+  .ors__row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ors__item:nth-child(n) .ors__hint { left: 0; right: auto; transform: none; }
+  .ors__item:nth-child(even) .ors__hint { left: auto; right: 0; transform: none; }
+}
+
+/* Too short to lock a screen (landscape phones): normal scrolling, nothing hidden. */
+@media (max-height: 599px) {
+  .scroller.flow { scroll-snap-type: none; }
+  .scroller.flow:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+  .scroller.flow .screen { height: auto; min-height: 100svh; overflow: visible; scroll-snap-align: none; padding-top: calc(var(--bar-h) + 10px); }
+  .scroller.flow .batter { grid-template-rows: auto auto; }
+  .scroller.flow .pie-wrap { flex: none; }
+  .scroller.flow .outcome { max-height: none; }
+  .scroller.flow .pie { height: 260px; flex: none; }
+  .scroller.flow .outcome { flex: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroller, .rail-hint { animation: none; }
+  .slice, .slice-group, .pie-row { transition: none; }
+}
+
+/* Rings in Day: the paper theme, tuned to the sky. */
+:root[data-theme="day"] .ors { --ors-muted: #223446; --ors-orbit: #223446; --ors-track: rgb(13 27 42 / 0.16); --ors-face: rgb(255 255 255 / 0.28); }
