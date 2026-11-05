@@ -114,6 +114,28 @@ test.describe("front page", () => {
     for (const i of [0, 1]) await expect(hints.nth(i)).toHaveCSS("text-align", "center");
   });
 
+  test("the stadium lights rest centred and symmetric on every batter", async ({ page, isMobile }) => {
+    test.skip(isMobile, "the desktop lock is enough; the rule is the same");
+    await page.goto("/?lang=en");
+    await ready(page);
+    for (const screen of [0, 1, 2, 3, 7]) {
+      await page.evaluate((i) => {
+        const s = document.querySelector<HTMLElement>(".scroller");
+        if (s) s.scrollTop = i * (s.querySelector<HTMLElement>(".screen")?.offsetHeight ?? 0);
+      }, screen);
+      await expect.poll(() => position(page)).toBe(screen);
+      const lights = await page.evaluate(() => {
+        const centre = (n: string) => {
+          const r = document.querySelector(n)!.getBoundingClientRect();
+          return r.x + r.width / 2;
+        };
+        return { left: centre(".b1"), middle: centre(".b2"), right: centre(".b3"), width: window.innerWidth };
+      });
+      expect(Math.abs(lights.middle - lights.width / 2)).toBeLessThanOrEqual(2);
+      expect(Math.abs(lights.left + lights.right - lights.width)).toBeLessThanOrEqual(2);
+    }
+  });
+
   test("the selector is centred in the card", async ({ page }) => {
     await page.goto("/?lang=en");
     await ready(page);

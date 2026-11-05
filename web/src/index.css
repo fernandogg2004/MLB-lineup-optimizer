@@ -267,7 +267,7 @@ summary::-webkit-details-marker { color: var(--text-muted); }
   background: linear-gradient(180deg, #cfe6ff 0%, rgb(207 230 255 / .15) 55%, transparent 80%);
   clip-path: polygon(46% 0, 54% 0, 100% 100%, 0 100%); }
 .b1 { left: -12%; transform: rotate(calc(-18deg + var(--s, 0) * 6deg)); }
-.b2 { left: 30%; opacity: .1; transform: rotate(calc(var(--s, 0) * -9deg)); }
+.b2 { left: calc(50% - 23vw); opacity: .1; transform: rotate(calc(var(--s, 0) * -9deg)); }
 .b3 { right: -12%; transform: rotate(calc(18deg + var(--s, 0) * 6deg)); }
 .bg-arc { position: absolute; left: -15%; right: -15%; bottom: -62vh; height: 96vh; border-radius: 50%; border-top: 1px solid rgb(255 255 255 / .1); will-change: transform;
   transform: translate3d(calc(var(--s, 0) * 3.5vw), calc(var(--d, 0) * -.8vh), 0);
