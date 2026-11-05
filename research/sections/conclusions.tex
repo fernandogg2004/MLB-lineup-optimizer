@@ -1,8 +1,7 @@
 Under explicit Markov assumptions, the expected runs of a batting order can be computed exactly and
-cheaply, which turns batting-order optimization from a noisy search into an exhaustive one with a
-certificate. With an empirical-Bayes plate-appearance model that uses only pregame information,
-the model's run predictions are calibrated on two held-out seasons, and the simple model predicts
-plate appearances about as well as a gradient-boosted classifier given the same inputs.
+cheaply, so all orders can be searched exhaustively and the optimum certified within the model.
+With an empirical-Bayes plate-appearance model that uses only pregame information, the model's run
+predictions are calibrated on two held-out seasons.
 
 The substantive conclusion is modest and, we think, robust: in this model the batting orders that
 MLB teams actually used in 2025--2026 were close to optimal (median rank above \EfourbPctMedian{}

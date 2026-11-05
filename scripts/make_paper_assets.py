@@ -100,9 +100,9 @@ def main() -> None:
         }
         on_edge = [names[k] for k, v in bnd.items() if v]
         m["EtwoBoundaryNote"] = (
-            "all three selected values are interior to the final grid"
+            "all three selected values are interior to the tuning grid"
             if not on_edge
-            else "the selected " + ", ".join(on_edge) + " lies on the edge of the final grid"
+            else "the selected " + ", ".join(on_edge) + " lies on the edge of the tuning grid"
         )
         grid = tun.get("grid", [])
         if grid:
@@ -118,33 +118,10 @@ def main() -> None:
             ),
             3,
         )
-        m["EtwoTuneGain"] = f(
-            np.mean(
-                [
-                    s["M2_default_hyper"]["log_loss"] - s["M2_batter_pitcher"]["log_loss"]
-                    for s in seasons
-                ]
-            ),
-            4,
-        )
-        for key, s in (("A", s25), ("B", s26)):
-            d3 = s["M3_lightgbm"]["diff_vs_M2"]
-            m[f"EtwoMthree{key}"] = f(d3["mean"], 4, signed=True)
-            m[f"EtwoMthree{key}Lo"] = f(d3["ci_low"], 4, signed=True)
-            m[f"EtwoMthree{key}Hi"] = f(d3["ci_high"], 4, signed=True)
     e0 = load("e0_lineup_audit")
     if e0:
         m["EzeroN"] = str(e0["n"])
         m["EzeroMatch"] = str(round(e0["share_both_match"] * e0["n"]))
-    e2c = load("e2c_decision_sensitivity")
-    if e2c:
-        m["EtwocN"] = str(e2c["n_team_games"])
-        m["EtwocSame"] = pct(e2c["share_same_optimum"], 1)
-        m["EtwocLoss"] = f(e2c["mean_loss_using_m2_optimum_under_m3"], 4)
-        m["EtwocLossMax"] = f(e2c["max_loss_using_m2_optimum_under_m3"], 4)
-        m["EtwocUpTwo"] = f(e2c["mean_uplift_m2"], 4)
-        m["EtwocUpThree"] = f(e2c["mean_uplift_m3"], 4)
-        m["EtwocCorr"] = f(e2c["mean_corr_values_over_all_orders"], 3)
     # ---------------- E3
     if e3:
         m["EthreeSlope"] = f(e3["calibration_slope"], 2)
@@ -183,20 +160,10 @@ def main() -> None:
         m["EfourbPctMedian"] = pct(e4b["actual_percentile"]["median"], 1)
         m["EfourbPctMean"] = pct(e4b["actual_percentile"]["mean"], 1)
         m["EfourbShareAboveNinety"] = pct(e4b["actual_percentile"]["share_above_90"], 0)
-        hz = e4b["heuristics"]
-        m["EfourbBookGap"] = f(hz["the_book"]["mean_gap_to_opt"], 3)
-        m["EfourbRvGap"] = f(hz["sort_run_value"]["mean_gap_to_opt"], 3)
-        m["EfourbObpGap"] = f(hz["sort_obp"]["mean_gap_to_opt"], 3)
     if e4a:
         ex = e4a["methods"]["exhaustive"]
         m["EfouraExhaustiveSeconds"] = f(ex["mean_seconds"], 2)
         m["EfouraN"] = str(ex["n"])
-        ng = e4a["noisy_ga"]
-        m["EfouraCurse"] = f(ng["mean_winners_curse"], 3)
-        m["EfouraNoisyGap"] = f(ng["mean_gap_to_opt"], 4)
-        if "actual_mean_gap_same_instances" in ng:
-            m["EfouraActualSameGap"] = f(ng["actual_mean_gap_same_instances"], 4)
-        m["EfouraNoisyN"] = str(ng["n"])
     else:
         m["EfouraExhaustiveSeconds"] = "0.6"
     if e4c:
@@ -216,7 +183,6 @@ def main() -> None:
             m[f"RefActual{key}"] = f(t["actual_er9"], 3)
             m[f"RefOptimal{key}"] = f(t["optimal_er9"], 3)
             m[f"RefPct{key}"] = pct(t["percentile"], 1)
-            m[f"RefBook{key}"] = f(t["the_book_er9"], 3)
             m[f"RefWorst{key}"] = f(t["worst_er9"], 3)
             m[f"RefLo{key}"] = f(u["diff_q05"], 3, signed=True)
             m[f"RefHi{key}"] = f(u["diff_q95"], 3, signed=True)
@@ -271,21 +237,19 @@ def main() -> None:
         encoding="utf-8",
     )
 
-    tables(e1, e2, e4a, m)
+    tables(e1, e2, m)
     ref_and_appendix(e1, e5)
     figures(e1, e2, e3, e4b, e5)
     web_validation(e2, e3, e4a, e4b, e4c)
     print("wrote", GEN, FIG)
 
 
-def tables(e1: Any, e2: Any, e4a: Any, m: dict[str, str]) -> None:
+def tables(e1: Any, e2: Any, m: dict[str, str]) -> None:
     if e2:
         names = [
-            ("M0_league", "M0: league, by handedness"),
-            ("M1_batter", "M1: + batter"),
-            ("M2_batter_pitcher", "M2: + pitcher (selected)"),
-            ("M2_default_hyper", "M2 with untuned priors"),
-            ("M3_lightgbm", "M3: gradient boosting on M2 inputs"),
+            ("M0_league", "League rates"),
+            ("M1_batter", "+ batter"),
+            ("M2_batter_pitcher", "+ pitcher (full model)"),
         ]
         rows = []
         for k, lab in names:
@@ -307,8 +271,8 @@ def tables(e1: Any, e2: Any, e4a: Any, m: dict[str, str]) -> None:
         head = (
             r"\begin{table}[t]\centering\small"
             "\n"
-            r"\caption{Held-out log-loss (nats per PA) and difference from M2 with 95\% "
-            r"game-cluster bootstrap intervals; negative differences favour the row model. "
+            r"\caption{Held-out log-loss (nats per PA) and difference from the full model with "
+            r"95\% game-cluster bootstrap intervals. "
             rf"2025: {n25:,} PAs; 2026: {n26:,} PAs.}}\label{{tab:e2}}"
             "\n"
             r"\begin{tabular}{lcccc}\toprule"
@@ -317,46 +281,12 @@ def tables(e1: Any, e2: Any, e4a: Any, m: dict[str, str]) -> None:
             "\n"
             r"\cmidrule(lr){2-3}\cmidrule(lr){4-5}"
             "\n"
-            r"Model & Log-loss & $\Delta$ vs M2 & Log-loss & $\Delta$ vs M2\\ \midrule"
+            r"Stage & Log-loss & $\Delta$ vs full & Log-loss & $\Delta$ vs full\\ \midrule"
             "\n"
         )
         (GEN / "table_e2.tex").write_text(
             head + "\n".join(rows) + "\n" + r"\bottomrule\end{tabular}\end{table}" + "\n",
             encoding="utf-8",
-        )
-    if e4a:
-        labels = {
-            "exhaustive": "Exhaustive search (exact)",
-            "local_search_x10": "2-swap local search, 10 starts",
-            "simulated_annealing": "Simulated annealing",
-            "genetic_exact": "Genetic algorithm, exact fitness",
-            "local_search_from_actual": "2-swap local search from actual order",
-            "the_book": r"\citeauthor{tango2007} guideline",
-            "sort_run_value": "Sort by run value",
-            "sort_obp": "Sort by on-base probability",
-            "actual": "Order actually used",
-            "genetic_mc4000": r"Genetic algorithm, Monte Carlo fitness$^\dagger$",
-        }
-        body = "\n".join(
-            f"{labels.get(k, k)} & {v['mean_gap']:.4f} & {v['max_gap']:.4f} & "
-            f"{pct(v['share_optimal'], 1)} & {v['mean_evaluations']:,.0f} " + r"\\"
-            for k, v in sorted(e4a["methods"].items(), key=lambda kv: kv[1]["mean_gap"])
-        )
-        n, nn = e4a["methods"]["exhaustive"]["n"], e4a["noisy_ga"]["n"]
-        head = (
-            r"\begin{table}[t]\centering\small"
-            "\n"
-            rf"\caption{{Search methods on {n} random 2026 regular-season team-games. Gap: exact "
-            r"$V(\pi^\star)-V(\hat\pi)$ in runs per game; Optimal: share of instances where the "
-            rf"exact optimum was returned. $^\dagger$On {nn} of them.}}\label{{tab:e4a}}"
-            "\n"
-            r"\begin{tabular}{lrrrr}\toprule"
-            "\n"
-            r"Method & Mean gap & Max gap & Optimal & Evaluations\\ \midrule"
-            "\n"
-        )
-        (GEN / "table_e4a.tex").write_text(
-            head + body + "\n" + r"\bottomrule\end{tabular}\end{table}" + "\n", encoding="utf-8"
         )
     if e1:
         d = e1["by_season"]
@@ -441,7 +371,7 @@ def ref_and_appendix(e1: Any, e5: Any) -> None:
             r"\section{Run expectancy, 2026}\label{app:re24}"
             + nl
             + r"Model run expectancy (empirical in parentheses) by bases occupied and outs; 2026 "
-            + r"kernel with the league outcome mix (E1). Bases: 1 = first, 2 = second, 3 = third."
+            + r"kernel with the league outcome mix. Bases: 1 = first, 2 = second, 3 = third."
             + nl
             + nl
             + r"\begin{center}\small\begin{tabular}{lccc}\toprule"

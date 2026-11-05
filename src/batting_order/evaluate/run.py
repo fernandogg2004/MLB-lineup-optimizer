@@ -1,4 +1,4 @@
-"""Paper experiments E1–E5 (protocol: docs/methodology/experimental-protocol.md).
+"""Paper experiments E1–E5 (protocol: docs/methodology/validation-protocol.md).
 
 Results go to ``outputs/<experiment>.json`` (small, versioned) and large per-row
 tables to ``work/`` (not versioned). Every number in the paper and the dashboard's

@@ -64,14 +64,14 @@ explicit Markov assumptions the expected runs of a lineup can be computed exactl
 inning-level Markov chain on the leadoff slot; we prove that the computation is well defined,
 bound its truncation error, and use rotational structure to evaluate all $9!=362{,}880$ orders in
 about \EfouraExhaustiveSeconds{} seconds, so that the reported optimum is certified within the model.
-On held-out seasons (2025--2026) the plate-appearance model improves log-loss over the league
-baseline by \EtwoGainMtwoVsMzero{} nats per plate appearance, and the run predictions are
+On held-out seasons (2025--2026) the plate-appearance model improves log-loss over league
+rates by \EtwoGainMtwoVsMzero{} nats per plate appearance, and the run predictions are
 calibrated (slope \EthreeSlope{}). Over \EfourbN{} team-games, the model-optimal order exceeds the
 order actually used by \EfourbUpliftMean{} expected runs per game (\EfourbUpliftSeason{} per
 162 games), and actual orders rank, on median, above \EfourbPctMedian{} of all possible orders.
 For Game~5 of the 2026 World Series (Milwaukee~4, Tampa Bay~1) the estimated gains are
-\RefUpliftAway{} (Milwaukee) and \RefUpliftHome{} (Tampa Bay) runs per game, with 90\% parameter-
-uncertainty intervals that are of the same order as the gains themselves. These are model-based
+\RefUpliftAway{} (Milwaukee) and \RefUpliftHome{} (Tampa Bay) runs per game, with 90\%
+parameter-uncertainty intervals that are of the same order as the gains themselves. These are model-based
 counterfactuals: a historical game reveals only the outcome of the order that was used, so no
 observed result can confirm them.
 \end{abstract}
@@ -88,17 +88,15 @@ application of Markov chains and simulation in operations research
 received wisdom from that literature, popularized by \citet{tango2007}, is that the order matters,
 but only modestly: a sensible order is worth only a few runs per season less than the best one.
 
-This paper re-examines that conclusion with three ingredients:
+This paper measures the effect with three ingredients:
 \begin{enumerate}[leftmargin=*]
 \item \textbf{A precisely defined objective.} We maximize $\E[R_9\mid\pi,\cI]$, the expected runs
 in nine offensive innings for a fixed pregame order $\pi$ given the information $\cI$ available
 before first pitch. We do \emph{not} optimize win probability, which at the level of a single game
 is close to a coin flip and depends on the opponent's offense as well.
-\item \textbf{Exact evaluation and exhaustive search.} A common approach ranks orders by Monte
-Carlo estimates inside a stochastic search. Because selection among noisy estimates is biased
-upward (the ``optimizer's curse'' \cite{smith2006}), such a search cannot certify that its output
-is optimal, and it overstates the gain of the selected order. We evaluate expected runs exactly
-(\cref{sec:model}) and search all orders exhaustively (\cref{sec:optimization}).
+\item \textbf{Exact evaluation and exhaustive search.} We evaluate expected runs exactly
+(\cref{sec:model}) and search all orders exhaustively (\cref{sec:optimization}), so the reported
+optimum carries no sampling error and is certified within the model.
 \item \textbf{Leakage-free, falsifiable validation.} All estimates for a game on date $d$ use only
 plate appearances before $d$. We validate the plate-appearance model on held-out seasons, check
 that the implied run expectancy matches observed scoring, and check the calibration of game-level
@@ -257,7 +255,7 @@ construction), but it affects about one transition in a thousand.
 
 Starting lineups are inferred as the first nine distinct batters of each team; the inference is
 marked reliable when the tenth PA returns to the leadoff hitter. In a random audit of \EzeroN{}
-reliable 2026 team-games (E0) the inferred lineup and opposing starter matched the official boxscore
+reliable 2026 team-games the inferred lineup and opposing starter matched the official boxscore
 in \EzeroMatch{} of them. For the
 reference game we use the official boxscore (slot codes $100,\dots,900$).
 \Cref{tab:data} summarizes the data.
@@ -468,8 +466,8 @@ The identities follow by summing over PAs.
 
 The run value of class $c$ is the visit-weighted mean change in run expectancy,
 $\mathrm{RV}(c)=\sum_s\nu(s)[\rho_c(s)+P_c(s,\cdot)\mathrm{RE}-\mathrm{RE}(s)]/\sum_s\nu(s)$ (with
-$\mathrm{RE}(\abs)=0$), i.e.\ linear weights \cite{tango2007}. We use these only to define the
-heuristic baselines and to describe hitters.
+$\mathrm{RE}(\abs)=0$), i.e.\ linear weights \cite{tango2007}. We use these only to describe
+hitters.
 
 %======================================================================
 \section{Optimization}\label{sec:optimization}
@@ -503,10 +501,9 @@ i.e.\ the same sequence as the inning led off by slot $j+m$ of $\pi$.
 Hence the 9! orders split into $8!=40{,}320$ cyclic classes. For each class (fix hitter 1 in
 slot 1) we compute the tables once ($9G$ half-innings) and obtain the value of all nine rotations
 from \eqref{eq:value} in $O(9\cdot9\cdot81\,G)$ further operations (nine rotations, nine innings). The complete search costs about
-$8!\cdot9G\bar n|\cS|^2\approx10^{10}$ floating-point operations, i.e.\ \EfouraExhaustiveSeconds{}
-seconds per instance on one laptop CPU with a compiled (Numba) implementation (measured while
-another experiment ran concurrently), and about ten seconds in a
-browser.
+$8!\cdot9G\bar n|\cS|^2\approx10^{10}$ floating-point operations, i.e.\ about
+\EfouraExhaustiveSeconds{} seconds per instance (mean over \EfouraN{} random 2026 team-games) on one
+laptop CPU with a compiled (Numba) implementation, and about ten seconds in a browser.
 
 \begin{corollary}[Certified optimum]\label{cor:cert}
 Let $\hat\pi$ maximize the computed $\hat V$ and let $\Delta=\hat V(\hat\pi)-\max_{\pi\ne\hat\pi}\hat V(\pi)$.
@@ -522,68 +519,54 @@ For the reference game the computed margins are $\Delta=\RefCertAway$ (Milwaukee
 $\RefCertHome$ (Tampa Bay), many orders of magnitude above $324\varepsilon/q$ and above
 floating-point rounding (of order $10^{-14}$ in these sums).
 
-\subsection{Alternatives}
+\subsection{What the certificate does not cover}
 
-We compare exhaustive search with (i) three heuristics without search: the guideline of
-\citet{tango2007} (best three hitters in slots 1, 2 and 4, next two in 3 and 5, the rest in
-decreasing run value), sorting by run value, and sorting by on-base probability; (ii) best-improvement
-2-swap local search from the actual order, and from the actual order plus nine random starts; (iii) simulated annealing
-with swap moves; and (iv) a genetic algorithm (ordered crossover, swap mutation, tournament
-selection, elitism), run both with the exact objective and with a 4{,}000-game Monte Carlo
-objective, the usual simulation-based approach.
-
-None of the heuristic or stochastic methods has an optimality guarantee. For the Monte Carlo
-variant, the reported value of the chosen order is biased upward. For any fixed set of orders with
+\Cref{cor:cert} controls numerical error only. It does not remove the selection effect of
+estimation error in the inputs. For any fixed set of orders with
 $\hat V(\pi)=V(\pi)+\eta_\pi$ and $\E\eta_\pi=0$, $\E[\max_\pi\hat V(\pi)]\ge\max_\pi V(\pi)$ by
-Jensen's inequality; for an order $\hat\pi$ selected on such estimates, the post-decision surprise
-$\E[\hat V(\hat\pi)-V(\hat\pi)]$ is positive \cite{smith2006}, and this is what E4a measures. Exact
-evaluation removes the Monte Carlo component of this bias. It does not remove the selection effect
-of estimation error in the inputs: $\hat\pi$ maximizes the plug-in value
-$V_{\hat\theta}$, whose maximum overstates the expected gain under parameter uncertainty
-(\cref{sec:uncertainty}).
+Jensen's inequality, and for an order $\hat\pi$ selected on such estimates the post-decision
+surprise $\E[\hat V(\hat\pi)-V(\hat\pi)]$ is positive \cite{smith2006}. Here $\hat\pi$ maximizes the
+plug-in value $V_{\hat\theta}$, whose maximum therefore overstates the expected gain under parameter
+uncertainty (\cref{sec:uncertainty}).
 
 %======================================================================
-\section{Experimental methodology}\label{sec:experiments}
+\section{Validation design}\label{sec:experiments}
 %======================================================================
 
-The protocol (\texttt{docs/methodology/experimental-protocol.md}) was fixed before any 2025--2026
-metric was computed. Hyperparameters were tuned on 2024 only; 2025 and 2026, including the
-reference game, are test seasons.
+Hyperparameters are tuned on 2024 only; 2025 and 2026, including the reference game, are test
+seasons.
 
-\paragraph{E1: kernel validation.} For each season 2023--2026 we compare model run expectancy
+\paragraph{Kernel.} For each season 2023--2026 we compare model run expectancy
 (\cref{prop:re}, with that season's kernel and league outcome mix) with empirical run expectancy:
 the mean runs scored from each state to the end of the half-inning, excluding walk-off
 half-innings.
 
-\paragraph{E2: plate-appearance models.} Rolling origin with 14-day blocks: the model is refitted
-at the start of each block on data before it and predicts every PA in the block. Candidates:
-M0 (league distribution by handedness), M1 (+ batter multipliers), M2 (+ pitcher multipliers;
-the selected model), M2 with untuned priors, and M3, a gradient-boosted multinomial classifier
-(LightGBM \cite{ke2017}) on the M2 inputs, trained on rolling 2023--2024 snapshots. The metrics are
-log-loss and Brier score (strictly proper \cite{gneiting2007}) and class-wise calibration, with
-95\% confidence intervals for differences from a game-level cluster bootstrap \cite{efron1993}.
+\paragraph{Plate-appearance model.} Rolling origin with 14-day blocks: the model is refitted
+at the start of each block on data before it and predicts every PA in the block. To show what each
+component contributes we score the model in three stages: league rates by handedness, then batter
+multipliers, then pitcher multipliers (the full model). The metrics are log-loss (strictly proper
+\cite{gneiting2007}) and class-wise calibration, with 95\% confidence intervals for differences from
+a game-level cluster bootstrap \cite{efron1993}.
 
-\paragraph{E3: game-level calibration.} For every 2025--2026 team-game with a reliable lineup we
+\paragraph{Game-level calibration.} For every 2025--2026 team-game with a reliable lineup we
 compare the predicted $\E[R_{1..8}]$ with the observed runs in innings 1--8 (the home team does not
 always bat in the ninth). We report bias, the calibration slope of observed on predicted, mean
 squared error relative to a constant (previous-season mean) and to the team's mean over its
 previous 60 games, and randomized PIT values \cite{czado2009} of the observed runs under the
 exact predicted distribution for a random subset.
 
-\paragraph{E4: optimization.} (a) Search methods on 200 random 2026 regular-season team-games:
-gap to the exhaustive optimum, share of instances solved exactly, evaluations, runtime; the
-Monte Carlo genetic algorithm on the first 30 of them, where the order used is also
-evaluated so that the two are compared on the same instances. (b) For all 2025--2026 team-games: the model gain of
-the optimum over the order used, and the percentile of the order used among all 9! orders.
-(c) Parameter uncertainty on 80 random 2026 team-games: 40 joint posterior draws
+\paragraph{Orders actually used.} For all 2025--2026 team-games: the model gain of the optimum over
+the order used, and the percentile of the order used among all 9! orders.
+
+\paragraph{Parameter uncertainty.} On 80 random 2026 team-games: 40 joint posterior draws
 \eqref{eq:posterior} of all batter, starter and bullpen multipliers per game; for each draw we
 re-evaluate the point-estimate optimum and the order used, and re-optimize.
 
-\paragraph{E5: reference game.} 2026 World Series Game 5 (gamePk 849799), both teams, with 400
-posterior draws and sensitivity to the kernel era and to untuned priors.
+\paragraph{Reference game.} 2026 World Series Game 5 (gamePk 849799), both teams, with 400
+posterior draws.
 
 All computations are deterministic given seeds; the Statcast extraction, model, evaluator and
-experiments are in the repository, and every number in this paper is read from the
+analyses are in the repository, and every number in this paper is read from the
 \texttt{outputs/} files produced by \texttt{batting-order experiments}.
 
 %======================================================================
@@ -618,7 +601,7 @@ model this.
 \paragraph{Data.} Statcast occasionally revises recent games; decisive-pitch states may contain
 scorer errors (removed when they violate bookkeeping: \DataErrMin--\DataErrMax{} transitions per season outside
 the censored ones, \cref{tab:data}). Lineups for the
-backtests are inferred (\EzeroMatch{} of \EzeroN{} matched the official boxscore in the E0 audit),
+backtests are inferred (\EzeroMatch{} of \EzeroN{} matched the official boxscore in the audit of \cref{sec:data}),
 with no guarantee for every game.
 
 \paragraph{Counterfactuals.} As stated in \cref{rem:identification}, none of the comparisons

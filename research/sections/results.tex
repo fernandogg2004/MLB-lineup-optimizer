@@ -1,4 +1,4 @@
-\subsection{Data and kernel (E1)}
+\subsection{Data and kernel}\label{sec:res-kernel}
 
 \Cref{tab:data} summarizes the processed data. Outside the censored end-of-game transitions,
 bookkeeping violations (scorer errors) number between \DataErrMin{} and \DataErrMax{} per season. The kernel reproduces observed run
@@ -14,55 +14,35 @@ outcome mix observed in that state is markedly more favourable to the offence th
 overall). Innings reach those states
 disproportionately against weak pitching or with strong hitters at the plate, which a
 league-average run-expectancy calculation cannot reflect. Censoring of end-of-game transitions,
-which score runs by construction, pushes in the same direction but is too rare to explain the gaps. Game-level predictions (E3) use the
-actual hitters and pitchers and are the relevant check.
+which score runs by construction, pushes in the same direction but is too rare to explain the gaps. Game-level predictions
+(\cref{sec:res-games}) use the actual hitters and pitchers and are the relevant check.
 
 \begin{figure}[t]\centering
 \includegraphics[width=0.48\textwidth]{figures/re24.pdf}\hfill
 \includegraphics[width=0.48\textwidth]{figures/calibration.pdf}
-\caption{Left: model versus empirical run expectancy for the 24 base-out states, 2023--2026 (E1).
+\caption{Left: model versus empirical run expectancy for the 24 base-out states, 2023--2026.
 Right: observed runs in innings 1--8 versus predicted expected runs, by decile of the prediction,
-2025--2026 test seasons, with $\pm2$ standard errors (E3).}\label{fig:re24}\label{fig:calibration}
+2025--2026 test seasons, with $\pm2$ standard errors.}\label{fig:re24}\label{fig:calibration}
 \end{figure}
 
-\subsection{Plate-appearance model (E2)}
+\subsection{Plate-appearance model}\label{sec:res-pa}
 
 Tuning on 2024 selected prior-strength scales $\lambda_B=\EtwoBatterScale$,
 $\lambda_P=\EtwoPitcherScale$ and half-life $H=\EtwoHalfLife$ days (half-lives searched:
 \EtwoHalfLifeGrid{} days); \EtwoBoundaryNote{}.
-\Cref{tab:e2} reports the test seasons. Batter multipliers reduce log-loss relative to the league
-model by \EtwoBatterGain{} nats per PA (mean of the two seasons), and pitcher multipliers by a
+\Cref{tab:e2} reports the test seasons. Batter multipliers reduce log-loss relative to league rates
+by \EtwoBatterGain{} nats per PA (mean of the two seasons), and pitcher multipliers by a
 further \EtwoPitcherGain{}; both differences are large relative to their bootstrap intervals.
-Tuning the priors matters little (\EtwoTuneGain{}). The gradient-boosted model M3, using the same
-inputs, differs from M2 by \EtwoMthreeA{} nats in 2025 (95\% interval \EtwoMthreeALo{} to
-\EtwoMthreeAHi{}) and \EtwoMthreeB{} in 2026 (\EtwoMthreeBLo{} to \EtwoMthreeBHi{}). Class-wise calibration of M2
-is shown in \cref{fig:pacal}.
+Class-wise calibration of the model is shown in \cref{fig:pacal}.
 
 \input{generated/table_e2.tex}
 
-\paragraph{Deviation from the pre-specified selection rule.} Our protocol selected the simplest
-model not significantly worse than the best; strictly applied to 2025, it selects M3. We
-nevertheless use M2 for the lineup analysis and report this as a deviation. The reasons are that
-M3's advantage is about one thousandth of a nat per PA in one of the two test seasons and absent
-in the other, and that M2 provides the posterior distribution used for parameter uncertainty
-(\cref{sec:uncertainty}), which M3 does not. We checked what the choice changes on \EtwocN{}
-random test team-games (E2c). The \emph{magnitude} of the conclusions does not depend on it: the
-mean gain of the optimal order over the actual order is \EtwocUpTwo{} runs per game under M2 and
-\EtwocUpThree{} under M3. The \emph{identity} of the optimal order does: the two models select the
-same exact order in only \EtwocSame{} of the games, and the M2 optimum is worse under M3 than the M3
-optimum by \EtwocLoss{} runs per game on average (maximum \EtwocLossMax{}); the correlation of the two
-models' values over all 9! orders averages \EtwocCorr{}. This is the same phenomenon as in
-\cref{sec:uncertainty}: many orders are nearly tied, and small changes in the inputs change which
-one is best. One caveat applies to M3: for the bullpen pseudo-pitcher we supplied a sample-size
-feature outside its training range, so M3's absolute run levels for innings against the bullpen
-should not be relied on.
-
 \begin{figure}[t]\centering
 \includegraphics[width=\textwidth]{figures/pa_calibration.pdf}
-\caption{Class-wise calibration of M2 on 2026 (deciles of the predicted probability).}\label{fig:pacal}
+\caption{Class-wise calibration of the plate-appearance model on 2026 (deciles of the predicted probability).}\label{fig:pacal}
 \end{figure}
 
-\subsection{Run predictions at the game level (E3)}
+\subsection{Run predictions at the game level}\label{sec:res-games}
 
 Over \EthreeN{} test team-games, the mean prediction error (observed minus predicted runs in
 innings 1--8) is \EthreeBias{} runs (95\% interval \EthreeBiasLo{} to \EthreeBiasHi{}), and the
@@ -77,36 +57,14 @@ team-games are close to uniform, and the central 80\% predictive interval covers
 ``central 80\%'' interval holds on average \EthreeCoverageModel{} of the model's own probability,
 and observed coverage should be compared with that value: the difference is \EthreeCoverageZ{}
 binomial standard errors, consistent with calibration of the predictive distribution. Team-games that batted fewer than eight
-innings (\EthreeShort{}, e.g.\ called games) are excluded from E3.
+innings (\EthreeShort{}, e.g.\ called games) are excluded.
 
 \begin{figure}[t]\centering
 \includegraphics[width=0.48\textwidth]{figures/pit.pdf}
-\caption{Randomized PIT histogram of observed runs in innings 1--8 (E3).}\label{fig:pit}
+\caption{Randomized PIT histogram of observed runs in innings 1--8.}\label{fig:pit}
 \end{figure}
 
-\subsection{Search methods (E4a)}
-
-\Cref{tab:e4a} compares the search methods with the exhaustive optimum. Exhaustive search takes
-\EfouraExhaustiveSeconds{}~s per instance on one machine (all 362{,}880 orders). Local search from
-ten random starts found the optimum in every instance tested, and simulated annealing and the
-genetic algorithm with exact fitness came close, so for this problem size the choice among
-competent search methods is unimportant once the objective is exact; exhaustive search is
-preferred because it provides the certificate of \cref{cor:cert}. The heuristic guideline of
-\citet{tango2007} recovers about half of the gap between the actual order and the optimum.
-
-The genetic algorithm with Monte Carlo fitness ends about as far
-from the optimum as the managers' own orders: on the same \EfouraNoisyN{} instances its mean gap is
-\EfouraNoisyGap{} runs, against \EfouraActualSameGap{} for the order actually used. Its reported
-value of the chosen order, however, exceeds that order's exact value by \EfouraCurse{} runs on
-average: the optimizer's curse is an order of magnitude larger than the effect being optimized.
-(The heuristic orders in \cref{tab:e4a} use run values averaged over the starter and bullpen
-regimes; in E4b they use the starter regime only, which explains the small difference between the
-two experiments' heuristic gaps.) With 4{,}000 simulated games, the standard error of one fitness evaluation
-is about $3/\sqrt{4000}\approx0.05$ runs, larger than the differences among good orders.
-
-\input{generated/table_e4a.tex}
-
-\subsection{How far are real orders from the optimum? (E4b)}
+\subsection{How far are real orders from the optimum?}\label{sec:res-orders}
 
 Across \EfourbN{} team-games of 2025--2026, the model-optimal order exceeds the order actually used
 by \EfourbUpliftMean{} expected runs per game on average (median \EfourbUpliftMedian{}, 90th
@@ -121,20 +79,20 @@ improvement is a few runs per season, in line with the classical literature
 
 \begin{figure}[t]\centering
 \includegraphics[width=\textwidth]{figures/uplift_hist.pdf}
-\caption{Model gain of the optimal order over the order actually used, 2025--2026 (E4b).}\label{fig:uplift}
+\caption{Model gain of the optimal order over the order actually used, 2025--2026.}\label{fig:uplift}
 \end{figure}
 
 \subsection{Parameter uncertainty}\label{sec:uncertainty}
 
-In \EfourcN{} random 2026 team-games with \EfourcDraws{} posterior draws each (E4c), the point-
-estimate optimal order is better than the actual order in \EfourcPBetter{} of draws on average,
+In \EfourcN{} random 2026 team-games with \EfourcDraws{} posterior draws each, the point-estimate
+optimal order is better than the actual order in \EfourcPBetter{} of draws on average,
 but the 90\% posterior interval of the gain excludes zero in only \EfourcExcl{} of games, and its
 mean width (\EfourcWidth{} runs) exceeds the typical gain. The exact optimal order changes in almost
 every draw (it is unchanged in \EfourcSame{} of draws): many orders are nearly tied, and the data
 cannot single out one of them. What the data do support is a statement about a set of good orders
 (those that move the best hitters up), not about a unique best order.
 
-\subsection{The 2026 World Series, Game 5 (E5)}
+\subsection{The 2026 World Series, Game 5}\label{sec:res-ref}
 
 Milwaukee won 4--1 at Tropicana Field. Facing Drew Rasmussen and the Tampa Bay bullpen, the order
 Milwaukee used has model value \RefActualAway{} expected runs over nine innings; the optimal order

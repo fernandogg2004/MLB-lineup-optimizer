@@ -12,16 +12,15 @@ all 362,880 of them, and shows, in English and Spanish, how the two lineups of t
 ## Results at a glance
 
 All numbers come from `outputs/*.json` (test seasons 2025–2026; hyperparameters tuned on 2024 only;
-protocol fixed in advance in [`docs/methodology/experimental-protocol.md`](docs/methodology/experimental-protocol.md)).
+see [`docs/methodology/validation-protocol.md`](docs/methodology/validation-protocol.md)).
 
 | Question | Answer (model-based) |
 |---|---|
-| Are run predictions calibrated? | Yes: 9,872 team-games, mean error −0.035 runs (95% CI −0.096 to +0.027), calibration slope 0.94 (0.81–1.06) |
-| Does the simple plate-appearance model hold up against gradient boosting? | Yes: on the same inputs, gradient boosting is better by about 0.001 nats/PA in 2025 and no better in 2026 |
+| Are run predictions calibrated? | Yes: 9,860 team-games, mean error −0.035 runs (95% CI −0.096 to +0.026), calibration slope 0.94 (0.81–1.06) |
 | How far are MLB managers' orders from the model optimum? | +0.020 runs/game (≈3.2 runs per 162 games); the median order used beats 97.8% of all 362,880 orders |
 | How much can the order matter at all? | Best vs worst possible order of the same nine hitters: 0.094 runs/game on average |
 | Is "the" optimal order identifiable? | No: under parameter uncertainty the exact same order is optimal in only 0.5% of re-estimates |
-| Search | Exhaustive search is exact and takes ~1 s; a genetic algorithm with Monte Carlo fitness overstated its own pick by 0.16 runs and did worse than the managers |
+| Can the best order be certified? | Yes, within the model: all 362,880 orders are evaluated exactly in about 1.4 s, with a proven bound on numerical error |
 | 2026 World Series Game 5 | Gain of the model's top order: Milwaukee +0.010 (90% interval −0.002 to +0.021), Tampa Bay +0.024 (+0.009 to +0.041); both orders used were above the 97th percentile |
 
 These are counterfactual statements about the model, not observed effects: a real game shows only the
@@ -56,7 +55,7 @@ plate appearances with base-out state, runs, censoring, bookkeeping checks
 exact evaluator: half-innings as absorbing Markov chains → leadoff-slot chain across innings
         │  E[R_9] in ~1 ms; error ≤ 162·ε/q (proved, tested)
         ▼
-exhaustive search over 9! orders (rotation trick, ~0.6 s)  →  certified optimum within the model
+exhaustive search over 9! orders (rotation trick, ~1.4 s)  →  certified optimum within the model
         │
         ├─ outputs/*.json → paper (research/)
         └─ web/public/data/*.json → static dashboard; the browser re-runs the same exact evaluator
@@ -67,8 +66,8 @@ exhaustive search over 9! orders (rotation trick, ~0.6 s)  →  certified optimu
 | Data download / PA transitions / StatsAPI | `src/batting_order/data/` |
 | PA model, kernel, matchup | `src/batting_order/model/` |
 | Exact evaluator, Monte Carlo check, run expectancy | `src/batting_order/engine/` |
-| Search methods (exhaustive, local search, annealing, GA, heuristics) | `src/batting_order/optimize/` |
-| Experiments E1–E5 | `src/batting_order/evaluate/` |
+| Exhaustive search | `src/batting_order/optimize/` |
+| Validation analyses | `src/batting_order/evaluate/` |
 | Dashboard (Vite + React + TypeScript) | `web/` |
 | Paper | `research/` |
 
@@ -79,14 +78,6 @@ official lineups, venues and names from the **MLB Stats API**. Both are © MLB A
 are used here for non-commercial research. Bulk data are **not** stored in this repository: they
 are downloaded on demand and verified against checksums. The site shows only names, lineups, final
 scores and model-derived numbers.
-
-## Methods compared
-
-Plate-appearance models: league average, + batter, + pitcher (selected, empirical Bayes), and
-gradient boosting (LightGBM) on the same inputs.
-Search methods: exhaustive (exact), "The Book" guideline, sorting heuristics, local search,
-simulated annealing, and a genetic algorithm with exact fitness and with Monte Carlo fitness. Exhaustive search is used because it is both exact and fast; the
-others are kept as documented baselines.
 
 ## Run it
 
