@@ -454,36 +454,6 @@ test.describe("layout on each screen", () => {
     }
   });
 
-  test("the summary lands on the true values and uses expected runs only", async ({ page }) => {
-    await page.goto("/?lang=en#/g/849799/MIL/summary");
-    await expect(page.locator(".summary h2")).toHaveText("According to the model, this lineup…");
-    const list = page.locator(".sum-list");
-    const line = (i: number) => list.locator("li").nth(i).locator("span").last();
-    await expect(line(0)).toHaveText("expects 3.84 runs this game.", { timeout: 5000 });
-    await expect(line(1)).toHaveText("moves Brice Turang up from 5th to 1st, its biggest change.");
-    await expect(line(2)).toHaveText("would send its first hitter to the plate 4.6 times and its ninth 3.7 times.");
-    await expect(line(3)).toHaveText("would add +0.01 runs a game, about 2 over 162 games of this matchup.");
-    await expect(line(4)).toHaveText("beats the real lineup in 91 of 100 re-estimates of the players' ability, so the model is not certain of the gain.");
-    await expect(line(5)).toHaveText("would score at least once in 92% of games, and five or more in 35%.");
-    await expect(page.locator(".sum-context")).toHaveText("The real order was already better than 98% of the 362,880 possible orders. The best and worst of them are only 0.05 runs apart.");
-    await expect(page.locator(".sum-final")).toHaveText("What actually happened: MIL 4–1 TB.");
-    await expect(page.locator(".sum-foot")).toContainText("All numbers above are model estimates.");
-    await expect(page.locator(".sum-foot")).not.toContainText("MIL");
-  });
-
-  test("a near-certain rank does not read as better than more than", async ({ page }) => {
-    await page.goto("/?lang=en#/g/849799/TB/summary");
-    await expect(page.locator(".sum-context")).toContainText("already in the top 1% of the 362,880");
-    await expect(page.locator(".sum-context")).not.toContainText("more than");
-  });
-
-  test("Spanish uses its own number format", async ({ page }) => {
-    await page.goto("/?lang=es#/g/849799/TB/summary");
-    await expect(page.locator(".sum-list li").nth(0).locator("span").last()).toHaveText("anotaría unas 3,36 carreras en este partido.", { timeout: 5000 });
-    await expect(page.locator(".sum-context")).toContainText("362.880");
-    await expect(page.locator(".sum-list li").nth(4).locator("span").last()).toContainText("más de 99 de 100");
-  });
-
   test("a ring's explanation stays on top and on screen, and Esc dismisses it", async ({ page }) => {
     for (const [w, h] of [[1280, 800], [375, 667], [320, 700]] as const) {
       await page.setViewportSize({ width: w, height: h });
@@ -722,7 +692,7 @@ test.describe("resilience", () => {
   test("reduced motion shows final values at once with no parallax", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/?lang=en#/g/849799/MIL/summary");
-    await expect(page.locator(".sum-list li").first().locator("span").last()).toHaveText("expects 3.84 runs this game.");
+    await expect(page.locator(".sum-runs .sum-number")).toHaveText("3.84");
     expect(await page.locator(".layer").first().evaluate((e) => (e as HTMLElement).style.transform)).toBe("");
     expect(await page.locator("#stadium").evaluate((e) => (e as HTMLElement).style.getPropertyValue("--d"))).toBe("");
   });
@@ -737,7 +707,7 @@ test.describe("resilience", () => {
     await expect(page.locator('.screen[data-screen="0"] .ors')).toHaveAttribute("data-on", "true");
     await page.locator(".summary h2").scrollIntoViewIfNeeded();
     await expect(page.locator(".summary h2")).toBeInViewport();
-    await expect(page.locator(".sum-list li").first().locator("span").last()).toHaveText("expects 3.84 runs this game.", { timeout: 5000 });
+    await expect(page.locator(".sum-runs .sum-number")).toHaveText("3.84", { timeout: 5000 });
   });
 
   test("a missing data file shows a clear message", async ({ page }) => {

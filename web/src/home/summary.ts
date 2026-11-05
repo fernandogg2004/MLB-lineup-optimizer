@@ -1,55 +1,37 @@
 import type { HomeTeam } from "../data";
-import type { Key } from "../strings";
-import { biggestMove, chanceOfFivePlus, chanceOfScoring, runsGained, runsOverSeason, sameOrder } from "./derive";
+import { roundTo100, runsGained, sameOrder, wholePercent } from "./derive";
 
-type Vars = Record<string, string>;
+export type Upgrade = "none" | "tiny" | "small" | "modest" | "solid" | "big";
 
-interface Line {
-  key: Key;
-  vars: Vars;
-  /** Placeholders shown as plain text rather than rolling numbers. */
-  plain?: string[];
+/**
+ * How the title describes the model's gain, judged in runs over a 162-game season so that it means
+ * something to a fan: under 1 run tiny, under 3 small, under 6 modest, under 10 solid, else big.
+ * Published batting-order studies put typical gains at a handful of runs a season, which these follow.
+ */
+export function upgradeSize(team: HomeTeam): Upgrade {
+  if (sameOrder(team.optimal.order)) return "none";
+  const season = Math.max(0, runsGained(team)) * 162;
+  if (season < 1) return "tiny";
+  if (season < 3) return "small";
+  if (season < 6) return "modest";
+  if (season < 10) return "solid";
+  return "big";
 }
 
-export function summaryLines(team: HomeTeam, helpers: {
-  fmt: (v: number, d?: number) => string;
-  signed: (v: number, d?: number) => string;
-  whole: (p: number, percent: boolean) => string;
-  ord: (n: number) => string;
-}): Line[] {
-  const { fmt, signed, whole, ord } = helpers;
-  const order = team.optimal.order;
-  const lines: Line[] = [{ key: "sum.expects", vars: { runs: fmt(team.optimal.er9, 2) } }];
-  const move = biggestMove(order);
-  if (move) {
-    lines.push({
-      key: move.to < move.from ? "sum.move_up" : "sum.move_down",
-      vars: { name: team.hitters[move.hitter].name, from: ord(move.from + 1), to: ord(move.to + 1) },
-      plain: ["name", "from"],
-    });
-  } else {
-    lines.push({ key: "sum.no_move", vars: {} });
-  }
-  lines.push({
-    key: "sum.pa",
-    vars: { first: fmt(team.optimal.pa_by_slot[0], 1), ninth: fmt(team.optimal.pa_by_slot[8], 1) },
-  });
-  if (sameOrder(order)) {
-    lines.push({ key: "sum.no_gain", vars: {} });
-  } else {
-    const gain = runsGained(team);
-    const season = Math.round(runsOverSeason(team));
-    const gainText = gain < 0.005 ? `<${signed(0.01, 2)}` : signed(gain, 2);
-    if (season >= 1) lines.push({ key: "sum.gain", vars: { gain: gainText, season: String(season) } });
-    else lines.push({ key: "sum.gain_small", vars: { gain: gainText } });
-    lines.push({
-      key: team.uncertainty.diff_q05 <= 0 ? "sum.beats_unsure" : "sum.beats",
-      vars: { p: whole(team.uncertainty.p_opt_better, false) },
-    });
-  }
-  lines.push({
-    key: "sum.score",
-    vars: { p: whole(chanceOfScoring(team), true), q: whole(chanceOfFivePlus(team), true) },
-  });
-  return lines;
+/** The chance of the optimized order beating the real one, as a whole number out of 100; never "100". */
+export function beatsOutOf100(p: number): string {
+  const w = wholePercent(p);
+  if (w.kind === "more") return "99+";
+  if (w.kind === "less") return "<1";
+  return String(w.n);
+}
+
+export const RUN_GROUPS = ["0", "1", "2", "3", "4", "5+"] as const;
+
+/** One game's runs in six groups (0 to 4, then 5 or more), as whole percents that total exactly 100. */
+export function runGroups(distribution: number[]): { label: (typeof RUN_GROUPS)[number]; value: number; percent: number }[] {
+  const values = [...distribution.slice(0, 5), distribution.slice(5).reduce((a, b) => a + b, 0)];
+  while (values.length < 6) values.push(0);
+  const percents = roundTo100(values);
+  return RUN_GROUPS.map((label, i) => ({ label, value: values[i], percent: percents[i] }));
 }
