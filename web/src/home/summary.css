@@ -153,8 +153,12 @@
   .seg-axis { font-size: 0.68rem; }
   .sum-foot { font-size: 0.66rem; line-height: 1.25; }
   .sum-link { margin: -4px 0 0; font-size: 0.78rem; }
-  .sum-title { padding: 0 34px; font-size: 1.35rem; }
+  /* Room on both sides for the ball, whatever the title's length or font. */
+  .sum-title { padding: 0 48px; font-size: 1.35rem; }
   .fly { top: -6px; left: -14px; transform: scale(0.45); transform-origin: left top; }
+}
+@media (max-width: 380px) {
+  .sum-title { font-size: 1.2rem; }
 }
 @media (max-width: 600px) and (max-height: 700px) {
   .sum-sub { display: none; }

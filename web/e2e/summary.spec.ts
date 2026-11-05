@@ -134,9 +134,10 @@ test.describe("summary layout", () => {
     test(`fits at ${w}x${h}`, async ({ page, isMobile }) => {
       test.skip(isMobile, "viewport set by hand");
       await page.setViewportSize({ width: w, height: h });
-      for (const lang of ["en", "es"]) {
-        for (const theme of ["night", "day"]) {
-          await page.goto(`/?lang=${lang}&theme=${theme}#/g/849799/MIL/summary`);
+      // Phones try both teams, whose titles differ in length.
+      for (const [lang, theme, club] of [["en", "night", "MIL"], ["en", "day", "MIL"], ["es", "night", "MIL"], ["es", "day", "MIL"], ...(w <= 412 ? [["en", "night", "TB"], ["es", "day", "TB"]] : [])]) {
+        {
+          await page.goto(`/?lang=${lang}&theme=${theme}#/g/849799/${club}/summary`);
           await expect(summary(page)).toHaveAttribute("data-on", "true");
           await page.waitForTimeout(1800);
           const bad = await page.evaluate(() => {
@@ -165,7 +166,7 @@ test.describe("summary layout", () => {
             if (ball.right > text.left + 0.5 && ball.bottom > text.top && text.bottom > ball.top) out.push("ball covers the title");
             return [...new Set(out)];
           });
-          expect(bad, `${lang} ${theme}`).toEqual([]);
+          expect(bad, `${lang} ${theme} ${club}`).toEqual([]);
         }
       }
     });
