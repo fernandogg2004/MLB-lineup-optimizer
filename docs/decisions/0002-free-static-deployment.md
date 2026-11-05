@@ -23,7 +23,7 @@ functions, database, API keys or paid services are used.
 
 - Results in the browser are exact under the published model (same algorithm and tolerance as
   Python; parity tested to 1e-10), not approximations.
-- New games require running the CLI (locally, in the manual GitHub Action, or via the optional
-  Airflow DAG) and redeploying; Vercel does not ingest data.
+- New games require running the CLI (locally or in the manual GitHub Action) and redeploying;
+  Vercel does not ingest data.
 - Measured costs: a snapshot of a game is fetched once per visit; with Hobby's 100 GB/month the
   site supports on the order of 10^5 visits per month before pausing.

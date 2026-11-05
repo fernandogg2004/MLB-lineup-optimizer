@@ -78,7 +78,7 @@
    "mean_evaluations": 522.915,
    "mean_seconds": 2.8008593875003864
   },
-  "genetic_mc4000_original": {
+  "genetic_mc4000": {
    "n": 30,
    "mean_gap": 0.022308510883220833,
    "max_gap": 0.05261755256134126,

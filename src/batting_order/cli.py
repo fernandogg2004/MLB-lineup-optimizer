@@ -1,7 +1,7 @@
 """Command-line interface: ``batting-order <command>``.
 
 Every command is idempotent and safe to re-run; it is the single entry point used
-locally, by the manual GitHub Action and by the optional Airflow DAG.
+locally and by the manual GitHub Action.
 
     ingest     download raw Statcast for seasons (resumable; skips existing windows)
     verify     compare downloaded raw files with the published checksums (data_manifest/)

@@ -7,7 +7,7 @@ all 362,880 of them, and shows, in English and Spanish, how the two lineups of t
 
 - **Dashboard:** https://batting-order-lab.vercel.app (static site, English/Español, interactive simulator)
 - **Paper:** [`research/paper.pdf`](research/paper.pdf) (source: [`research/paper.tex`](research/paper.tex))
-- **Decisions and audits:** [`docs/`](docs/)
+- **Design decisions, protocol and operations:** [`docs/`](docs/)
 
 ## Results at a glance
 
@@ -17,19 +17,15 @@ protocol fixed in advance in [`docs/methodology/experimental-protocol.md`](docs/
 | Question | Answer (model-based) |
 |---|---|
 | Are run predictions calibrated? | Yes: 9,872 team-games, mean error −0.035 runs (95% CI −0.096 to +0.027), calibration slope 0.94 (0.81–1.06) |
-| Does the plate-appearance model beat the original 51-feature model? | Yes, by 0.0024 nats/PA (95% CI 0.0003–0.0050) on its own out-of-sample window |
+| Does the simple plate-appearance model hold up against gradient boosting? | Yes: on the same inputs, gradient boosting is better by about 0.001 nats/PA in 2025 and no better in 2026 |
 | How far are MLB managers' orders from the model optimum? | +0.020 runs/game (≈3.2 runs per 162 games); the median order used beats 97.8% of all 362,880 orders |
 | How much can the order matter at all? | Best vs worst possible order of the same nine hitters: 0.094 runs/game on average |
 | Is "the" optimal order identifiable? | No: under parameter uncertainty the exact same order is optimal in only 0.5% of re-estimates |
-| Search | Exhaustive search is exact and takes ~1 s; the original Monte Carlo genetic algorithm overstated its own pick by 0.16 runs and did worse than the managers |
+| Search | Exhaustive search is exact and takes ~1 s; a genetic algorithm with Monte Carlo fitness overstated its own pick by 0.16 runs and did worse than the managers |
 | 2026 World Series Game 5 | Gain of the model's top order: Milwaukee +0.010 (90% interval −0.002 to +0.021), Tampa Bay +0.024 (+0.009 to +0.041); both orders used were above the 97th percentile |
 
 These are counterfactual statements about the model, not observed effects: a real game shows only the
 runs scored with the order that was used.
-
-**History.** This repository previously contained a LightGBM + Monte Carlo + genetic-algorithm system
-(tag `baseline/pre-rebuild`). Its own README audit (PR #1, Oct 2026) found that the reported
-+0.052 runs/game shrank to about +0.02 on realistic lineups; the exact rebuild finds +0.020.
 
 ## What problem does it solve, and why does it matter?
 
@@ -75,7 +71,6 @@ exhaustive search over 9! orders (rotation trick, ~0.6 s)  →  certified optimu
 | Experiments E1–E5 | `src/batting_order/evaluate/` |
 | Dashboard (Vite + React + TypeScript) | `web/` |
 | Paper | `research/` |
-| Optional Airflow (disabled by default) | `orchestration/airflow/` |
 
 ## Data
 
@@ -87,11 +82,10 @@ scores and model-derived numbers.
 
 ## Methods compared
 
-Plate-appearance models: league average, + batter, + pitcher (selected, empirical Bayes),
-gradient boosting on the same inputs, and the original project's 51-feature LightGBM.
+Plate-appearance models: league average, + batter, + pitcher (selected, empirical Bayes), and
+gradient boosting (LightGBM) on the same inputs.
 Search methods: exhaustive (exact), "The Book" guideline, sorting heuristics, local search,
-simulated annealing, a genetic algorithm with exact fitness, and the original genetic algorithm
-with Monte Carlo fitness. Exhaustive search is used because it is both exact and fast; the
+simulated annealing, and a genetic algorithm with exact fitness and with Monte Carlo fitness. Exhaustive search is used because it is both exact and fast; the
 others are kept as documented baselines.
 
 ## Run it
@@ -116,9 +110,7 @@ batting-order home                                    # Home page data (official
 (cd web && npx vitest run && npx playwright test)     # unit + end-to-end tests
 ```
 
-Updating for a new season, deploying, and the optional Airflow DAG are described in
-[`docs/operations.md`](docs/operations.md) and
-[`orchestration/airflow/README.md`](orchestration/airflow/README.md).
+Updating for a new season and deploying are described in [`docs/operations.md`](docs/operations.md).
 
 ## Limitations
 

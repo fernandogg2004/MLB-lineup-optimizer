@@ -3,8 +3,8 @@
 Samples games from exactly the stochastic model that ``markov.py`` evaluates in
 closed form, so ``mean(simulate(...)) -> evaluate(...).expected_runs`` as the number
 of simulated games grows (strong law of large numbers). It is used (i) to
-cross-validate the exact evaluator and (ii) to reproduce the original project's
-noisy-fitness genetic search.
+cross-validate the exact evaluator and (ii) to run a genetic search with noisy
+(simulated) fitness, the common simulation-based approach that the paper compares against.
 """
 
 from __future__ import annotations

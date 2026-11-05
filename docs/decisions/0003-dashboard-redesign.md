@@ -29,8 +29,8 @@ prove certainty. The Statistics area keeps its existing precision (for example 9
 specification scopes the rule to Home.
 
 **New data lives in new files.** `web/public/data/home/{game_pk}.json` repeats the snapshot fields Home
-needs and adds the hitting lines. Game snapshots and `outputs/` are untouched, so the provenance in
-`docs/audits/provenance.md` stays valid. A test asserts the copied fields equal the snapshot.
+needs and adds the hitting lines. Game snapshots and `outputs/` are untouched, so the published model results are
+unaffected. A test asserts the copied fields equal the snapshot.
 
 **Illustrated batters, not photographs.** MLB and agency photos are copyrighted and the project does not
 use unlicensed assets. The figure is original and faceless. It has six poses plus varied bats and
@@ -82,7 +82,7 @@ throttled test to 8 fps, so the parallax uses independent layers instead.
 available. Where a club's two listed colours are too close to read on a small figure, the trim is white
 or silver. Tampa Bay's shirt is its light blue, as approved in the mockup review.
 
-**Wording says who is speaking.** The independent review (`docs/audits/agent-C-ux-redesign.md`) found the
+**Wording says who is speaking.** An independent UX review found the
 approved summary read as observed fact, against this project's invariant. The owner's brief said "something
 like", so the wording changed within it: the heading names the model, verbs became conditional, and the real
 score sits on its own line, apart from the note about estimates.
@@ -92,7 +92,7 @@ widths and made some screens overflow on Linux. Layout tests now match what visi
 
 **Owner's refinements after the preview.** Home was simplified at the owner's request: no sentence or kicker
 above the name, no fielding position, no orbiting words and no caption above the rings, whose explanation now
-appears on hover, focus or tap. This reverses the review's fixes for C-01 and part of C-02 and C-10: the page
+appears on hover, focus or tap. This reverses some of the UX review's fixes: the page
 no longer says in words what it is, apart from the site name, and the rings are not labelled as past results
 on screen. Ring explanations state only what the statistic measures, and the selector is explained only by its
 hover label, "Expected outcome against the starting pitcher" or "the relief pitchers". The forecast card follows the owner's reference image. The rail stays on the

@@ -81,11 +81,6 @@ E2E_BASE_URL=https://batting-order-lab.vercel.app npx playwright test
 
 A brand-new Vercel project assigns its first deployment to production even without `--prod`.
 
-## Optional automation
-
-`orchestration/airflow/` contains a disabled-by-default DAG that runs `batting-order update`
-on a schedule you choose. It does not commit or deploy. See its README.
-
 ## Data rights
 
 Statcast and Stats API data are © MLB Advanced Media and are used here for non-commercial research.
@@ -96,15 +91,3 @@ site shows player names, lineups, final scores, official season hitting lines (c
 page) and model-derived numbers. Player illustrations are original; no MLB or agency photos are used. Club logos in the team selector
 load at runtime from MLB's own address and no logo file is stored in this repository (ADR 0003); no
 licence for them is recorded.
-
-## Reproducing the legacy comparison (experiment E2b)
-
-E2b scores the original project's model on its own stored features. It needs the baseline commit
-and its Git LFS artifacts, so it is optional and is skipped (with a warning) when its input is absent:
-
-```bash
-GIT_LFS_SKIP_SMUDGE=0 git worktree add ../mlb-baseline-wt baseline/pre-rebuild
-# in an environment with the original requirements (see that worktree's README):
-python scripts/legacy_pa_predictions.py ../mlb-baseline-wt     ../mlb-baseline-wt/data/gold/features_train_v3.parquet     ../mlb-baseline-wt/models/at_bat_predictor.pkl work/legacy_2026.parquet
-batting-order experiments --only e2b
-```
