@@ -81,8 +81,8 @@ test.describe("summary content", () => {
       }),
     );
     expect(parts).toEqual(pie);
-    const pcts = (await page.locator(".seg-pct").allTextContents()).map((p) => Number(p.replace("%", "")));
-    expect(pcts.reduce((a, b) => a + b, 0)).toBe(100);
+    // The percentages roll before they land, so wait for all of them to settle.
+    await expect.poll(async () => (await page.locator(".seg-pct").allTextContents()).map((p) => Number(p.replace("%", ""))).reduce((a, b) => a + b, 0), { timeout: 6000 }).toBe(100);
   });
 });
 
