@@ -57,13 +57,6 @@ one is best. One caveat applies to M3: for the bullpen pseudo-pitcher we supplie
 feature outside its training range, so M3's absolute run levels for innings against the bullpen
 should not be relied on.
 
-\paragraph{The original model.} On the window where its stored features exist (\EtwobWindow{},
-\EtwobN{} PAs, which are out of sample for it), the predecessor system's 51-feature LightGBM has
-log-loss \EtwobLegacyLL{} on the common seven-class taxonomy, against \EtwobMtwoLL{} for M2 and
-\EtwobMzeroLL{} for the league model: M2 is better by \EtwobDiff{} nats per PA (95\% interval
-\EtwobDiffLo{} to \EtwobDiffHi{}), despite the legacy features being recomputed daily rather than
-every two weeks.
-
 \begin{figure}[t]\centering
 \includegraphics[width=\textwidth]{figures/pa_calibration.pdf}
 \caption{Class-wise calibration of M2 on 2026 (deciles of the predicted probability).}\label{fig:pacal}
@@ -101,7 +94,7 @@ competent search methods is unimportant once the objective is exact; exhaustive 
 preferred because it provides the certificate of \cref{cor:cert}. The heuristic guideline of
 \citet{tango2007} recovers about half of the gap between the actual order and the optimum.
 
-The genetic algorithm with Monte Carlo fitness, as in the predecessor system, ends about as far
+The genetic algorithm with Monte Carlo fitness ends about as far
 from the optimum as the managers' own orders: on the same \EfouraNoisyN{} instances its mean gap is
 \EfouraNoisyGap{} runs, against \EfouraActualSameGap{} for the order actually used. Its reported
 value of the chosen order, however, exceeds that order's exact value by \EfouraCurse{} runs on
