@@ -55,6 +55,7 @@ export interface Team {
   optimal: OrderEval & { pa_by_slot: number[]; run_distribution: number[] };
   the_book: OrderEval;
   worst: OrderEval;
+  truncated_mass: number;
   all_orders: { count: number; mean: number; sd: number; hist: { edges: number[]; counts: number[] } };
   top10: { order: number[]; er9: number }[];
   uncertainty: {
@@ -97,6 +98,7 @@ export interface GameSnapshot {
   cutoff: { information_before: string; pa_history_from: string; kernel: Record<string, unknown> };
   model: { outcomes: string[]; hyper: Record<string, number> };
   kernel: { P: number[][][]; R: number[][] };
+  run_expectancy: number[][];
   teams: { away: Team; home: Team };
 }
 

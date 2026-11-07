@@ -32,7 +32,7 @@ run accounting of *past* transitions) are never used as features.
 | How well does the PA model predict held-out PAs? | tune 2024; test 2025, 2026 | log-loss and per-class calibration, by stage of the model; game-cluster bootstrap 95% CI of differences | `e2_tuning.json`, `e2_pa_models.json` |
 | Are game-level run predictions calibrated? | 2025–2026 team-games with reliable lineups | bias and calibration slope of observed `R_8` on predicted `E[R_8]`; MSE against the previous season's league mean and the team's last 60 games; distributional calibration (PIT) on a random subset | `e3_run_calibration.json` |
 | How long does exhaustive search take? | 200 random 2026 team-games | runtime per game | `e4a_search_methods.json` |
-| How far are actual orders from the model optimum? | all 2025–2026 team-games | `Δ`, percentile of the actual order among 9! | `e4b_actual_vs_optimal.json` |
+| How far are actual orders from the model optimum? | all 2025–2026 team-games | `Δ`, percentile of the actual order among 9! | `e4b_actual_vs_optimal.json`, `e4b_rank_distribution.json` |
 | Is the recommendation robust to parameter uncertainty? | 80 random 2026 team-games, 40 draws each | posterior draws of multipliers: distribution of `Δ`, P(Δ>0), stability of the optimal order | `e4c_parameter_uncertainty.json` |
 | What does the model say about the reference game? | 2026 World Series Game 5, both teams, 400 draws | all of the above for two lineups | `e5_reference_game.json` |
 

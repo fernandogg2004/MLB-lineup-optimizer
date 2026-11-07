@@ -98,6 +98,16 @@ on screen. Ring explanations state only what the statistic measures, and the sel
 hover label, "Expected outcome against the starting pitcher" or "the relief pitchers". The forecast card follows the owner's reference image. The rail stays on the
 right, and the menu is white in Day.
 
+**Statistics is one continuous scientific page.** Six sections replace the Game analysis and Method tabs: overview, optimization, scoring, model, uncertainty and validation, with the simulator kept as its own tab. `#/statistics/method` now opens the validation section. Choices made while building it:
+
+- *No new dependencies.* Charts are the site's own SVG with shared theme tokens, and formulas use the browsers' native MathML, so the security policy is unchanged.
+- *Parallax is CSS only.* Two decorative layers follow the scroll through a scroll-driven animation, with no script running while scrolling. Browsers without the feature, screens under 861 px and reduced motion get a still background. Section entrances use the same mechanism, because a script-triggered fade left a section blank for about half a second after a long jump. Text and charts never move with the scroll. The stadium stays on Home.
+- *The story moves forward only.* The histogram's markers appear with the text steps and never reset when the reader scrolls back. Short screens, narrow screens and reduced motion show everything at once.
+- *Derived values are read-only.* The page re-expresses stored outputs: runs per transition from participant conservation (A5), the leadoff table and the out floor q from the snapshot, and the distribution of gains from the stored draws with the site's exact engine. Tests check each against the stored summary or the paper. The one new output is `outputs/e4b_rank_distribution.json`, derived from the per-game table behind E4b, and it reproduces the stored mean, median and share above the 90th percentile exactly.
+- *The comparison with gradient boosting is shown here, though the paper no longer has it.* The specification for this page asked for it, and it is the honest context for choosing the model. Search-method comparisons are no longer on the site.
+- *Run expectancy and the state grid are one component,* so a selected state drives the transition view. Its season figures come from E1 and are labelled apart from this game's kernel.
+- *Certainty stays capped on this page.* A re-estimate share above 99% reads "more than 99%", with the raw count beside it.
+
 ## Consequences
 
 - `batting-order snapshot` and `update` now also write Home data and need the MLB Stats API. Responses

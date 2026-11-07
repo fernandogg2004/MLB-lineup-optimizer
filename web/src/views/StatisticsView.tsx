@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { fetchJson, validateSnapshot, type GameSnapshot, type HomeData } from "../data";
-import { setStadiumDepth } from "../home/stadium";
-import { useMedia } from "../home/format";
 import { useI18n } from "../i18n-context";
-import { statsHash, type StatsTab } from "../route";
-import { GameView } from "./GameView";
-import { MethodView } from "./MethodView";
+import { statsHash, type StatsSection, type StatsTab } from "../route";
 import { Simulator } from "./Simulator";
+import { Backdrop } from "./stats/Backdrop";
+import "./stats/stats.css";
+import { StatsPage } from "./stats/StatsPage";
+import type { Validation } from "./stats/validation";
 
 const REPO = "https://github.com/fernandogg2004/mlb-lineup-optimizer";
 
@@ -101,19 +101,22 @@ function SeasonHitting({ pk, team }: { pk: number; team: string }) {
   );
 }
 
-export function StatisticsView({ tab, pk, team }: { tab: StatsTab; pk: number; team: string }) {
-  const { t } = useI18n();
+export function StatisticsView({ tab, pk, team, section }: { tab: StatsTab; pk: number; team: string; section?: StatsSection }) {
+  const { t, date: dateText } = useI18n();
   const [loaded, setLoaded] = useState<{ pk: number; snap: GameSnapshot | null } | null>(null);
-  const still = useMedia("(prefers-reduced-motion: reduce)");
-  const needsGame = tab !== "method";
+  const [lastGood, setLastGood] = useState<GameSnapshot | null>(null);
+  const [validation, setValidation] = useState<Validation | null>(null);
+  const [validationFailed, setValidationFailed] = useState(false);
 
   useEffect(() => {
-    if (!needsGame) return;
     let cancelled = false;
     fetchJson<GameSnapshot>(`games/${pk}.json`)
       .then((s) => {
         validateSnapshot(s);
-        if (!cancelled) setLoaded({ pk, snap: s });
+        if (!cancelled) {
+          setLoaded({ pk, snap: s });
+          setLastGood(s);
+        }
       })
       .catch(() => {
         if (!cancelled) setLoaded({ pk, snap: null });
@@ -121,72 +124,66 @@ export function StatisticsView({ tab, pk, team }: { tab: StatsTab; pk: number; t
     return () => {
       cancelled = true;
     };
-  }, [pk, needsGame]);
+  }, [pk]);
 
-  // The stadium drifts gently behind this page too.
   useEffect(() => {
-    setStadiumDepth(0);
-    if (still) return;
-    let frame = 0;
-    const update = () => {
-      frame = 0;
-      const max = document.documentElement.scrollHeight - window.innerHeight;
-      setStadiumDepth(max > 0 ? (window.scrollY / max) * 6 : 0);
-    };
-    const on = () => {
-      if (!frame) frame = requestAnimationFrame(update);
-    };
-    window.addEventListener("scroll", on, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", on);
-      cancelAnimationFrame(frame);
-    };
-  }, [still]);
+    fetchJson<Validation>("validation.json").then(setValidation, () => setValidationFailed(true));
+  }, []);
 
   const current = loaded && loaded.pk === pk ? loaded : null;
-  const snap = current?.snap ?? null;
+  // The previous game stays on screen until the next one arrives, so the page keeps its place.
+  const snap = current?.snap ?? (current ? null : lastGood);
   const side = snap && snap.teams.home.team === team ? "home" : "away";
-  const tabs: [StatsTab, Parameters<typeof t>[0]][] = [
-    ["game", "nav.game"],
-    ["simulator", "nav.simulator"],
-    ["method", "nav.method"],
-  ];
 
   return (
     <div className="stats-page">
-      <div className="container">
-        <nav className="tabs" aria-label={t("stats.tabs")}>
-          {tabs.map(([key, label]) => (
-            <a key={key} className="nav-link" href={statsHash(key, pk, team)} aria-current={tab === key ? "page" : undefined}>
-              {t(label)}
-            </a>
-          ))}
-          <a className="nav-link" href={`${import.meta.env.BASE_URL}paper.pdf`}>
-            {t("nav.paper")}
-          </a>
-          <a className="nav-link" href={REPO} rel="noopener">
-            {t("nav.code")}
-          </a>
-        </nav>
-        {tab === "method" ? (
-          <MethodView />
-        ) : current && !snap ? (
-          <p role="alert">{t("game.error")}</p>
-        ) : !snap ? (
-          <p aria-busy="true">{t("game.loading")}</p>
-        ) : tab === "simulator" ? (
+      <Backdrop />
+      {tab === "simulator" && (
+        <div className="container">
+          <nav className="tabs" aria-label={t("stats.tabs")}>
+            <a className="nav-link" href={statsHash("game", pk, team)}>{t("nav.analysis")}</a>
+            <a className="nav-link" href={statsHash("simulator", pk, team)} aria-current="page">{t("nav.simulator")}</a>
+            <a className="nav-link" href={`${import.meta.env.BASE_URL}paper.pdf`}>{t("nav.paper")}</a>
+            <a className="nav-link" href={REPO} rel="noopener">{t("nav.code")}</a>
+          </nav>
+        </div>
+      )}
+      {current && !current.snap ? (
+        <p className="container st-message" role="alert">{t("game.error")}</p>
+      ) : !snap ? (
+        <p className="container st-message" aria-busy="true">{t("game.loading")}</p>
+      ) : tab === "simulator" ? (
+        <div className="container">
           <Simulator key={`${snap.game.game_pk}-${snap.teams[side].team}`} snap={snap} team={snap.teams[side]} />
-        ) : (
-          <div className="space-y-6">
-            <GameView snap={snap} side={side} />
-            <SeasonHitting pk={pk} team={snap.teams[side].team} />
-          </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <StatsPage
+          snap={snap}
+          side={side}
+          pk={pk}
+          v={validation}
+          vFailed={validationFailed}
+          section={section}
+          after={<SeasonHitting pk={snap.game.game_pk} team={snap.teams[side].team} />}
+        />
+      )}
       <footer className="footer">
         <div className="container py-6 text-xs text-muted space-y-1">
           <p>{t("footer.data")}</p>
           <p>{t("footer.disclaimer")}</p>
+          {snap && (
+            <p>
+              {t("tech.version", {
+                date: dateText(snap.generated_at.slice(0, 10)),
+                sw: `${snap.software.package}@${snap.software.git}`,
+                cutoff: dateText(snap.cutoff.information_before),
+              })}
+              {" · "}
+              <a className="link" href={`${import.meta.env.BASE_URL}data/games/${snap.game.game_pk}.json`} download>
+                {t("tech.download")}
+              </a>
+            </p>
+          )}
         </div>
       </footer>
     </div>

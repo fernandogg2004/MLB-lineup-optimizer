@@ -564,7 +564,7 @@ test.describe("navigation", () => {
     await page.goto("/?lang=en");
     await expect(page).toHaveTitle("How much does the batting order matter? · Batting Order Lab");
     await page.goto("/?lang=en#/statistics/method");
-    await expect(page).toHaveTitle("Method & validation · Batting Order Lab");
+    await expect(page).toHaveTitle("Statistics · Batting Order Lab");
     await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
   });
 

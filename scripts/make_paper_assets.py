@@ -455,27 +455,68 @@ def figures(e1: Any, e2: Any, e3: Any, e4b: Any, e5: Any) -> None:
 
 
 def web_validation(e2: Any, e3: Any, e4a: Any, e4b: Any, e4c: Any) -> None:
+    """Everything the Statistics page shows about validation. Only copies stored results."""
     WEB.mkdir(parents=True, exist_ok=True)
     out: dict[str, Any] = {}
+    e0, e1, ranks = load("e0_lineup_audit"), load("e1_kernel"), load("e4b_rank_distribution")
+    if e0:
+        out["e0"] = {k: e0[k] for k in ("n", "share_both_match")}
+    if e1:
+        keep = (
+            "model_re24",
+            "empirical_re24",
+            "n_by_state",
+            "weighted_mean_abs_diff",
+            "max_abs_diff",
+        )
+        out["e1"] = {"by_season": {s: {k: v[k] for k in keep} for s, v in e1["by_season"].items()}}
     if e2:
         out["e2"] = {
             "by_season": {
-                s: {"n_pa": v["n_pa"], "models": v["models"]} for s, v in e2["by_season"].items()
+                s: {"n_pa": v["n_pa"], "n_games": v["n_games"], "models": v["models"]}
+                for s, v in e2["by_season"].items()
             }
         }
     if e3:
         out["e3"] = {
             k: e3[k]
-            for k in ("by_decile", "calibration_slope", "bias_obs_minus_pred", "n_team_games")
+            for k in (
+                "n_team_games",
+                "excluded_fewer_than_8_innings",
+                "mean_observed_r8",
+                "mean_predicted_r8",
+                "bias_obs_minus_pred",
+                "bias_ci95",
+                "calibration_intercept",
+                "calibration_slope",
+                "slope_ci95",
+                "corr",
+                "mse",
+                "mse_n",
+                "by_decile",
+                "pit",
+            )
         }
     if e4a:
-        out["e4a"] = {"methods": e4a["methods"], "noisy_ga": e4a["noisy_ga"]}
+        ex = e4a["methods"]["exhaustive"]
+        out["e4a"] = {"exhaustive_seconds": ex["mean_seconds"], "n": ex["n"]}
     if e4b:
         out["e4b"] = {
-            k: e4b[k] for k in ("n_team_games", "uplift_opt_vs_actual", "actual_percentile")
+            k: e4b[k]
+            for k in (
+                "n_team_games",
+                "uplift_opt_vs_actual",
+                "spread_best_minus_worst_mean",
+                "opt_minus_random_mean",
+                "actual_percentile",
+                "uplift_histogram",
+                "uplift_hist_edges",
+            )
         }
+    if ranks:
+        out["ranks"] = {k: v for k, v in ranks.items() if k not in ("experiment", "software")}
     if e4c:
-        out["e4c"] = {k: v for k, v in e4c.items() if k != "rows"}
+        out["e4c"] = {k: v for k, v in e4c.items() if k not in ("rows", "software")}
     (WEB / "validation.json").write_text(json.dumps(out, indent=1), encoding="utf-8")
 
 

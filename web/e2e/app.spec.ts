@@ -30,11 +30,11 @@ test("reference game loads with both teams and the actual score", async ({ page 
 
 test("language switch translates the interface", async ({ page }) => {
   await page.goto("/?lang=en#/statistics");
-  await expect(page.getByText("Did the managers use the best batting order?")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "From player statistics to the optimal batting order" })).toBeVisible();
   await page.getByRole("button", { name: "Open menu" }).click();
   await page.getByRole("button", { name: "ES", exact: true }).click();
   await page.keyboard.press("Escape");
-  await expect(page.getByText("¿Usaron los mánagers el mejor orden al bate?")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "De las estadísticas de los jugadores al orden al bate óptimo" })).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("lang", "es");
 });
 
@@ -62,16 +62,16 @@ test("constrained search finds an order with the leadoff hitter locked", async (
   await expect(page.locator(".sim-row").first()).toContainText(leadoff);
 });
 
-test("method page renders validation results", async ({ page }) => {
+test("the old method page opens the validation section", async ({ page }) => {
   await page.goto("/?lang=en#/statistics/method");
-  await expect(page.getByRole("heading", { name: "Method and validation" })).toBeVisible();
-  await expect(page.getByText("Limitations")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Does the model work beyond this game?" })).toBeInViewport();
+  await expect(page.getByRole("heading", { name: "Limitations" })).toBeVisible();
 });
 
 test("addresses from the previous site still work", async ({ page }) => {
   await page.goto("/?lang=en#/method");
-  await expect(page.getByRole("heading", { name: "Method and validation" })).toBeVisible();
-  await expect(page).toHaveURL(/#\/statistics\/method$/);
+  await expect(page.getByRole("heading", { name: "Does the model work beyond this game?" })).toBeVisible();
+  await expect(page).toHaveURL(/#\/statistics\/game$/);
   await page.goto("/?lang=en#/game/849802");
   await expect(page.getByText("Historical fact", { exact: true })).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Game", exact: true })).toHaveAttribute("data-value", "849802");
@@ -79,7 +79,7 @@ test("addresses from the previous site still work", async ({ page }) => {
 
 test("statistics page keeps the paper, code and season definitions", async ({ page }) => {
   await page.goto("/?lang=en#/statistics");
-  await expect(page.getByRole("link", { name: "Paper (PDF)" })).toHaveAttribute("href", /paper\.pdf$/);
+  await expect(page.getByRole("link", { name: "Paper (PDF)", exact: true })).toHaveAttribute("href", /paper\.pdf$/);
   await expect(page.getByRole("link", { name: "Source code" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Season hitting and percentiles" })).toBeVisible();
   await expect(page.getByText(/official hitting lines from the MLB Stats API/)).toBeVisible();

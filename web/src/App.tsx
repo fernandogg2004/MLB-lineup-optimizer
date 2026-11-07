@@ -69,7 +69,7 @@ function Shell() {
     const page =
       route.page === "home"
         ? t("title.home")
-        : t(route.tab === "method" ? "nav.method" : route.tab === "simulator" ? "nav.simulator" : "nav.game");
+        : t(route.tab === "simulator" ? "nav.simulator" : "menu.statistics");
     document.title = `${page} · ${t("app.name")}`;
   }, [t, route]);
 
@@ -94,8 +94,8 @@ function Shell() {
 
   // Replace old-style addresses with the current ones, keeping the same content.
   useEffect(() => {
-    if (/^#\/(method|game)\b/.test(window.location.hash) && route.page === "statistics") {
-      window.history.replaceState(null, "", statsHash(route.tab, route.pk));
+    if (/^#\/(method|game|statistics\/method)\b/.test(window.location.hash) && route.page === "statistics") {
+      window.history.replaceState(null, "", statsHash(route.tab, route.pk, route.team, route.section));
     }
   }, [route]);
 
@@ -133,7 +133,7 @@ function Shell() {
   );
 
   const target = useMemo(() => ({ screen: route.page === "home" ? route.screen : 0 }), [route]);
-  const showPickers = index !== null && entry !== null && !(route.page === "statistics" && route.tab === "method");
+  const showPickers = index !== null && entry !== null;
 
   return (
     <div className="app">
@@ -221,14 +221,12 @@ function Shell() {
             <p className="home-message" role="alert">
               {t("game.error")}
             </p>
-          ) : route.page === "statistics" && route.tab === "method" ? (
-            <StatisticsView tab="method" pk={entry?.game_pk ?? 0} team={team} />
           ) : !entry ? (
             <p className="home-message" aria-busy="true">
               {t("game.loading")}
             </p>
           ) : route.page === "statistics" ? (
-            <StatisticsView tab={route.tab} pk={entry.game_pk} team={team} />
+            <StatisticsView tab={route.tab} pk={entry.game_pk} team={team} section={route.section} />
           ) : (
             <HomeView pk={entry.game_pk} team={team} target={target} theme={theme} menuOpen={menuOpen} onScreen={onScreen} />
           )}

@@ -593,6 +593,21 @@ def e3_e4b(pa: pl.DataFrame, lineups: pl.DataFrame, quick: bool) -> None:
         "caveat": "Model-based quantities; not observed causal effects of batting order.",
     }
     _save("e4b_actual_vs_optimal", e4b)
+    _save("e4b_rank_distribution", rank_distribution(g["pct_actual"].to_numpy()))
+
+
+def rank_distribution(pct: np.ndarray, bins: int = 20) -> dict[str, Any]:
+    """Distribution of where the orders actually used rank among all orders of the same nine."""
+    counts, edges = np.histogram(pct, bins=bins, range=(0.0, 1.0))
+    return {
+        "n_team_games": int(pct.size),
+        "hist_edges": np.round(edges, 4).tolist(),
+        "hist_counts": counts.tolist(),
+        "share_above": {f"{t:.2f}": float((pct > t).mean()) for t in (0.5, 0.75, 0.9, 0.95, 0.99)},
+        "mean": float(pct.mean()),
+        "median": float(np.median(pct)),
+        "note": "pct = share of all 9! orders with strictly lower model value than the order used.",
+    }
 
 
 def _deciles(pred: np.ndarray, obs: np.ndarray) -> list[dict[str, float]]:

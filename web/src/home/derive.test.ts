@@ -137,11 +137,13 @@ describe("routes", () => {
     expect(parseHash("#/g/abc/TB/99")).toEqual({ page: "home", pk: undefined, team: "TB", screen: 0 });
   });
   it("redirects the previous site's links", () => {
-    expect(parseHash("#/method")).toEqual({ page: "statistics", tab: "method" });
+    expect(parseHash("#/method")).toEqual({ page: "statistics", tab: "game", section: "validation" });
     expect(parseHash("#/game/849802")).toEqual({ page: "statistics", tab: "game", pk: 849802 });
   });
   it("builds Statistics links", () => {
-    expect(statsHash("method", 1, "TB")).toBe("#/statistics/method");
+    expect(parseHash("#/statistics/method")).toEqual({ page: "statistics", tab: "game", section: "validation" });
+    expect(parseHash(statsHash("game", 849799, "TB", "model"))).toEqual({ page: "statistics", tab: "game", pk: 849799, team: "TB", section: "model" });
+    expect(statsHash("game", 849799, "TB")).toBe("#/statistics/game/849799/TB");
     expect(parseHash(statsHash("simulator", 849799, "TB"))).toEqual({ page: "statistics", tab: "simulator", pk: 849799, team: "TB" });
   });
 });
