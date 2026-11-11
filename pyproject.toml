@@ -17,6 +17,11 @@ dependencies = [
     "requests>=2.31",
 ]
 
+[project.urls]
+Homepage = "https://batting-order-lab.vercel.app"
+Repository = "https://github.com/fernandogg2004/mlb-lineup-optimizer"
+Paper = "https://github.com/fernandogg2004/mlb-lineup-optimizer/blob/main/research/paper.pdf"
+
 [project.optional-dependencies]
 # Comparator models used only in the model-selection experiment.
 compare = ["lightgbm>=4.3", "scikit-learn>=1.4"]
