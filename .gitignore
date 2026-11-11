@@ -55,3 +55,8 @@ Thumbs.db
 
 # Local design notes and mockups (not part of the project)
 /docs/prompts/
+
+# Personal and design-history files (not part of the project)
+/main_data_scientist.tex
+/design/
+/docs/statistics-redesign-audit.md

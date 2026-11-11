@@ -89,5 +89,5 @@ Bulk data are not redistributed in this repository: they are downloaded on deman
 `data_manifest/` (Savant occasionally revises recent games, so a mismatch is reported, not fixed). The
 site shows player names, lineups, final scores, official season hitting lines (credited on the Statistics
 page) and model-derived numbers. Player illustrations are original; no MLB or agency photos are used. Club logos in the team selector
-load at runtime from MLB's own address and no logo file is stored in this repository (ADR 0003); no
+load at runtime from MLB's own address and no logo file is stored in this repository; no
 licence for them is recorded.
